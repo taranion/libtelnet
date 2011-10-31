@@ -49,6 +49,10 @@ public class PassiveUsage implements TelnetListener, NetworkVirtualConsoleListen
 		thread.start();
 	}
 
+	//-----------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetListener#incomingConnection(org.prelle.telnet.NetworkVirtualConsole)
+	 */
 	@Override
 	public void incomingConnection(NetworkVirtualConsole console) {
 		logger.debug("inc: "+console);

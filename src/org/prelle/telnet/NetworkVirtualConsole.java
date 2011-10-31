@@ -6,8 +6,8 @@ package org.prelle.telnet;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.Socket;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,6 +35,8 @@ public class NetworkVirtualConsole implements TelnetConstants {
 	private NetworkVirtualConsoleListener listener;
 	
 	private boolean clientMode;
+	private int[] windowSize = new int[]{80,25};
+	private String termType;
 
 	//-----------------------------------------------------------------
 	public static void registerOption(TelnetOption option) {
@@ -69,8 +71,36 @@ public class NetworkVirtualConsole implements TelnetConstants {
 	}
 
 	//-----------------------------------------------------------------
+	public InetAddress getRemoteAddress() {
+		return socket.getInetAddress();
+	}
+
+	//-----------------------------------------------------------------
+	public String getRemoteIP() {
+		return socket.getInetAddress().getHostAddress();
+	}
+
+	//-----------------------------------------------------------------
+	public String getRemoteHost() {
+		return socket.getInetAddress().getHostName();
+	}
+
+	//-----------------------------------------------------------------
+	public int getRemotePort() {
+		return socket.getPort();
+	}
+
+	//-----------------------------------------------------------------
 	public NetworkVirtualConsoleListener getListener() {
 		return listener;
+	}
+
+	//-----------------------------------------------------------------
+	/**
+	 * @param listener the listener to set
+	 */
+	public void setListener(NetworkVirtualConsoleListener listener) {
+		this.listener = listener;
 	}
 	
 	//--------------------------------------------------------------
@@ -207,11 +237,11 @@ public class NetworkVirtualConsole implements TelnetConstants {
 				buffer.appendChar((char)dat);
 				if (!Character.isLetterOrDigit((char)dat)) 
 					logger.debug("("+dat+")");
-				if (isEchoEnabled()) {
-					logger.info("Send echo of input");
-					out.write((byte)dat);
-					out.flush();
-				}
+//				if (isEchoEnabled()) {
+//					logger.info("Send echo of input");
+//					out.write((byte)dat);
+//					out.flush();
+//				}
 			}
 		} // while true
 	}
@@ -400,6 +430,11 @@ public class NetworkVirtualConsole implements TelnetConstants {
 	}
 
 	//-----------------------------------------------------------------
+	public void stopEcho() throws IOException {
+		options.get(TelnetEcho.CODE).requestStop(this);
+	}
+
+	//-----------------------------------------------------------------
 //	public void requestEchoStop(NetworkVirtualConsole nvt) throws IOException {
 //		nvt.sendDont(SUB_ECHO);
 //	}
@@ -436,6 +471,32 @@ public class NetworkVirtualConsole implements TelnetConstants {
 		} catch (IOException e) {
 			logger.error(e.toString(),e);
 		}
+	}
+
+	//-----------------------------------------------------------------
+	public int[] getWindowSize() {
+		return windowSize;
+	}
+
+	//-----------------------------------------------------------------
+	/**
+	 * @param windowSize the windowSize to set
+	 */
+	public void setWindowSize(int[] windowSize) {
+		this.windowSize = windowSize;
+	}
+
+	//-----------------------------------------------------------------
+	public String getTerminalType() {
+		return termType;
+	}
+
+	//-----------------------------------------------------------------
+	/**
+	 * @param termType the termType to set
+	 */
+	public void setTerminalType(String termType) {
+		this.termType = termType;
 	}
 
 }

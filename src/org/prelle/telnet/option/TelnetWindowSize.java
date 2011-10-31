@@ -76,6 +76,7 @@ public class TelnetWindowSize extends TelnetOption {
 		int x = x1*256 + x2;
 		int y = y1*256 + y2;
 		logger.info("Terminal Width = "+ x+"*"+y);
+		nvt.setWindowSize(new int[]{x,y});
 		
 		in.read(); // IAC
 		in.read(); // SE

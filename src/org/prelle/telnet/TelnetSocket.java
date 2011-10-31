@@ -8,7 +8,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 import org.apache.log4j.Logger;
-import org.prelle.telnet.option.LineMode;
 import org.prelle.telnet.option.SuppressGoAhead;
 import org.prelle.telnet.option.TelnetEcho;
 import org.prelle.telnet.option.TelnetWindowSize;

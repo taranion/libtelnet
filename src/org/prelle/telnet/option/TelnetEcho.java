@@ -66,6 +66,9 @@ public class TelnetEcho extends TelnetOption {
 	}
 
 	//-----------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.option.TelnetOption#requestUsage(org.prelle.telnet.NetworkVirtualConsole)
+	 */
 	public void requestUsage(NetworkVirtualConsole nvt) throws IOException {
 		logger.debug("Suggest "+getName());
 		if (!nvt.isClientMode()) {
@@ -74,6 +77,18 @@ public class TelnetEcho extends TelnetOption {
 		} else {
 			nvt.getDoVariable(getName()).setState(true);
 			nvt.sendDo(getCode());
+		}
+	}
+
+	//-----------------------------------------------------------------
+	public void requestStop(NetworkVirtualConsole nvt) throws IOException {
+		logger.debug("Stop "+getName());
+		if (!nvt.isClientMode()) {
+			nvt.getWillVariable(getName()).setState(false);
+			nvt.sendWont(getCode());
+		} else {
+			nvt.getDoVariable(getName()).setState(false);
+			nvt.sendDont(getCode());
 		}
 	}
 

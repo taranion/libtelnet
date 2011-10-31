@@ -23,8 +23,6 @@ public class TerminalType extends TelnetOption {
 	
 	private final static int IS   = 0;
 	private final static int SEND = 1;
-	
-	private String terminalType;
 
 	//-----------------------------------------------------------------
 	/**
@@ -82,7 +80,9 @@ public class TerminalType extends TelnetOption {
 					buf.append((char)chr);
 			} while (chr!=255);
 			logger.info("Terminal type = "+buf);
-			terminalType = buf.toString();
+			nvt.setTerminalType( buf.toString() );
+			
+			nvt.getListener().terminalTypeDetermined(nvt, buf.toString());
 			break;
 		case SEND:
 		default:
@@ -90,8 +90,6 @@ public class TerminalType extends TelnetOption {
 		}
 		
 		if (in.read()!=TelnetConstants.SE) throw new IOException("Expected SE after terminal types IAC");
-		
-		nvt.getListener().terminalTypeDetermined(nvt, terminalType);
 	}
 
 	//-----------------------------------------------------------------
@@ -108,14 +106,6 @@ public class TerminalType extends TelnetOption {
 			out.write(TelnetConstants.SE);
 			out.flush();
 		}
-	}
-
-	//-----------------------------------------------------------------
-	/**
-	 * @return the terminalType
-	 */
-	public String getTerminalType() {
-		return terminalType;
 	}
 
 }

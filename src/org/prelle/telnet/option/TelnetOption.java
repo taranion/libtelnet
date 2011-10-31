@@ -39,6 +39,18 @@ public abstract class TelnetOption {
 	}
 
 	//-----------------------------------------------------------------
+	public void requestStop(NetworkVirtualConsole nvt) throws IOException {
+		logger.debug("Desire stopping "+getName());
+		if (nvt.isClientMode()) {
+			nvt.getWillVariable(getName()).setState(false);
+			nvt.sendWont(getCode());
+		} else {
+			nvt.getDoVariable(getName()).setState(true);
+			nvt.sendDont(getCode());
+		}
+	}
+
+	//-----------------------------------------------------------------
 	/**
 	 * @see org.prelle.telnet.option.TelnetOption#requestNotUsage()
 	 */
