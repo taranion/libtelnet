@@ -50,6 +50,7 @@ public class TelnetInputStream extends InputStream {
 			int ret = in.read();
 			if (in instanceof TelnetDebuggingInputStream)
 				((TelnetDebuggingInputStream)in).setInControlMode(false);
+			logger.debug("Read in higher level control "+ret);
 			return ret;
 		}
 		
@@ -182,6 +183,28 @@ public class TelnetInputStream extends InputStream {
 	 */
 	public void setHigherLevelControl(boolean higherLevel) {
 		higherLevelControl = higherLevel;
+	}
+
+	//-----------------------------------------------------------------
+	/**
+	 * Read until the next CR can be found
+	 * @return
+	 */
+	public String readUntilCR() throws IOException {
+		StringBuffer buf = new StringBuffer();
+		int data = -1;
+		do {
+			data = this.read();
+			switch(data) {
+			case -1: // Stream dead
+				return null;
+			case 10: // LINEFEED
+				continue;
+			default:
+				buf.append( (char)data );
+			}
+		} while (data>31);
+		return buf.toString();
 	}
 
 }

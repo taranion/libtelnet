@@ -52,6 +52,7 @@ public class TelnetDebuggingInputStream extends InputStream implements TelnetCon
 	 */
 	@Override
 	public int read(byte[] b) throws IOException {
+		logger.debug("read(byte[])");
 		return real.read(b);
 	}
 

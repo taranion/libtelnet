@@ -82,25 +82,9 @@ public class TelnetWindowSize extends TelnetOption {
 		in.read();
 		in.read();
 		in.setHigherLevelControl(false);
-		logger.info("Terminal Width done");
+		logger.debug("Terminal Width done");
 		
 		nvt.fireOptionDataChanged(this, new TelnetWindowSizeData(x, y));
 	}
 
-}
-
-class TelnetWindowSizeData {
-	private int x;
-	private int y;
-	
-	public TelnetWindowSizeData(int x, int y) {
-		this.x = x;
-		this.y = y;
-	}
-	
-	public String toString() {
-		return "WindowSize = "+x+"*"+y;
-	}
-	public int getX() {return x;}
-	public int getY() {return y;}
 }

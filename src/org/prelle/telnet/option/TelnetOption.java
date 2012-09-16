@@ -125,7 +125,7 @@ public abstract class TelnetOption implements TelnetConstants {
 				logger.debug("Already assume WILL "+getName()+" on remote party");
 			} else {
 				nvt.getWillVariable(getCode()).setState(true);
-				logger.info("Enabled "+getName()+" (remote party accepted)");
+				logger.debug("Enabled "+getName()+" (remote party accepted)");
 				optionEnabled(nvt, true);
 			}
 		} else if (!willState) {

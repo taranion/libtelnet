@@ -12,8 +12,10 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.SocketImpl;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
@@ -34,6 +36,7 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 	private Map<Integer,WillVariable> willVariables = new HashMap<Integer, WillVariable>();
 	private Map<Integer,DoVariable>   doVariables   = new HashMap<Integer, DoVariable>();
 	private Map<TelnetOption,Object> optionState = new HashMap<TelnetOption, Object>();
+	private List<TelnetOptionListener> optionListener = new ArrayList<TelnetOptionListener>();
 
 	//-----------------------------------------------------------------
 	/**
@@ -346,9 +349,20 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 		return optionState.get(option);
 	}
 
+	//-----------------------------------------------------------------
+	public void addOptionListener(TelnetOptionListener optList) {
+		if (!optionListener.contains(optList))
+			optionListener.add(optList);
+	}
+
+	//-----------------------------------------------------------------
 	public void fireOptionDataChanged(TelnetOption option,Object data) {
-		logger.warn("TODO: fire OptionDataChanged for "+option+"  = "+data);
-		
+		for (TelnetOptionListener list : optionListener)
+			try {
+				list.telnetOptionDataChanged(this, option, data);
+			} catch (Exception e) {
+				logger.error("Error calling "+list.getClass()+".telnetOptionDataChanged: "+e,e);
+			}
 	}
 
 	//-----------------------------------------------------------------
