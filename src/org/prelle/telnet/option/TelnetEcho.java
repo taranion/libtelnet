@@ -4,13 +4,16 @@
 package org.prelle.telnet.option;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 import org.prelle.telnet.DoVariable;
-import org.prelle.telnet.NetworkVirtualConsole;
+import org.prelle.telnet.TelnetInputStream;
+import org.prelle.telnet.TelnetOutputStream;
+import org.prelle.telnet.TelnetSocket;
 import org.prelle.telnet.WillVariable;
 
 /**
+ * RFC 857
+ * @see http://tools.ietf.org/html/rfc857
  * @author prelle
  *
  */
@@ -21,12 +24,12 @@ public class TelnetEcho extends TelnetOption {
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#setDefaults(org.prelle.telnet.NetworkVirtualConsole)
+	 * @see org.prelle.telnet.option.TelnetOption#setDefaults(org.prelle.telnet.TelnetSocket)
 	 */
 	@Override
-	public void setDefaults(NetworkVirtualConsole nvt) {
-		nvt.setOptionVariable(new WillVariable(NAME, false));
-		nvt.setOptionVariable(new DoVariable(NAME, false));
+	public void setDefaults(TelnetSocket nvt) {
+		nvt.setOptionVariable(new WillVariable(CODE, false));
+		nvt.setOptionVariable(new DoVariable(CODE, false));
 	}
 	
 	//-----------------------------------------------------------------
@@ -49,46 +52,48 @@ public class TelnetEcho extends TelnetOption {
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#initialize(org.prelle.telnet.NetworkVirtualConsole)
+	 * @see org.prelle.telnet.option.TelnetOption#initialize(org.prelle.telnet.TelnetSocket)
 	 */
 	@Override
-	public void initialize(NetworkVirtualConsole console) throws IOException {
+	public void initialize(TelnetSocket console) throws IOException {
 		// Not sending and not awaiting echo
 	}
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#performSubNegotiation(org.prelle.telnet.NetworkVirtualConsole, java.io.InputStream)
+	 * @see org.prelle.telnet.option.TelnetOption#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
 	 */
 	@Override
-	public void performSubNegotiation(NetworkVirtualConsole nvt, InputStream in)
+	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in)
 			throws IOException {
 	}
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#requestUsage(org.prelle.telnet.NetworkVirtualConsole)
+	 * @see org.prelle.telnet.option.TelnetOption#requestUsage(org.prelle.telnet.TelnetSocket)
 	 */
-	public void requestUsage(NetworkVirtualConsole nvt) throws IOException {
+	public void requestUsage(TelnetSocket nvt) throws IOException {
 		logger.debug("Suggest "+getName());
-		if (!nvt.isClientMode()) {
-			nvt.getWillVariable(getName()).setState(true);
-			nvt.sendWill(getCode());
+		TelnetOutputStream out = (TelnetOutputStream) nvt.getOutputStream();
+		if (!nvt.isInClientMode()) {
+			nvt.getWillVariable(getCode()).setState(true);
+			out.sendWill(getCode());
 		} else {
-			nvt.getDoVariable(getName()).setState(true);
-			nvt.sendDo(getCode());
+			nvt.getDoVariable(getCode()).setState(true);
+			out.sendDo(getCode());
 		}
 	}
 
 	//-----------------------------------------------------------------
-	public void requestStop(NetworkVirtualConsole nvt) throws IOException {
+	public void requestStop(TelnetSocket nvt) throws IOException {
 		logger.debug("Stop "+getName());
-		if (!nvt.isClientMode()) {
-			nvt.getWillVariable(getName()).setState(false);
-			nvt.sendWont(getCode());
+		TelnetOutputStream out = (TelnetOutputStream) nvt.getOutputStream();
+		if (!nvt.isInClientMode()) {
+			nvt.getWillVariable(getCode()).setState(false);
+			out.sendWont(getCode());
 		} else {
-			nvt.getDoVariable(getName()).setState(false);
-			nvt.sendDont(getCode());
+			nvt.getDoVariable(getCode()).setState(false);
+			out.sendDont(getCode());
 		}
 	}
 

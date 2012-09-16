@@ -4,49 +4,51 @@
 package org.prelle.telnet.option;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 import org.apache.log4j.Logger;
-import org.prelle.telnet.NetworkVirtualConsole;
+import org.prelle.telnet.TelnetConstants;
+import org.prelle.telnet.TelnetInputStream;
+import org.prelle.telnet.TelnetOutputStream;
+import org.prelle.telnet.TelnetSocket;
 
 /**
  * @author prelle
  *
  */
-public abstract class TelnetOption {
+public abstract class TelnetOption implements TelnetConstants {
 
 	protected final static Logger logger = Logger.getLogger("telnet.option");
 
-	public abstract void setDefaults(NetworkVirtualConsole console);
+	public abstract void setDefaults(TelnetSocket nvt);
 
 	public abstract String getName();
 	public abstract int getCode();
 
-	public abstract void initialize(NetworkVirtualConsole console) throws IOException;
-
-	public abstract void performSubNegotiation(NetworkVirtualConsole nvt, InputStream in) throws IOException;
+	public abstract void initialize(TelnetSocket console) throws IOException;
 
 	//-----------------------------------------------------------------
-	public void requestUsage(NetworkVirtualConsole nvt) throws IOException {
-		logger.debug("Suggest "+getName());
-		if (nvt.isClientMode()) {
-			nvt.getWillVariable(getName()).setState(true);
-			nvt.sendWill(getCode());
+	public void requestUsage(TelnetSocket nvt) throws IOException {
+		logger.debug("Suggest "+getName()+" , clientmode="+nvt.isInClientMode());
+		TelnetOutputStream out = (TelnetOutputStream) nvt.getOutputStream();
+		if (nvt.isInClientMode()) {
+			nvt.getWillVariable(getCode()).setState(true);
+			out.sendWill(getCode());
 		} else {
-			nvt.getDoVariable(getName()).setState(true);
-			nvt.sendDo(getCode());
+			nvt.getDoVariable(getCode()).setState(true);
+			out.sendDo(getCode());
 		}
 	}
 
 	//-----------------------------------------------------------------
-	public void requestStop(NetworkVirtualConsole nvt) throws IOException {
+	public void requestStop(TelnetSocket nvt) throws IOException {
 		logger.debug("Desire stopping "+getName());
-		if (nvt.isClientMode()) {
-			nvt.getWillVariable(getName()).setState(false);
-			nvt.sendWont(getCode());
+		TelnetOutputStream out = (TelnetOutputStream) nvt.getOutputStream();
+		if (nvt.isInClientMode()) {
+			nvt.getWillVariable(getCode()).setState(false);
+			out.sendWont(getCode());
 		} else {
-			nvt.getDoVariable(getName()).setState(true);
-			nvt.sendDont(getCode());
+			nvt.getDoVariable(getCode()).setState(true);
+			out.sendDont(getCode());
 		}
 	}
 
@@ -54,17 +56,18 @@ public abstract class TelnetOption {
 	/**
 	 * @see org.prelle.telnet.option.TelnetOption#requestNotUsage()
 	 */
-	public void processDo(NetworkVirtualConsole nvt) throws IOException {
+	public void processDo(TelnetSocket nvt) throws IOException {
 		boolean[] states = nvt.getDoWillStatesFor(this);
 		boolean doState = states[0];
 		boolean willState = states[1];
+		TelnetOutputStream out = (TelnetOutputStream) nvt.getOutputStream();
 		if (willState) {
 			// This "DO" is a response
 			if (doState) {
 				// Already assume DO on remote site
 				logger.debug("Already assume DO "+getName()+" on remote party");
 			} else {
-				nvt.getDoVariable(getName()).setState(true);
+				nvt.getDoVariable(getCode()).setState(true);
 				logger.info("Enabled "+getName()+" (remote party accepted)");
 			}
 		} else if (!doState) {
@@ -73,8 +76,8 @@ public abstract class TelnetOption {
 				// Already in "WILL" state
 				logger.debug("Already in WILL "+getName()+" locally");
 			} else {
-				nvt.getWillVariable(getName()).setState(true);
-				nvt.sendWill(getCode());
+				nvt.getWillVariable(getCode()).setState(true);
+				out.sendWill(getCode());
 				logger.info("Enabled "+getName()+" (remote party requested)");
 			}
 		} else {
@@ -83,14 +86,15 @@ public abstract class TelnetOption {
 	}
 
 	//-----------------------------------------------------------------
-	public void processDont(NetworkVirtualConsole nvt) throws IOException {
+	public void processDont(TelnetSocket nvt) throws IOException {
 		boolean[] states = nvt.getDoWillStatesFor(this);
 		boolean doState = states[0];
 		boolean willState = states[1];
+		TelnetOutputStream out = (TelnetOutputStream) nvt.getOutputStream();
 		if (willState) {
 			// This "DONT" is a response
-			nvt.getDoVariable(getName()).setState(false);
-			nvt.getWillVariable(getName()).setState(false);
+			nvt.getDoVariable(getCode()).setState(false);
+			nvt.getWillVariable(getCode()).setState(false);
 			logger.info("Remote party rejected "+getName());
 		} else if (doState) {
 			// This is a stop request
@@ -98,8 +102,8 @@ public abstract class TelnetOption {
 				// Already in "WONT" state
 				logger.debug("Already in WONT "+getName()+" locally");
 			} else {
-				nvt.getWillVariable(getName()).setState(false);
-				nvt.sendWont(getCode());
+				nvt.getWillVariable(getCode()).setState(false);
+				out.sendWont(getCode());
 				logger.info("Disabled "+getName()+" (remote party requested)");
 			}
 		} else {
@@ -108,21 +112,19 @@ public abstract class TelnetOption {
 	}
 
 	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.option.TelnetOption#processWill(org.prelle.telnet.NetworkVirtualConsole)
-	 */
-	public void processWill(NetworkVirtualConsole nvt) throws IOException {
+	public void processWill(TelnetSocket nvt) throws IOException {
 		boolean[] states = nvt.getDoWillStatesFor(this);
 		boolean doState = states[0];
 		boolean willState = states[1];
 //		logger.debug("doState="+doState+"   willState="+willState);
+		TelnetOutputStream out = (TelnetOutputStream) nvt.getOutputStream();
 		if (doState) {
 			// This "WILL" is a response
 			if (willState) {
 				// Already assume WILL on remote site
 				logger.debug("Already assume WILL "+getName()+" on remote party");
 			} else {
-				nvt.getWillVariable(getName()).setState(true);
+				nvt.getWillVariable(getCode()).setState(true);
 				logger.info("Enabled "+getName()+" (remote party accepted)");
 				optionEnabled(nvt, true);
 			}
@@ -132,8 +134,8 @@ public abstract class TelnetOption {
 				// Already in "DO" state
 				logger.debug("Already in DO "+getName()+" locally");
 			} else {
-				nvt.getDoVariable(getName()).setState(true);
-				nvt.sendDo(getCode());
+				nvt.getDoVariable(getCode()).setState(true);
+				out.sendDo(getCode());
 				logger.info("Enabled "+getName()+" (remote party requested)");
 				optionEnabled(nvt, false);
 			}
@@ -143,10 +145,11 @@ public abstract class TelnetOption {
 	}
 
 	//-----------------------------------------------------------------
-	public void processWont(NetworkVirtualConsole nvt) throws IOException {
+	public void processWont(TelnetSocket nvt) throws IOException {
 		boolean[] states = nvt.getDoWillStatesFor(this);
 		boolean doState = states[0];
 		boolean willState = states[1];
+		TelnetOutputStream out = (TelnetOutputStream) nvt.getOutputStream();
 //		logger.debug("doState="+doState+"   willState="+willState);
 		if (doState) {
 			// This "WONT" is a response
@@ -154,7 +157,7 @@ public abstract class TelnetOption {
 				// Already assume WILL on remote site
 				logger.debug("Already assume WONT "+getName()+" on remote party");
 			} else {
-				nvt.getWillVariable(getName()).setState(false);
+				nvt.getWillVariable(getCode()).setState(false);
 				logger.info("Disabled "+getName()+" (remote party rejected)");
 			}
 			optionDisabled(nvt, true);
@@ -164,8 +167,8 @@ public abstract class TelnetOption {
 				// Already in "DO" state
 				logger.debug("Already in DONT "+getName()+" locally");
 			} else {
-				nvt.getDoVariable(getName()).setState(false);
-				nvt.sendDont(getCode());
+				nvt.getDoVariable(getCode()).setState(false);
+				out.sendDont(getCode());
 				logger.info("Disabled "+getName()+" (remote party requested)");
 				optionDisabled(nvt, false);
 			}
@@ -175,13 +178,22 @@ public abstract class TelnetOption {
 	}
 
 	//-----------------------------------------------------------------
-	protected void optionEnabled(NetworkVirtualConsole nvt, boolean iAmInitiator) throws IOException {
+	protected void optionEnabled(TelnetSocket nvt, boolean iAmInitiator) throws IOException {
 		logger.info(getName()+" enabled");
 	}
 
 	//-----------------------------------------------------------------
-	protected void optionDisabled(NetworkVirtualConsole nvt, boolean iAmInitiator) throws IOException {
+	protected void optionDisabled(TelnetSocket nvt, boolean iAmInitiator) throws IOException {
 		logger.info(getName()+" not supported");
+	}
+
+//	//-----------------------------------------------------------------
+//	public boolean isEnabledByDefault() {
+//		return false;
+//	}
+
+	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in) throws IOException {
+		
 	}
 	
 }

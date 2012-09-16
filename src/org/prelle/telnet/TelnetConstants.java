@@ -8,6 +8,27 @@ package org.prelle.telnet;
  *
  */
 public interface TelnetConstants {
+	
+	public static enum ControlCode {
+		SE(240), NOP(241),  DM(242), BREAK(243), IP(244),
+		AE(245), AYT(246),  EC(247), EL(248), GA(249),
+		SB(250), WILL(251), WONT(252), DO(253), DONT(254), IAC(255);
+		
+		private final int codeValue;
+
+		ControlCode(int value) {this.codeValue = value;}
+		public int code() { return codeValue; }
+		public static ControlCode getCodeFor(int val) {
+			for (ControlCode code : ControlCode.values())
+				if (code.code()==val) return code;
+			return null;
+		}
+		public static boolean isControlCode(int val) {
+			for (ControlCode code : ControlCode.values())
+				if (code.code()==val) return true;
+			return false;
+		}
+	};
 
 	public final static int SE   = 240;
     //    public final static int NOP  = 241;

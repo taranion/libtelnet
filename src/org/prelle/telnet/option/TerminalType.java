@@ -4,15 +4,17 @@
 package org.prelle.telnet.option;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 
 import org.prelle.telnet.DoVariable;
-import org.prelle.telnet.NetworkVirtualConsole;
 import org.prelle.telnet.TelnetConstants;
+import org.prelle.telnet.TelnetInputStream;
+import org.prelle.telnet.TelnetSocket;
 import org.prelle.telnet.WillVariable;
 
 /**
+ * RFC 1091
+ * @see http://tools.ietf.org/html/rfc1091
  * @author prelle
  *
  */
@@ -26,12 +28,12 @@ public class TerminalType extends TelnetOption {
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#setDefaults(org.prelle.telnet.NetworkVirtualConsole)
+	 * @see org.prelle.telnet.option.TelnetOption#setDefaults(org.prelle.telnet.TelnetSocket)
 	 */
 	@Override
-	public void setDefaults(NetworkVirtualConsole nvt) {
-		nvt.setOptionVariable(new WillVariable(NAME, false));
-		nvt.setOptionVariable(new DoVariable(NAME, false));
+	public void setDefaults(TelnetSocket nvt) {
+		nvt.setOptionVariable(new WillVariable(CODE, false));
+		nvt.setOptionVariable(new DoVariable(CODE, false));
 	}
 	
 	//-----------------------------------------------------------------
@@ -55,20 +57,23 @@ public class TerminalType extends TelnetOption {
 	//-----------------------------------------------------------------
 	/**
 	 * @throws IOException 
-	 * @see org.prelle.telnet.option.TelnetOption#initialize(org.prelle.telnet.NetworkVirtualConsole)
+	 * @see org.prelle.telnet.option.TelnetOption#initialize(org.prelle.telnet.TelnetSocket)
 	 */
 	@Override
-	public void initialize(NetworkVirtualConsole console) throws IOException {
+	public void initialize(TelnetSocket console) throws IOException {
 		requestUsage(console);
 	}
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#performSubNegotiation(org.prelle.telnet.NetworkVirtualConsole, java.io.InputStream)
+	 * @see org.prelle.telnet.option.TelnetOption#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
 	 */
 	@Override
-	public void performSubNegotiation(NetworkVirtualConsole nvt, InputStream in)
+	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in)
 			throws IOException {
+		logger.debug("performSubNegotiation");
+		in.setHigherLevelControl(true);
+		
 		int isOrSend = in.read();
 		switch (isOrSend) {
 		case IS:
@@ -76,25 +81,26 @@ public class TerminalType extends TelnetOption {
 			int chr = -1;
 			do {
 				chr = in.read();
-				if (chr<255)
+				if (chr<240)
 					buf.append((char)chr);
 			} while (chr!=255);
 			logger.info("Terminal type = "+buf);
-			nvt.setTerminalType( buf.toString() );
 			
-			nvt.getListener().terminalTypeDetermined(nvt, buf.toString());
+			nvt.fireOptionDataChanged(this, buf.toString());
 			break;
 		case SEND:
 		default:
 			logger.warn("Not implemented: "+isOrSend);
 		}
-		
-		if (in.read()!=TelnetConstants.SE) throw new IOException("Expected SE after terminal types IAC");
+
+		int se = in.read();
+		in.setHigherLevelControl(false);
+		if (se!=TelnetConstants.SE) throw new IOException("Expected SE after terminal types IAC");
 	}
 
 	//-----------------------------------------------------------------
 	@Override
-	protected void optionEnabled(NetworkVirtualConsole nvt, boolean iAmInitiator) throws IOException {
+	protected void optionEnabled(TelnetSocket nvt, boolean iAmInitiator) throws IOException {
 		if (iAmInitiator) {
 			logger.debug("Requesting terminal type");
 			OutputStream out = nvt.getOutputStream();

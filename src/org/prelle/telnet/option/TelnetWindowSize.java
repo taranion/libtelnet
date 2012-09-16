@@ -4,10 +4,10 @@
 package org.prelle.telnet.option;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 import org.prelle.telnet.DoVariable;
-import org.prelle.telnet.NetworkVirtualConsole;
+import org.prelle.telnet.TelnetInputStream;
+import org.prelle.telnet.TelnetSocket;
 import org.prelle.telnet.WillVariable;
 
 /**
@@ -28,11 +28,11 @@ public class TelnetWindowSize extends TelnetOption {
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#setDefaults(org.prelle.telnet.NetworkVirtualConsole)
+	 * @see org.prelle.telnet.option.TelnetOption#setDefaults(org.prelle.telnet.TelnetSocket)
 	 */
-	public void setDefaults(NetworkVirtualConsole nvt) {
-		nvt.setOptionVariable(new WillVariable(NAME, false));
-		nvt.setOptionVariable(new DoVariable(NAME, false));
+	public void setDefaults(TelnetSocket nvt) {
+		nvt.setOptionVariable(new WillVariable(CODE, false));
+		nvt.setOptionVariable(new DoVariable(CODE, false));
 	}
 
 	//-----------------------------------------------------------------
@@ -55,19 +55,20 @@ public class TelnetWindowSize extends TelnetOption {
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#initialize(org.prelle.telnet.NetworkVirtualConsole)
+	 * @see org.prelle.telnet.option.TelnetOption#initialize(org.prelle.telnet.TelnetSocket)
 	 */
 	@Override
-	public void initialize(NetworkVirtualConsole console) throws IOException {
+	public void initialize(TelnetSocket console) throws IOException {
 		requestUsage(console);
 	}
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#performSubNegotiation(org.prelle.telnet.NetworkVirtualConsole, java.io.InputStream)
+	 * @see org.prelle.telnet.option.TelnetOption#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
 	 */
 	@Override
-	public void performSubNegotiation(NetworkVirtualConsole nvt, InputStream in) throws IOException {
+	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in) throws IOException {
+		in.setHigherLevelControl(true);
 		// NAWS Sub negotiation
 		int x1 = in.read();
 		int x2 = in.read();
@@ -76,12 +77,30 @@ public class TelnetWindowSize extends TelnetOption {
 		int x = x1*256 + x2;
 		int y = y1*256 + y2;
 		logger.info("Terminal Width = "+ x+"*"+y);
-		nvt.setWindowSize(new int[]{x,y});
 		
-		in.read(); // IAC
-		in.read(); // SE
+//		in.readUntilSE();
+		in.read();
+		in.read();
+		in.setHigherLevelControl(false);
+		logger.info("Terminal Width done");
 		
-		nvt.getListener().windowSizeDetermined(nvt, x, y);
+		nvt.fireOptionDataChanged(this, new TelnetWindowSizeData(x, y));
 	}
 
+}
+
+class TelnetWindowSizeData {
+	private int x;
+	private int y;
+	
+	public TelnetWindowSizeData(int x, int y) {
+		this.x = x;
+		this.y = y;
+	}
+	
+	public String toString() {
+		return "WindowSize = "+x+"*"+y;
+	}
+	public int getX() {return x;}
+	public int getY() {return y;}
 }

@@ -4,10 +4,10 @@
 package foo;
 
 import java.io.IOException;
-import java.io.InputStream;
 
 import org.prelle.telnet.DoVariable;
-import org.prelle.telnet.NetworkVirtualConsole;
+import org.prelle.telnet.TelnetInputStream;
+import org.prelle.telnet.TelnetSocket;
 import org.prelle.telnet.WillVariable;
 import org.prelle.telnet.option.TelnetOption;
 
@@ -27,12 +27,12 @@ public class MUDServerStatusProtocol extends TelnetOption {
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#setDefaults(org.prelle.telnet.NetworkVirtualConsole)
+	 * @see org.prelle.telnet.option.TelnetOption#setDefaults(org.prelle.telnet.TelnetSocket)
 	 */
 	@Override
-	public void setDefaults(NetworkVirtualConsole nvt) {
-		nvt.setOptionVariable(new WillVariable(NAME, false));
-		nvt.setOptionVariable(new DoVariable(NAME, false));
+	public void setDefaults(TelnetSocket nvt) {
+		nvt.setOptionVariable(new WillVariable(CODE, false));
+		nvt.setOptionVariable(new DoVariable(CODE, false));
 	}
 	
 	//-----------------------------------------------------------------
@@ -55,19 +55,19 @@ public class MUDServerStatusProtocol extends TelnetOption {
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#initialize(org.prelle.telnet.NetworkVirtualConsole)
+	 * @see org.prelle.telnet.option.TelnetOption#initialize(org.prelle.telnet.TelnetSocket)
 	 */
 	@Override
-	public void initialize(NetworkVirtualConsole console) throws IOException {
+	public void initialize(TelnetSocket console) throws IOException {
 		requestUsage(console);
 	}
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#performSubNegotiation(org.prelle.telnet.NetworkVirtualConsole, java.io.InputStream)
+	 * @see org.prelle.telnet.option.TelnetOption#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
 	 */
 	@Override
-	public void performSubNegotiation(NetworkVirtualConsole nvt, InputStream in)
+	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in)
 			throws IOException {
 	}
 

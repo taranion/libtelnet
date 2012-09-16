@@ -2,7 +2,7 @@ package org.prelle.telnet;
 
 public abstract class TelnetVariable {
 
-	protected String name;
+	protected int code;
 	protected boolean status;
 
 	//-----------------------------------------------------------------
@@ -10,8 +10,8 @@ public abstract class TelnetVariable {
 	 * @param name
 	 * @param deflt
 	 */
-	public TelnetVariable(String name, boolean deflt) {
-		this.name= name;
+	public TelnetVariable(int code, boolean deflt) {
+		this.code= code;
 		this.status = deflt;
 	}
 
@@ -21,16 +21,13 @@ public abstract class TelnetVariable {
 	public TelnetVariable() {
 		super();
 	}
-	
-	//-----------------------------------------------------------------
-	public abstract String getKey();
 
 	//-----------------------------------------------------------------
 	/**
 	 * @return
 	 */
-	public String getName() {
-		return name;
+	public int getName() {
+		return code;
 	}
 
 	//-----------------------------------------------------------------

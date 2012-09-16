@@ -4,10 +4,11 @@
 package foo;
 
 import java.io.IOException;
-import java.io.InputStream;
+import java.io.OutputStream;
 
 import org.prelle.telnet.DoVariable;
-import org.prelle.telnet.NetworkVirtualConsole;
+import org.prelle.telnet.TelnetInputStream;
+import org.prelle.telnet.TelnetSocket;
 import org.prelle.telnet.WillVariable;
 import org.prelle.telnet.option.TelnetOption;
 
@@ -19,17 +20,22 @@ import org.prelle.telnet.option.TelnetOption;
  */
 public class MUDTerminalTypeStandard extends TelnetOption {
 
-	private final static int    CODE = 70;
+	public final static int    CODE = 24;  // oder 70??
+	private final static int	IS   = 0;
+	private final static int	SEND = 1;
+	
 	private final static String NAME = "MTTS";
 
+	static enum RequestState { DEFAULT, CLIENT_NAME, TERMINAL_TYPE, MUD_TERMINAL_TYPE, UNKNOWN} 
+	
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#setDefaults(org.prelle.telnet.NetworkVirtualConsole)
+	 * @see org.prelle.telnet.option.TelnetOption#setDefaults(org.prelle.telnet.TelnetSocket)
 	 */
 	@Override
-	public void setDefaults(NetworkVirtualConsole nvt) {
-		nvt.setOptionVariable(new WillVariable(NAME, false));
-		nvt.setOptionVariable(new DoVariable(NAME, false));
+	public void setDefaults(TelnetSocket nvt) {
+		nvt.setOptionVariable(new WillVariable(CODE, false));
+		nvt.setOptionVariable(new DoVariable(CODE, false));
 	}
 	
 	//-----------------------------------------------------------------
@@ -52,20 +58,100 @@ public class MUDTerminalTypeStandard extends TelnetOption {
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#initialize(org.prelle.telnet.NetworkVirtualConsole)
+	 * @see org.prelle.telnet.option.TelnetOption#initialize(org.prelle.telnet.TelnetSocket)
 	 */
 	@Override
-	public void initialize(NetworkVirtualConsole console) throws IOException {
+	public void initialize(TelnetSocket console) throws IOException {
 		requestUsage(console);
+		
+		MUDTerminalTypeData data = new MUDTerminalTypeData();
+		data.setState(RequestState.DEFAULT);
+		console.setOptionState(this, data);
 	}
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#performSubNegotiation(org.prelle.telnet.NetworkVirtualConsole, java.io.InputStream)
+	 * @see org.prelle.telnet.option.TelnetOption#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
 	 */
 	@Override
-	public void performSubNegotiation(NetworkVirtualConsole nvt, InputStream in)
+	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in)
 			throws IOException {
+		logger.debug("performSubNegotiation for "+NAME);
+		int sendOrIs = in.read();
+		
+		switch (sendOrIs) {
+		case IS:
+			// Remote side sends data - read until IAC
+
+			StringBuffer buf = new StringBuffer();
+			while (true) {
+				int dat = in.read();
+				if (dat==IAC) {
+					logger.trace("SN: IAC");
+					break;
+				}
+				
+				logger.trace("SN: "+dat+"  ("+ (char)dat + ")");
+				buf.append( (char)dat );
+			}
+			int dat = in.read(); //SE
+			if (dat!=SE) {
+				logger.warn("Expected subnegotiation end, but found "+dat);
+			}
+			logger.trace("SN: IAC");
+			
+			MUDTerminalTypeData data = (MUDTerminalTypeData) nvt.getOptionState(this);
+			switch (data.getState()) {
+			case CLIENT_NAME:
+				// Answer to first TTYPE SEND is a client name
+				data.setClientName(buf.toString());
+				logger.debug("MUD-Client: "+buf.toString());
+				data.setState(RequestState.TERMINAL_TYPE);
+				requestNext(nvt);
+				return;
+			case TERMINAL_TYPE:
+				// Answer to second TTYPE SEND is a generic terminal type
+				data.setTerminalType(buf.toString());
+				logger.debug("Terminal-Type: "+buf.toString());
+				data.setState(RequestState.MUD_TERMINAL_TYPE);
+				requestNext(nvt);
+				return;
+			case MUD_TERMINAL_TYPE:
+				// Answer to third TTYPE SEND is a specific MUD terminal type
+				data.setMudTerminalType(buf.toString());
+				logger.debug("MUD-Terminal: "+buf.toString());
+				data.setState(RequestState.UNKNOWN);
+				nvt.fireOptionDataChanged(this, data);
+				return;
+			default:
+				logger.warn("Don't know what to do with this response: "+data.getState());
+			}
+		default:
+			logger.warn("Don't know what to do with sendOrIs="+sendOrIs);
+		}
+		
+	}
+
+	//-----------------------------------------------------------------
+	protected void optionEnabled(TelnetSocket nvt, boolean iAmInitiator) throws IOException {
+		logger.info(getName()+" enabled");
+		logger.debug("Request MUD terminal type");
+		((MUDTerminalTypeData)nvt.getOptionState(this)).setState(RequestState.CLIENT_NAME);
+		requestNext(nvt);
+	}
+
+	//-----------------------------------------------------------------
+	public static void requestNext(TelnetSocket nvt) throws IOException {
+		OutputStream out = nvt.getOutputStream();
+		byte[] send = new byte[6];
+		send[0] = (byte)IAC; 
+		send[1] = (byte)SB; 
+		send[2] = (byte)CODE;
+		send[3] = (byte)SEND;
+		send[4] = (byte)IAC;
+		send[5] = (byte)SE;
+		out.write(send);
+		out.flush();		
 	}
 
 }
