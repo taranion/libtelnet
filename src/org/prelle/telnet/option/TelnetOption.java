@@ -4,6 +4,7 @@
 package org.prelle.telnet.option;
 
 import java.io.IOException;
+import java.io.OutputStream;
 
 import org.apache.log4j.Logger;
 import org.prelle.telnet.TelnetConstants;
@@ -192,8 +193,26 @@ public abstract class TelnetOption implements TelnetConstants {
 //		return false;
 //	}
 
+	//-----------------------------------------------------------------
 	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in) throws IOException {
 		
 	}
+	
+	//-----------------------------------------------------------------
+	protected static void startSubNegotiation(TelnetSocket sock, int code) throws IOException {
+		OutputStream out = sock.getOutputStream();
+		out.write(IAC);
+		out.write(SB);
+		out.write(code);		
+	}
+	
+	//-----------------------------------------------------------------
+	protected static void endSubNegotiation(TelnetSocket sock, int code) throws IOException {
+		OutputStream out = sock.getOutputStream();
+		out.write(IAC);
+		out.write(SE);
+		out.write(code);		
+	}
+
 	
 }

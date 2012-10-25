@@ -7,6 +7,7 @@ import java.io.IOException;
 
 import org.prelle.telnet.DoVariable;
 import org.prelle.telnet.TelnetInputStream;
+import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetSocket;
 import org.prelle.telnet.WillVariable;
 
@@ -87,4 +88,28 @@ public class TelnetWindowSize extends TelnetOption {
 		nvt.fireOptionDataChanged(this, new TelnetWindowSizeData(x, y));
 	}
 
+	//-----------------------------------------------------------------
+	/**
+	 * Inform remote party of the current window size
+	 * @param sock
+	 * @param x
+	 * @param y
+	 * @throws IOException
+	 */
+	public static void sendNewSize(TelnetSocket sock, int x, int y) throws IOException {
+		if (x>65535)
+			throw new IllegalArgumentException("X to big");
+		if (y>65535)
+			throw new IllegalArgumentException("Y to big");
+		
+		TelnetOutputStream out = (TelnetOutputStream) sock.getOutputStream();
+
+		TelnetOption.startSubNegotiation(sock, CODE);
+		out.write(x>>8);
+		out.write(x%256);
+		out.write(y>>8);
+		out.write(y%256);
+		TelnetOption.endSubNegotiation(sock, CODE);
+		out.flush();
+	}
 }
