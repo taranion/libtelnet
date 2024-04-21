@@ -7,15 +7,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-import org.apache.log4j.Logger;
-import org.apache.log4j.PropertyConfigurator;
 import org.prelle.telnet.TelnetConfiguration;
 import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetServerSocket;
 import org.prelle.telnet.TelnetSocket;
+import org.prelle.telnet.mud.MUDServerDataProtocol;
+import org.prelle.telnet.mud.MUDServerStatusProtocol;
+import org.prelle.telnet.mud.MUDSoundProtocol;
+import org.prelle.telnet.mud.MUDTerminalTypeStandard;
 import org.prelle.telnet.option.SuppressGoAhead;
 import org.prelle.telnet.option.TelnetEcho;
 import org.prelle.telnet.option.TelnetOption;
@@ -30,7 +34,7 @@ import org.prelle.telnet.option.TransmitBinary;
  */
 public class PassiveUsage implements Runnable, TelnetOptionListener {
 
-    private final static Logger logger = Logger.getLogger("app");
+    private final static Logger logger = System.getLogger("app");
 	
 	private Thread thread;
 	private ServerSocket serverSocket;
@@ -45,7 +49,6 @@ public class PassiveUsage implements Runnable, TelnetOptionListener {
 	}
 
 	public PassiveUsage() throws IOException {
-		PropertyConfigurator.configure("log4j.properties");
 		serverSocket = new TelnetServerSocket(4000);
 //		new NetworkVirtualConsole(inc, this, this);
 		
@@ -64,6 +67,7 @@ public class PassiveUsage implements Runnable, TelnetOptionListener {
 		
 		thread = new Thread(this,"ThreadCheck");
 		thread.start();
+		System.getLogger("app").log(Level.INFO, "Waiting on port 4000");
 	}
 
 	//-----------------------------------------------------------------
@@ -74,7 +78,7 @@ public class PassiveUsage implements Runnable, TelnetOptionListener {
 				TelnetSocket socket = (TelnetSocket)vanillaSocket;
 				
 				OutputStream out = socket.getOutputStream();
-				logger.debug("Incoming connection via "+socket.getClass()+" and output via "+out);
+				logger.log(Level.DEBUG,"Incoming connection via "+socket.getClass()+" and output via "+out);
 				PrintWriter pw = new PrintWriter(out);
 				pw.print("Wie heisst Du? ");
 				socket.requestEcho();
@@ -91,7 +95,7 @@ public class PassiveUsage implements Runnable, TelnetOptionListener {
 			}
 //			for (NetThread pThread: new ArrayList<NetThread>(playerThreads)) {
 //				if (!pThread.isAlive()) {
-//					logger.debug("Removing thread "+pThread);
+//					logger.log(Level.DEBUG,"Removing thread "+pThread);
 //					playerThreads.remove(pThread);
 //				}
 //			}
@@ -111,7 +115,7 @@ public class PassiveUsage implements Runnable, TelnetOptionListener {
 	@Override
 	public void telnetOptionDataChanged(TelnetSocket nvt,
 			TelnetOption option, Object data) {
-		logger.info("Telnet Option Data Changed: "+option.getClass().getSimpleName()+" = "+data);
+		logger.log(Level.INFO,"Telnet Option Data Changed: "+option.getClass().getSimpleName()+" = "+data);
 		
 		switch (option.getCode()) {
 		case MUDTerminalTypeStandard.CODE:

@@ -1,9 +1,10 @@
 /**
  * 
  */
-package foo;
+package org.prelle.telnet.mud;
 
 import java.io.IOException;
+import java.lang.System.Logger.Level;
 
 import org.prelle.telnet.DoVariable;
 import org.prelle.telnet.TelnetInputStream;
@@ -80,7 +81,7 @@ public class MUDServerDataProtocol extends TelnetOption {
 	@Override
 	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in)
 			throws IOException {
-		logger.debug("performSubNegotiation for "+NAME);
+		logger.log(Level.DEBUG,"performSubNegotiation for "+NAME);
 //		int sendOrIs = in.read();
 //		
 //		switch (sendOrIs) {
@@ -109,21 +110,21 @@ public class MUDServerDataProtocol extends TelnetOption {
 //			case CLIENT_NAME:
 //				// Answer to first TTYPE SEND is a client name
 //				data.setClientName(buf.toString());
-//				logger.debug("MUD-Client: "+buf.toString());
+//				logger.log(Level.DEBUG,"MUD-Client: "+buf.toString());
 //				data.setState(RequestState.TERMINAL_TYPE);
 //				requestNext(nvt);
 //				return;
 //			case TERMINAL_TYPE:
 //				// Answer to second TTYPE SEND is a generic terminal type
 //				data.setTerminalType(buf.toString());
-//				logger.debug("Terminal-Type: "+buf.toString());
+//				logger.log(Level.DEBUG,"Terminal-Type: "+buf.toString());
 //				data.setState(RequestState.MUD_TERMINAL_TYPE);
 //				requestNext(nvt);
 //				return;
 //			case MUD_TERMINAL_TYPE:
 //				// Answer to third TTYPE SEND is a specific MUD terminal type
 //				data.setMudTerminalType(buf.toString());
-//				logger.debug("MUD-Terminal: "+buf.toString());
+//				logger.log(Level.DEBUG,"MUD-Terminal: "+buf.toString());
 //				data.setState(RequestState.UNKNOWN);
 //				nvt.getListener().telnetOptionDataChanged(nvt, this, data);
 //				return;
@@ -138,7 +139,7 @@ public class MUDServerDataProtocol extends TelnetOption {
 
 	//-----------------------------------------------------------------
 	protected void optionEnabled(TelnetSocket nvt, boolean iAmInitiator) throws IOException {
-		logger.info(getName()+" enabled");
+		logger.log(Level.INFO,getName()+" enabled");
 	}
 
 }

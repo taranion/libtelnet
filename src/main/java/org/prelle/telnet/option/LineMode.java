@@ -4,6 +4,7 @@
 package org.prelle.telnet.option;
 
 import java.io.IOException;
+import java.lang.System.Logger.Level;
 
 import org.prelle.telnet.DoVariable;
 import org.prelle.telnet.TelnetConstants;
@@ -147,7 +148,7 @@ public class LineMode extends TelnetOption {
 		int type = in.read();
 		switch (type) {
 		case MODE:
-			logger.debug("Client requests mode mask");
+			logger.log(Level.DEBUG,"Client requests mode mask");
 			int mask = in.read();
 			in.read();  // IAC
 			in.read();  // SE
@@ -160,12 +161,12 @@ public class LineMode extends TelnetOption {
 				int ascii = in.read();
 				if (ascii==255)
 					ascii = ascii*in.read();
-				logger.debug("  Function="+funct+"  Modifier="+modif+"   ASCII="+ascii);
-				logger.debug("  Function="+FUNCTIONS[funct]+"  Modifier="+modif+"   ASCII="+ascii);
+				logger.log(Level.DEBUG,"  Function="+funct+"  Modifier="+modif+"   ASCII="+ascii);
+				logger.log(Level.DEBUG,"  Function="+FUNCTIONS[funct]+"  Modifier="+modif+"   ASCII="+ascii);
 			}
 			break;
 		default:
-			logger.debug("??? "+type);
+			logger.log(Level.DEBUG,"??? "+type);
 			in.read(); // IAC
 			in.read(); // SB
 		}

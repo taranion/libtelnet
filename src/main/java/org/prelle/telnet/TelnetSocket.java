@@ -6,6 +6,8 @@ package org.prelle.telnet;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.net.InetAddress;
 import java.net.Proxy;
 import java.net.Socket;
@@ -18,7 +20,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
 import org.prelle.telnet.option.TelnetEcho;
 import org.prelle.telnet.option.TelnetOption;
 
@@ -28,7 +29,7 @@ import org.prelle.telnet.option.TelnetOption;
  */
 public class TelnetSocket extends Socket implements TelnetStreamListener {
 
-	private final static Logger logger = Logger.getLogger("telnet.lvl3");
+	private final static Logger logger = System.getLogger("telnet.lvl3");
 
 	private TelnetInputStream in;
 	private TelnetOutputStream out;
@@ -130,8 +131,8 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 			// Load defaults
 			option.setDefaults(this);
 		}
-		logger.debug("Do-Variables   = "+doVariables.values());
-		logger.debug("Will-Variables = "+willVariables.values());		
+		logger.log(Level.DEBUG,"Do-Variables   = "+doVariables.values());
+		logger.log(Level.DEBUG,"Will-Variables = "+willVariables.values());		
 	}
 
 	//-----------------------------------------------------------------
@@ -175,7 +176,7 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 	@Override
 	public void receivedGoAheadSignal() {
 		// TODO Auto-generated method stub
-		logger.debug("Go Ahead received");
+		logger.log(Level.DEBUG,"Go Ahead received");
 
 	}
 
@@ -186,7 +187,7 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 	@Override
 	public void receivedInterruptProcess() {
 		// TODO Auto-generated method stub
-		logger.warn("TODO: Interrupt process received");
+		logger.log(Level.WARNING,"TODO: Interrupt process received");
 		try {
 			this.close();
 		} catch (IOException e) {
@@ -204,14 +205,18 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 		TelnetOption option = TelnetConfiguration.getOption(optionCode);
 		try {
 			if (option==null) {
-				logger.warn("remote party offers option unknown option "+optionCode);
+				logger.log(Level.WARNING,"remote party offers option unknown option "+optionCode);
 				out.sendDont(optionCode);
 			} else {
-				logger.info("remote party offers "+option.getName());
-				option.processWill(this);
+				logger.log(Level.INFO,"remote party offers "+option.getName());
+//				WillVariable cfg = getWillVariable(optionCode);
+//				if (cfg.getState())
+					option.processWill(this);
+//				else
+//					option.processWont(this);
 			}
 		} catch (IOException e) {
-			logger.error("Could not answer that WILL offer: "+e,e);
+			logger.log(Level.ERROR,"Could not answer that WILL offer: "+e,e);
 		}
 	}
 
@@ -224,13 +229,13 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 		TelnetOption option = TelnetConfiguration.getOption(optionCode);
 		try {
 			if (option==null) {
-				logger.warn("remote party rejects option unknown option "+optionCode);
+				logger.log(Level.WARNING,"remote party rejects option unknown option "+optionCode);
 			} else {
-				logger.info("remote party rejects "+option.getName());
+				logger.log(Level.INFO,"remote party rejects "+option.getName());
 				option.processWont(this);
 			}
 		} catch (IOException e) {
-			logger.error("Could not answer that WILL offer: "+e,e);
+			logger.log(Level.ERROR,"Could not answer that WILL offer: "+e,e);
 		}
 	}
 
@@ -243,14 +248,14 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 		TelnetOption option = TelnetConfiguration.getOption(optionCode);
 		try {
 			if (option==null) {
-				logger.warn("remote party performs option unknown option "+optionCode);
+				logger.log(Level.WARNING,"remote party performs option unknown option "+optionCode);
 				out.sendWont(optionCode);
 			} else {
-				logger.info("remote party performs "+option.getName());
+				logger.log(Level.INFO,"remote party performs "+option.getName());
 				option.processDo(this);
 			}
 		} catch (IOException e) {
-			logger.error("Could not answer that WILL offer: "+e,e);
+			logger.log(Level.ERROR,"Could not answer that WILL offer: "+e,e);
 		}
 	}
 
@@ -263,14 +268,14 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 		TelnetOption option = TelnetConfiguration.getOption(optionCode);
 		try {
 			if (option==null) {
-				logger.warn("remote party performs option unknown option "+optionCode);
+				logger.log(Level.WARNING,"remote party performs option unknown option "+optionCode);
 				out.sendWont(optionCode);
 			} else {
-				logger.info("remote party performs "+option.getName());
+				logger.log(Level.INFO,"remote party performs "+option.getName());
 				option.processDont(this);
 			}
 		} catch (IOException e) {
-			logger.error("Could not answer that WILL offer: "+e,e);
+			logger.log(Level.ERROR,"Could not answer that WILL offer: "+e,e);
 		}
 	}
 
@@ -283,15 +288,15 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 		TelnetOption option = TelnetConfiguration.getOption(optionCode);
 		try {
 			if (option==null) {
-				logger.warn("remote party performs subnegitation for unknown option "+optionCode);
+				logger.log(Level.WARNING,"remote party performs subnegitation for unknown option "+optionCode);
 			} else {
-				logger.info("subnegotiation startet for "+option.getName());
+				logger.log(Level.INFO,"subnegotiation startet for "+option.getName());
 				in.setHigherLevelControl(true);
 				option.performSubNegotiation(this, in);
 				in.setHigherLevelControl(false);
 			}
 		} catch (IOException e) {
-			logger.error("Could not answer that WILL offer: "+e,e);
+			logger.log(Level.ERROR,"Could not answer that WILL offer: "+e,e);
 		}
 	}
 
@@ -326,7 +331,7 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 		boolean[] ret = new boolean[]{
 				doVariables.get(opt.getCode()).getState(), 
 				willVariables.get(opt.getCode()).getState()};
-		logger.debug("Do/Will states for "+opt.getName()+" are: "+Arrays.toString(ret));
+		logger.log(Level.DEBUG,"Do/Will states for "+opt.getName()+" are: "+Arrays.toString(ret));
 		return ret;
 	}
 
@@ -361,7 +366,7 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 			try {
 				list.telnetOptionDataChanged(this, option, data);
 			} catch (Exception e) {
-				logger.error("Error calling "+list.getClass()+".telnetOptionDataChanged: "+e,e);
+				logger.log(Level.ERROR,"Error calling "+list.getClass()+".telnetOptionDataChanged: "+e,e);
 			}
 	}
 

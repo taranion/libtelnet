@@ -3,7 +3,8 @@
  */
 package org.prelle.telnet;
 
-import org.apache.log4j.Logger;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 
 /**
  * @author prelle
@@ -11,7 +12,7 @@ import org.apache.log4j.Logger;
  */
 public class LineBuffer {
 
-    private final static Logger logger = Logger.getLogger("telnet");
+    private final static Logger logger = System.getLogger("telnet");
     
     public final static int DELETE = 8;
     public final static int TABULATOR = 9;
@@ -46,10 +47,10 @@ public class LineBuffer {
                     return;
             case UP:
                     // TODO Browse history
-                    logger.warn("UICOmmon.LineBuffer.processKey: UP");
+                    logger.log(Level.WARNING,"UICOmmon.LineBuffer.processKey: UP");
                     return;
             default:
-                    logger.warn("TODO: LineBuffer.processKey: "+key);
+                    logger.log(Level.WARNING,"TODO: LineBuffer.processKey: "+key);
             }
     }
     

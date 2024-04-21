@@ -5,8 +5,9 @@ package org.prelle.telnet;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 
-import org.apache.log4j.Logger;
 import org.prelle.telnet.TelnetConstants.ControlCode;
 
 /**
@@ -15,7 +16,7 @@ import org.prelle.telnet.TelnetConstants.ControlCode;
  */
 public class TelnetDebuggingOutputStream extends OutputStream {
 
-	private final static Logger logger = Logger.getLogger("telnet.lvl1");
+	private final static Logger logger = System.getLogger("telnet.lvl1");
 
 	private OutputStream realOut;
 	private boolean inControlMode = false;
@@ -35,9 +36,9 @@ public class TelnetDebuggingOutputStream extends OutputStream {
 	public void write(int data) throws IOException {
 		ControlCode code = ControlCode.getCodeFor(data);
 		if (code!=null)
-			logger.debug(String.format("SND %s", code.toString()));
+			logger.log(Level.DEBUG,String.format("SND %s", code.toString()));
 		else
-			logger.trace(String.format("SND %d (%s)", data, (char)data));
+			logger.log(Level.TRACE,String.format("SND %d (%s)", data, (char)data));
 		realOut.write(data);
 	}
 
@@ -47,7 +48,7 @@ public class TelnetDebuggingOutputStream extends OutputStream {
 	 */
 	@Override
 	public void write(byte[] data) throws IOException {
-		if (logger.isDebugEnabled() && inControlMode) {
+		if (logger.isLoggable(Level.DEBUG) && inControlMode) {
 			StringBuffer buf = new StringBuffer();
 			for (byte dat : data) {
 				int tmp = dat;
@@ -57,7 +58,7 @@ public class TelnetDebuggingOutputStream extends OutputStream {
 				else
 					buf.append( tmp );
 			}
-			logger.debug("SND "+buf);
+			logger.log(Level.DEBUG,"SND "+buf);
 		}
 		realOut.write(data);
 	}

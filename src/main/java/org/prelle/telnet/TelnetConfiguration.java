@@ -3,6 +3,8 @@
  */
 package org.prelle.telnet;
 
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -11,7 +13,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.Logger;
 import org.prelle.telnet.option.TelnetOption;
 
 /**
@@ -20,7 +21,7 @@ import org.prelle.telnet.option.TelnetOption;
  */
 public class TelnetConfiguration {
 
-	private final static Logger logger = Logger.getLogger("telnet");
+	private final static Logger logger = System.getLogger("telnet");
 
 	private static Map<Integer, TelnetOption> options = new HashMap<Integer, TelnetOption>();
 
@@ -37,7 +38,7 @@ public class TelnetConfiguration {
 
 	//-----------------------------------------------------------------
 	public static void registerOption(TelnetOption option) {
-		logger.debug(String.format("Register option %d/%s with %s", option.getCode(), option.getName(), option.getClass().getName()));
+		logger.log(Level.DEBUG,String.format("Register option %d/%s with %s", option.getCode(), option.getName(), option.getClass().getName()));
 		options.put(option.getCode(), option);
 		
 //		setEnabled(option.getCode(), option.isEnabledByDefault());
@@ -45,7 +46,7 @@ public class TelnetConfiguration {
 
 //	//-----------------------------------------------------------------
 //	public static void registerOption(TelnetOption option, boolean enable) {
-//		logger.debug(String.format("Register option %d/%s with %s", option.getCode(), option.getName(), option.getClass().getName()));
+//		logger.log(Level.DEBUG,String.format("Register option %d/%s with %s", option.getCode(), option.getName(), option.getClass().getName()));
 //		options.put(option.getCode(), option);
 //		
 //		setEnabled(option.getCode(), enable);
@@ -62,7 +63,7 @@ public class TelnetConfiguration {
 //		assert option!=null;
 //		
 //		isEnabled.put(optionCode, enabled);
-//		logger.debug((enabled?"Enable":"Disable")+" "+option.getName());
+//		logger.log(Level.DEBUG,(enabled?"Enable":"Disable")+" "+option.getName());
 //	}
 //		
 //	//--------------------------------------------------------------

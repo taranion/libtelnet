@@ -5,8 +5,9 @@ package org.prelle.telnet;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 
-import org.apache.log4j.Logger;
 import org.prelle.telnet.TelnetConstants.ControlCode;
 
 /**
@@ -15,7 +16,7 @@ import org.prelle.telnet.TelnetConstants.ControlCode;
  */
 public class TelnetInputStream extends InputStream {
 
-	private final static Logger logger = Logger.getLogger("telnet.lvl2");
+	private final static Logger logger = System.getLogger("telnet.lvl2");
 
 	private InputStream in;
 	private TelnetStreamListener listener;
@@ -50,7 +51,7 @@ public class TelnetInputStream extends InputStream {
 			int ret = in.read();
 			if (in instanceof TelnetDebuggingInputStream)
 				((TelnetDebuggingInputStream)in).setInControlMode(false);
-			logger.debug("Read in higher level control "+ret);
+			logger.log(Level.DEBUG,"Read in higher level control "+ret);
 			return ret;
 		}
 		
@@ -73,7 +74,7 @@ public class TelnetInputStream extends InputStream {
 				processIAC();
 				continue;
 			default:
-				logger.warn("Don't know what to do with code "+code);
+				logger.log(Level.WARNING,"Don't know what to do with code "+code);
 			}
 
 		} while (true);
@@ -120,11 +121,11 @@ public class TelnetInputStream extends InputStream {
 		//		mode = Mode.RCV_IAC;
 		ControlCode code = readNextCode();
 
-		logger.debug("IAC "+code);
+		logger.log(Level.DEBUG,"IAC "+code);
 		int next = -1;
 		switch (code) {
 		case IP:
-			logger.debug("Interrupt Process Requested");
+			logger.log(Level.DEBUG,"Interrupt Process Requested");
 			listener.receivedInterruptProcess();
 			break;
 		case GA:
@@ -151,13 +152,13 @@ public class TelnetInputStream extends InputStream {
 			listener.receivedSubnegotiationBegin(next);
 			break;
 		default:
-			logger.warn("Received unprocessed "+code);
+			logger.log(Level.WARNING,"Received unprocessed "+code);
 		}
 	}
 
 //	//-----------------------------------------------------------------
 //	public void readUntilSE() throws IOException {
-//		logger.debug("Read until IAC SE");
+//		logger.log(Level.DEBUG,"Read until IAC SE");
 //		while (true) {
 //			int data1 = in.read();
 //			if (data1==-1)
@@ -171,7 +172,7 @@ public class TelnetInputStream extends InputStream {
 //			if (data2==TelnetConstants.ControlCode.SE.code()) {
 //				return;
 //			}
-//			logger.warn("Expected IAC SE but found IAC "+data2);
+//			logger.log(Level.WARNING,"Expected IAC SE but found IAC "+data2);
 //		}
 //	}
 

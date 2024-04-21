@@ -5,8 +5,8 @@ package org.prelle.telnet;
 
 import java.io.IOException;
 import java.io.InputStream;
-
-import org.apache.log4j.Logger;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 
 /**
  * @author prelle
@@ -14,7 +14,7 @@ import org.apache.log4j.Logger;
  */
 public class TelnetDebuggingInputStream extends InputStream implements TelnetConstants {
 
-	private final static Logger logger = Logger.getLogger("telnet.lvl1");
+	private final static Logger logger = System.getLogger("telnet.lvl1");
 	
 	private InputStream real;
 	private boolean inControlMode = false;
@@ -36,12 +36,12 @@ public class TelnetDebuggingInputStream extends InputStream implements TelnetCon
 		
 		ControlCode code = ControlCode.getCodeFor(data);
 		if (code!=null)
-			logger.debug(String.format("RCV %s", code.toString()));
+			logger.log(Level.DEBUG,String.format("RCV %s", code.toString()));
 		else  {
 			if (inControlMode) {
-				logger.debug(String.format("RCV %d", data));
+				logger.log(Level.DEBUG,String.format("RCV %d", data));
 			} else
-				logger.trace(String.format("RCV %d (%s)", data, (char)data));
+				logger.log(Level.TRACE,String.format("RCV %d (%s)", data, (char)data));
 		}
 		return data;
 	}
@@ -52,7 +52,7 @@ public class TelnetDebuggingInputStream extends InputStream implements TelnetCon
 	 */
 	@Override
 	public int read(byte[] b) throws IOException {
-		logger.debug("read(byte[])");
+		logger.log(Level.DEBUG,"read(byte[])");
 		return real.read(b);
 	}
 

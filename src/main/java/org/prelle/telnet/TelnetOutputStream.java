@@ -5,8 +5,9 @@ package org.prelle.telnet;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 
-import org.apache.log4j.Logger;
 import org.prelle.telnet.TelnetConstants.ControlCode;
 
 /**
@@ -15,7 +16,7 @@ import org.prelle.telnet.TelnetConstants.ControlCode;
  */
 public class TelnetOutputStream extends OutputStream {
 
-	private final static Logger logger = Logger.getLogger("telnet.lvl1");
+	private final static Logger logger = System.getLogger("telnet.lvl1");
 
 	private OutputStream realOut;
 	
@@ -46,7 +47,7 @@ public class TelnetOutputStream extends OutputStream {
 
 	//-----------------------------------------------------------------
 	public void sendDo(int optionCode) throws IOException {
-		logger.debug("confirm "+optionCode);
+		logger.log(Level.DEBUG,"confirm "+optionCode);
 		if (realOut instanceof TelnetDebuggingOutputStream)
 			((TelnetDebuggingOutputStream)realOut).setInControlMode(true);
 
@@ -63,7 +64,7 @@ public class TelnetOutputStream extends OutputStream {
 
 	//-----------------------------------------------------------------
 	public void sendWill(int optionCode) throws IOException {
-		logger.debug("offer "+optionCode);
+		logger.log(Level.DEBUG,"offer "+optionCode);
 		if (realOut instanceof TelnetDebuggingOutputStream)
 			((TelnetDebuggingOutputStream)realOut).setInControlMode(true);
 
@@ -80,7 +81,7 @@ public class TelnetOutputStream extends OutputStream {
 
 	//-----------------------------------------------------------------
 	public void sendDont(int optionCode) throws IOException {
-		logger.debug("reject "+optionCode);
+		logger.log(Level.DEBUG,"reject "+optionCode);
 		if (realOut instanceof TelnetDebuggingOutputStream)
 			((TelnetDebuggingOutputStream)realOut).setInControlMode(true);
 		byte[] data = new byte[3];
@@ -96,7 +97,7 @@ public class TelnetOutputStream extends OutputStream {
 
 	//-----------------------------------------------------------------
 	public void sendWont(int optionCode) throws IOException {
-		logger.debug("reject (Wont) "+optionCode);
+		logger.log(Level.DEBUG,"reject (Wont) "+optionCode);
 		if (realOut instanceof TelnetDebuggingOutputStream)
 			((TelnetDebuggingOutputStream)realOut).setInControlMode(true);
 		byte[] data = new byte[3];

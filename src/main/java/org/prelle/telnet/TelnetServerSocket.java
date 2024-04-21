@@ -4,10 +4,11 @@
 package org.prelle.telnet;
 
 import java.io.IOException;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-import org.apache.log4j.Logger;
 import org.prelle.telnet.option.TelnetOption;
 
 /**
@@ -16,7 +17,7 @@ import org.prelle.telnet.option.TelnetOption;
  */
 public class TelnetServerSocket extends ServerSocket {
 
-    private final static Logger logger = Logger.getLogger("telnet.lvl3");
+    private final static Logger logger = System.getLogger("telnet.lvl3");
 
 	//-----------------------------------------------------------------
 	public TelnetServerSocket(int port) throws IOException {
@@ -35,15 +36,15 @@ public class TelnetServerSocket extends ServerSocket {
 	@Override
 	public Socket accept() throws IOException {
 		TelnetSocket ret = new TelnetSocket();
-		logger.debug("Waiting for new connections");
+		logger.log(Level.DEBUG,"Waiting for new connections");
 		implAccept(ret);
 
 		/*
 		 * Send all by default enabled variables
 		 */
-		logger.debug("Initialize options");
+		logger.log(Level.DEBUG,"Initialize options");
 		for (TelnetOption option : TelnetConfiguration.getKnownOptions()) {
-			logger.debug("Initialize "+option.getName());
+			logger.log(Level.DEBUG,"Initialize "+option.getName());
 			option.initialize(ret);
 		}
 		

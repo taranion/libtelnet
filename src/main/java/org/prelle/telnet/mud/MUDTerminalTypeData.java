@@ -1,7 +1,7 @@
 /**
  * 
  */
-package foo;
+package org.prelle.telnet.mud;
 
 /**
  * @author prelle

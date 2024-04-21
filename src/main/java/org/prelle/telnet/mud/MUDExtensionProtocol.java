@@ -1,27 +1,26 @@
 /**
  * 
  */
-package org.prelle.telnet.option;
+package org.prelle.telnet.mud;
 
 import java.io.IOException;
-import java.lang.System.Logger.Level;
 
 import org.prelle.telnet.DoVariable;
 import org.prelle.telnet.TelnetInputStream;
-import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetSocket;
 import org.prelle.telnet.WillVariable;
+import org.prelle.telnet.option.TelnetOption;
 
 /**
- * RFC 857
- * @see http://tools.ietf.org/html/rfc857
+ * See http://www.zuggsoft.com/zmud/msp.htm
+ * @see http://www.zuggsoft.com/zmud/msp.htm
  * @author prelle
  *
  */
-public class TelnetEcho extends TelnetOption {
+public class MUDExtensionProtocol extends TelnetOption {
 
-	public final static int    CODE = 1;
-	public final static String NAME = "ECHO";
+	private final static int    CODE = 91;
+	private final static String NAME = "MXP";
 
 	//-----------------------------------------------------------------
 	/**
@@ -57,7 +56,7 @@ public class TelnetEcho extends TelnetOption {
 	 */
 	@Override
 	public void initialize(TelnetSocket console) throws IOException {
-		// Not sending and not awaiting echo
+		requestUsage(console);
 	}
 
 	//-----------------------------------------------------------------
@@ -67,35 +66,6 @@ public class TelnetEcho extends TelnetOption {
 	@Override
 	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in)
 			throws IOException {
-	}
-
-	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.option.TelnetOption#requestUsage(org.prelle.telnet.TelnetSocket)
-	 */
-	public void requestUsage(TelnetSocket nvt) throws IOException {
-		logger.log(Level.DEBUG,"Suggest "+getName());
-		TelnetOutputStream out = (TelnetOutputStream) nvt.getOutputStream();
-		if (!nvt.isInClientMode()) {
-			nvt.getWillVariable(getCode()).setState(true);
-			out.sendWill(getCode());
-		} else {
-			nvt.getDoVariable(getCode()).setState(true);
-			out.sendDo(getCode());
-		}
-	}
-
-	//-----------------------------------------------------------------
-	public void requestStop(TelnetSocket nvt) throws IOException {
-		logger.log(Level.DEBUG,"Stop "+getName());
-		TelnetOutputStream out = (TelnetOutputStream) nvt.getOutputStream();
-		if (!nvt.isInClientMode()) {
-			nvt.getWillVariable(getCode()).setState(false);
-			out.sendWont(getCode());
-		} else {
-			nvt.getDoVariable(getCode()).setState(false);
-			out.sendDont(getCode());
-		}
 	}
 
 }

@@ -1,10 +1,11 @@
 /**
  * 
  */
-package foo;
+package org.prelle.telnet.mud;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.System.Logger.Level;
 
 import org.prelle.telnet.DoVariable;
 import org.prelle.telnet.TelnetInputStream;
@@ -76,7 +77,7 @@ public class MUDTerminalTypeStandard extends TelnetOption {
 	@Override
 	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in)
 			throws IOException {
-		logger.debug("performSubNegotiation for "+NAME);
+		logger.log(Level.DEBUG,"performSubNegotiation for "+NAME);
 		int sendOrIs = in.read();
 		
 		switch (sendOrIs) {
@@ -87,55 +88,55 @@ public class MUDTerminalTypeStandard extends TelnetOption {
 			while (true) {
 				int dat = in.read();
 				if (dat==IAC) {
-					logger.trace("SN: IAC");
+					logger.log(Level.TRACE,"SN: IAC");
 					break;
 				}
 				
-				logger.trace("SN: "+dat+"  ("+ (char)dat + ")");
+				logger.log(Level.TRACE,"SN: "+dat+"  ("+ (char)dat + ")");
 				buf.append( (char)dat );
 			}
 			int dat = in.read(); //SE
 			if (dat!=SE) {
-				logger.warn("Expected subnegotiation end, but found "+dat);
+				logger.log(Level.WARNING,"Expected subnegotiation end, but found "+dat);
 			}
-			logger.trace("SN: IAC");
+			logger.log(Level.TRACE,"SN: IAC");
 			
 			MUDTerminalTypeData data = (MUDTerminalTypeData) nvt.getOptionState(this);
 			switch (data.getState()) {
 			case CLIENT_NAME:
 				// Answer to first TTYPE SEND is a client name
 				data.setClientName(buf.toString());
-				logger.debug("MUD-Client: "+buf.toString());
+				logger.log(Level.DEBUG,"MUD-Client: "+buf.toString());
 				data.setState(RequestState.TERMINAL_TYPE);
 				requestNext(nvt);
 				return;
 			case TERMINAL_TYPE:
 				// Answer to second TTYPE SEND is a generic terminal type
 				data.setTerminalType(buf.toString());
-				logger.debug("Terminal-Type: "+buf.toString());
+				logger.log(Level.DEBUG,"Terminal-Type: "+buf.toString());
 				data.setState(RequestState.MUD_TERMINAL_TYPE);
 				requestNext(nvt);
 				return;
 			case MUD_TERMINAL_TYPE:
 				// Answer to third TTYPE SEND is a specific MUD terminal type
 				data.setMudTerminalType(buf.toString());
-				logger.debug("MUD-Terminal: "+buf.toString());
+				logger.log(Level.DEBUG,"MUD-Terminal: "+buf.toString());
 				data.setState(RequestState.UNKNOWN);
 				nvt.fireOptionDataChanged(this, data);
 				return;
 			default:
-				logger.warn("Don't know what to do with this response: "+data.getState());
+				logger.log(Level.WARNING,"Don't know what to do with this response: "+data.getState());
 			}
 		default:
-			logger.warn("Don't know what to do with sendOrIs="+sendOrIs);
+			logger.log(Level.WARNING,"Don't know what to do with sendOrIs="+sendOrIs);
 		}
 		
 	}
 
 	//-----------------------------------------------------------------
 	protected void optionEnabled(TelnetSocket nvt, boolean iAmInitiator) throws IOException {
-		logger.info(getName()+" enabled");
-		logger.debug("Request MUD terminal type");
+		logger.log(Level.INFO,getName()+" enabled");
+		logger.log(Level.DEBUG,"Request MUD terminal type");
 		((MUDTerminalTypeData)nvt.getOptionState(this)).setState(RequestState.CLIENT_NAME);
 		requestNext(nvt);
 	}

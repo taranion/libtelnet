@@ -5,6 +5,7 @@ package org.prelle.telnet.option;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.System.Logger.Level;
 
 import org.prelle.telnet.DoVariable;
 import org.prelle.telnet.TelnetConstants;
@@ -71,7 +72,7 @@ public class TerminalType extends TelnetOption {
 	@Override
 	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in)
 			throws IOException {
-		logger.debug("performSubNegotiation");
+		logger.log(Level.DEBUG,"performSubNegotiation");
 		in.setHigherLevelControl(true);
 		
 		int isOrSend = in.read();
@@ -84,13 +85,13 @@ public class TerminalType extends TelnetOption {
 				if (chr<240)
 					buf.append((char)chr);
 			} while (chr!=255);
-			logger.info("Terminal type = "+buf);
+			logger.log(Level.INFO,"Terminal type = "+buf);
 			
 			nvt.fireOptionDataChanged(this, buf.toString());
 			break;
 		case SEND:
 		default:
-			logger.warn("Not implemented: "+isOrSend);
+			logger.log(Level.WARNING,"Not implemented: "+isOrSend);
 		}
 
 		int se = in.read();
@@ -102,7 +103,7 @@ public class TerminalType extends TelnetOption {
 	@Override
 	protected void optionEnabled(TelnetSocket nvt, boolean iAmInitiator) throws IOException {
 		if (iAmInitiator) {
-			logger.debug("Requesting terminal type");
+			logger.log(Level.DEBUG,"Requesting terminal type");
 			OutputStream out = nvt.getOutputStream();
 			out.write(TelnetConstants.IAC);
 			out.write(TelnetConstants.SB);

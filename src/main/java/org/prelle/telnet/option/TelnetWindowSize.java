@@ -4,6 +4,7 @@
 package org.prelle.telnet.option;
 
 import java.io.IOException;
+import java.lang.System.Logger.Level;
 
 import org.prelle.telnet.DoVariable;
 import org.prelle.telnet.TelnetInputStream;
@@ -77,13 +78,13 @@ public class TelnetWindowSize extends TelnetOption {
 		int y2 = in.read();
 		int x = x1*256 + x2;
 		int y = y1*256 + y2;
-		logger.info("Terminal Width = "+ x+"*"+y);
+		logger.log(Level.INFO,"Terminal Width = "+ x+"*"+y);
 		
 //		in.readUntilSE();
 		in.read();
 		in.read();
 		in.setHigherLevelControl(false);
-		logger.debug("Terminal Width done");
+		logger.log(Level.DEBUG,"Terminal Width done");
 		
 		nvt.fireOptionDataChanged(this, new TelnetWindowSizeData(x, y));
 	}
