@@ -1,0 +1,195 @@
+<html lang='en'>
+	<head>
+		<title>MNES (Mud New Environ Standard)</title>
+		<link href="../protocols.css" rel="stylesheet" type="text/css">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta charset='utf-8'>
+		<meta name="description" content="The MNES (Mud New Environ Standard) specification">
+	</head>
+
+	<body>
+		<table width='100%' height='40' align='top'>
+			<tr>
+				<td width='143'></td>
+				<td width='70%' align='left' class='title'>MUD NEW-ENVIRON Standard</td>
+				<td>&nbsp;</td>
+			</tr>
+		</table>
+
+		<table width='135' align='left'>
+			<tr>
+				<td class='sidebar'>
+
+MNES<br>
+<a href="index.php#PROTOCOL">&bull; Protocol</a><br>
+<a href="index.php#LINKS">&bull; Links</a><br>
+<br>
+<br>
+<br>
+<br>
+<a href="https://tintin.mudhalla.net/protocols/eor">EOR</a><br>
+<a href="https://tintin.mudhalla.net/protocols/gmcp">GMCP</a><br>
+<a href="https://tintin.mudhalla.net/protocols/mccp">MCCP</a><br>
+<a href="https://tintin.mudhalla.net/protocols/mmcp">MMCP</a><br>
+MNES<br>
+<a href="https://tintin.mudhalla.net/protocols/msdp">MSDP</a><br>
+<a href="https://tintin.mudhalla.net/protocols/mslp">MSLP</a><br>
+<a href="https://tintin.mudhalla.net/protocols/mssp">MSSP</a><br>
+<a href="https://tintin.mudhalla.net/protocols/mtts">MTTS</a>				</td>
+			</tr>
+			<tr>
+				<td width='135' height='36' style='background-color:#040; border:1px solid #CC6;'>
+					<center><a href="https://mudhalla.net"><img src="https://mudhalla.net/mudhalla_logo.png" width="135" height="36" border="0" alt="MUDhalla is a website dedicated to multiplayer text adventure games, also known as MUDs." /></a></center>
+				</td>
+			</tr>
+		</table>
+
+
+		<table width='10' height='100%' align="left">
+			<tr>
+				<td></td>
+			</tr>
+		</table>
+
+		<table width='70%' align="left">
+
+<tr><td class='promo'><a name='STANDARD'></a></td></tr><tr><td></td></tr>
+<tr><td class='promo'>MUD servers often want to know the various capabilities of a Mud Client. While various methods exist there is no consistent nor guaranteed way to do so.</td></tr><tr><td></td></tr>
+<tr><td class='promo'>The <a href='../mtts/'>Mud Terminal Type Standard</a> seeks to address these issues by providing a transparant and straight forward standard for Mud Clients to communicate their capabilities. It does so by extending and standardizing <a href='https://tintin.mudhalla.net/rfc/rfc1091'>RFC1091</a> which describes the Telnet Terminal-Type Option.</td></tr><tr><td></td></tr>
+<tr><td class='promo'>MTTS is limited in scope by design. MNES (Mud New Environment Standard) seeks to supplement MTTS by providing a straightforward way to use the NEW-ENVIRON telnet option to exchange and update various client and server settings.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promobar' style='line-height:24px;'><strong><big>The NEW-ENVIRON Protocol</big></strong></td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'>NEW-ENVIRON is implemented as a Telnet option <a href='https://tintin.mudhalla.net/rfc/rfc854'>RFC854</a>, <a href='https://tintin.mudhalla.net/rfc/rfc855'>RFC855</a>. The server and client negotiate the use of the NEW-ENVIRON option as they would any other telnet option as detailed in <a href='https://tintin.mudhalla.net/rfc/rfc1572'>RFC1572</a>. Once agreement has been reached on the use of the option, option sub-negotiation is used to exchange information between the server and client.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><strong><big>Server Commands</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan='1'><hr noshade color='#2B3856'></td></tr><tr><td></td></tr>
+<tr><td class='premo'>IAC DO &nbsp; NEW-ENVIRON &nbsp;&nbsp; Indicates the server wants to exchange NEW-ENVIRON variables.</td></tr><tr><td></td></tr>
+<tr><td class='premo'>IAC DONT NEW-ENVIRON &nbsp;&nbsp; Indicates the server doesn't want to exchange NEW-ENVIRON variables.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><strong><big>Client Commands</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan='1'><hr noshade color='#2B3856'></td></tr><tr><td></td></tr>
+<tr><td class='premo'>IAC WILL NEW-ENVIRON &nbsp;&nbsp; Indicates the client will exchange NEW-ENVIRON variables.</td></tr><tr><td></td></tr>
+<tr><td class='premo'>IAC WONT NEW-ENVIRON &nbsp;&nbsp; Indicates the client will not exchange NEW-ENVIRON variables.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><strong><big>Handshake</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan='1'><hr noshade color='#2B3856'></td></tr><tr><td></td></tr>
+<tr><td class='promo'>When a client connects to a NEW-ENVIRON enabled server the server should send IAC DO NEW-ENVIRON. The client should respond with either IAC WILL NEW-ENVIRON or IAC WONT NEW-ENVIRON. Once the server receives IAC WILL NEW-ENVIRON the server can send NEW-ENVIRON sub-negotiations and the client can respond to these.</td></tr><tr><td></td></tr>
+<tr><td class='promo'>The client should never initiate a negotiation, in the case this does happen the server should abide by the state change. To avoid trigger loops the server should not respond to negotiations from the client, unless it correctly implements the Q method in <a href='https://tintin.mudhalla.net/rfc/rfc1143'>RFC 1143</a>.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><strong><big>Disabling NEW-ENVIRON</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan='1'><hr noshade color='#2B3856'></td></tr><tr><td></td></tr>
+<tr><td class='promo'>When a typical MUD server performs a copyover it may lose all previously exchanged NEW-ENVIRON data. If this is the case, before the actual copyover, the MUD server should send IAC DONT NEW-ENVIRON, the client in turn should fully disable and reset its NEW-ENVIRON state. After the copyover has finished the server and client behave as if the client has just connected, so the server should send IAC DO NEW-ENVIRON.</td></tr><tr><td></td></tr>
+<tr><td class='promo'>When a typical MUD client loses its link and reconnects it loses all previously exchanged MSDP data. The server should reset its NEW-ENVIRON state and re-negotiate NEW-ENVIRON whenever a client reconnects.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><strong><big>NEW-ENVIRON definitions</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan='1'><hr noshade color='#2B3856'></td></tr><tr><td></td></tr>
+<tr><td class='premo'><pre>
+NEW-ENVIRON      39<br>
+IS                0
+SEND              1
+INFO              2<br>
+VAR               0
+VAL               1
+ESC               2
+USERVAR           3</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><strong><big>Example NEW-ENVIRON handshake</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan='1'><hr noshade color='#2B3856'></td></tr><tr><td></td></tr>
+<tr><td class='premo'><pre wrap>
+<b>server - IAC DO NEW-ENVIRON</b><br>
+client - IAC WILL NEW-ENVIRON<br>
+<b>server - IAC   SB NEW-ENVIRON SEND VAR "CLIENT_NAME" VAR "CLIENT_VERSION" IAC SE</b><br>
+client - IAC   SB NEW-ENVIRON IS   VAR "CLIENT_NAME" VAL "TINTIN++" IAC SE<br>
+client - IAC   SB NEW-ENVIRON IS   VAR "CLIENT_VERSION" VAL "2.01.7" IAC SE<br>
+<b>server - IAC   SB NEW-ENVIRON SEND VAR "CHARSET" IAC SE</b><br>
+client - IAC   SB NEW-ENVIRON IS    VAR "CHARSET" VAL "ASCII" IAC SE<br.
+</pre></td></tr><tr><td></td></tr>
+<tr><td class='promo'>The quote characters mean that the encased word is a string, the quotes themselves should not be sent.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><strong><big>Variables and Values</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan='1'><hr noshade color='#2B3856'></td></tr><tr><td></td></tr>
+<tr><td class='promo'>A server can request the client to send variables with a typical telnet sub-negotiation having the format: IAC SB NEW-ENVIRON SEND VAR &lt;VARIABLE&gt; IAC SE. For ease of parsing, variables should solely exist of upper case letters and underscores, while values cannot contain the VAR, VAL, ESC, USERVAR, or IAC byte (0, 1, 2, 3, 255). A server can request several variables at once. For example:</td></tr><tr><td></td></tr>
+<tr><td class='premo'>IAC SB NEW-ENVIRON IS VAR "CHARSET" VAR "IPADDRESS" IAC SE</td></tr><tr><td></td></tr>
+<tr><td class='promo'>The quote characters mean that the encased word is a string, the quotes themselves should not be sent.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'>Once the server has requested the client to send a variable the client should answer using the format: IAC SB NEW-ENVIRON IS VAR &lt;VARIABLE&gt; VAL &lt;VALUE&gt; IAC SE. At anytime the client can update the variable using INFO instead of IS.</td></tr><tr><td></td></tr>
+<tr><td class='premo'><pre wrap>
+server - IAC DO NEW-ENVIRON<br>
+client - IAC WILL NEW-ENVIRON<br>
+client - IAC   SB NEW-ENVIRON IS   VAR "CHARSET" VAL "ASCII" IAC SE<br>
+client - IAC   SB NEW-ENVIRON INFO VAR "CHARSET" VAL "UTF-8" IAC SE<br>
+</pre></td></tr><tr><td></td></tr>
+<tr><td class='promo'>The original NEW-ENVIRON option allows for several ways to request all variables and user variables at once. Servers supporting MNES should either use the IAC SB NEW-ENVIRON SEND VAR IAC SE or IAC SB NEW-ENVIRON SEND IAC SE sequence to request all variables, and clients should handle these sequences properly.</td></tr><tr><td></td></tr>
+<tr><td class='premo'><pre wrap>
+server - IAC DO NEW-ENVIRON<br>
+client - IAC WILL NEW-ENVIRON<br>
+server - IAC   SB NEW-ENVIRON SEND VAR IAC SE<br>
+client - IAC   SB NEW-ENVIRON IS   VAR "CLIENT_NAME" VAL "TINTIN++" VAR "CHARSET" VAL "UTF-8" IAC SE<br>
+</pre></td></tr><tr><td></td></tr>
+<tr><td class='promo'><a name='VARIABLES'></a></td></tr><tr><td></td></tr>
+<tr><td class='promobar' style='line-height:24px;'><strong><big>MNES NEW-ENVIRON Variables</big></strong></td></tr><tr><td></td></tr>
+<tr><td class='promo'>These variables are standardized for MUDs wanting to implement NEW-ENVIRON using MNES. The number of variables is intentionally kept to a bare minimum.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><pre wrap>
+"CHARSET"              Character set.
+</pre></td></tr><tr><td></td></tr>
+<tr><td class='promo'>The CHARSET value could be one of ASCII, BIG5, CP437, CP949, CP1251, EUC-KR, GB18030, ISO-8859-1, ISO-8859-2, KOI8-R, UTF-8. It's generally not feasible for a MUD server to force the client to use a specific character set. The MNES CHARSET value should reflect the current character set mode of the client. See <a href='https://linux.die.net/man/7/charsets'>man charsets</a> for reference.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><pre wrap>
+"CLIENT_NAME"          Name of the client.
+"CLIENT_VERSION"       Version of the client.</pre></td></tr><tr><td></td></tr>
+<tr><td class='promo'>The CLIENT_NAME and CLIENT_VERSION variables shouldn't require additional explanation.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><pre wrap>
+"IPADDRESS"            The client's IP address.
+</pre></td></tr><tr><td></td></tr>
+<tr><td class='promo'>It's suggested for proxies adding MTTS support to also report the client's real IP address. This allows a MUD to ban specific users without having to ban an entire proxy.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><pre wrap>
+"MTTS"                 bitvector.
+</pre></td></tr><tr><td></td></tr>
+<tr><td class='promo'>The <a href='../mtts'>MTTS</a> bitvector that is set by the client should reflect the current MTTS state. See the MTTS specification for more information.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><pre wrap>
+"TERMINAL_TYPE"        name.
+</pre></td></tr><tr><td></td></tr>
+<tr><td class='promo'>The terminal type that is returned by the client should reflect the terminal type as described in the <a href='../mtts'>MTTS</a> specification.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><a name='LINKS'></a></td></tr><tr><td></td></tr>
+<tr><td class='promobar' style='line-height:24px;'><strong><big>Links</strong</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'>If you have any comments you can email me at mudclient@gmail.com.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><strong><big>Clients</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan='1'><hr noshade color='#2B3856'></td></tr><tr><td></td></tr>
+<tr><td class='promo'><a href='https://axmud.sourceforge.io'>Axmud</a></td></tr><tr><td></td></tr>
+<tr><td class='promo'><a href='https://tintin.mudhalla.net'>TinTin++</a></td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><strong><big>Codebases</big></strong></td></tr><tr><td></td></tr>
+<tr><td class='promo'><a href='https://github.com/scandum/lowlands'>Lowlands</a> - MNES support for the IPADRESS variable using MTH 1.5. Based on DikuMUD / MrMud.</td></tr><tr><td></td></tr>
+<tr><td colspan='1'><hr noshade color='#2B3856'></td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><strong><big>Discussion</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan='1'><hr noshade color='#2B3856'></td></tr><tr><td></td></tr>
+<tr><td class='promo'><a href='https://www.reddit.com/r/MUDhalla'>MNES Discussion Reddit board</a></td></tr><tr><td></td></tr>
+<tr><td class='promo'><a href='https://discord.gg/m3wZeSq'>MNES Discussion Discord channel</a></td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><strong><big>Extensions</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan='1'><hr noshade color='#2B3856'></td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><strong><big>Servers</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan='1'><hr noshade color='#2B3856'></td></tr><tr><td></td></tr>
+<tr><td class='promo'>sotmud.slackhalla.org:6969</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><strong><big>Snippets</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan='1'><hr noshade color='#2B3856'></td></tr><tr><td></td></tr>
+<tr><td class='promo'><a href='https://github.com/scandum/mth'>Scandum's MUD Telopt Handler</a> - Handles CHARSET, EOR, MCCP2, MCCP3, MSDP, MSDP over GMCP, MSSP, MTTS, NAWS, NEW-ENVIRON, TTYPE, and xterm 256 colors.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br><br><br><br><br><br><br><br><br><br><br><br></td></tr><tr><td></td></tr>
+
+
+		</table>
+	</body>
+
+</html>

@@ -15,11 +15,16 @@ import org.prelle.telnet.TelnetSocket;
  * @author prelle
  *
  */
-public class MUDSoundProtocol extends TelnetOptionHandler {
+public class MUDEndOfRecord extends TelnetOptionHandler {
 
 	//-----------------------------------------------------------------
-	public MUDSoundProtocol() {
-		super(90, "MSP");
+	public MUDEndOfRecord() {
+		super(25,"EOR");
+	}
+
+	//-----------------------------------------------------------------
+	public MUDEndOfRecord(int code, String name) {
+		super(code,name);
 	}
 
 	//-----------------------------------------------------------------
@@ -28,7 +33,7 @@ public class MUDSoundProtocol extends TelnetOptionHandler {
 	 */
 	@Override
 	public void initialize(TelnetSocket console) throws IOException {
-		requestUsage(console);
+//		requestUsage(console);
 	}
 
 	//-----------------------------------------------------------------

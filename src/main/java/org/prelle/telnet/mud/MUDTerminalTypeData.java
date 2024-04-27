@@ -3,20 +3,50 @@
  */
 package org.prelle.telnet.mud;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * @author prelle
  *
  */
 public class MUDTerminalTypeData {
+	
+	public static enum Capability {
+		ANSI(1),
+		VT100(2),
+		UTF8(4),
+		;
+		int bit;
+		Capability(int bit) {
+			this.bit = bit;
+		}
+		public int getBit() { return bit; }
+	}
 
 	private MUDTerminalTypeStandard.RequestState state;
 	private String clientName;
 	private String terminalType;
+	/**
+	 * 
+	 *       1 "ANSI"              Client supports all common ANSI color codes.
+	 *       2 "VT100"             Client supports all common VT100 codes.
+	 *       4 "UTF-8"             Client is using UTF-8 character encoding.
+	 *       8 "256 COLORS"        Client supports all 256 color codes.
+	 *      16 "MOUSE TRACKING"    Client supports xterm mouse tracking.
+	 *      32 "OSC COLOR PALETTE" Client supports OSC and the OSC color palette.
+	 *      64 "SCREEN READER"     Client is using a screen reader.
+	 *     128 "PROXY"             Client is a proxy allowing different users to connect from the same IP address.
+	 *     256 "TRUECOLOR"         Client supports truecolor codes using semicolon notation.
+	 *     512 "MNES"              Client supports the Mud New Environment Standard for information exchange.
+	 *    1024 "MSLP"              Client supports the Mud Server Link Protocol for clickable link handling.
+	 *    2048 "SSL"               Client supports SSL for data encryption, preferably TLS 1.3 or higher.       
+	 */
 	private String mudTerminalType;
 	
 	//-----------------------------------------------------------------
 	public String toString() {
-		return String.format("Client: %s,  Terminal: %s, MTT: %s", clientName, terminalType, mudTerminalType);
+		return String.format("Client: %s,  Terminal: %s, MTT: %s = %s", clientName, terminalType, mudTerminalType, getCapabilities());
 	}
 	
 	//-----------------------------------------------------------------
@@ -68,11 +98,29 @@ public class MUDTerminalTypeData {
 	public String getMudTerminalType() {
 		return mudTerminalType;
 	}
+	
 	//-----------------------------------------------------------------
 	/**
 	 * @param mudTerminalType the mudTerminalType to set
 	 */
 	public void setMudTerminalType(String mudTerminalType) {
 		this.mudTerminalType = mudTerminalType;
+	}
+	
+	//-----------------------------------------------------------------
+	public List<Capability> getCapabilities() {
+		if (!mudTerminalType.startsWith("MTTS "))
+			return List.of();
+		List<Capability> ret = new ArrayList<MUDTerminalTypeData.Capability>();
+		try {
+			int vector = Integer.parseInt(mudTerminalType.substring(5));
+			for (Capability cap : Capability.values()) {
+				if ((vector & cap.getBit())>0)
+					ret.add(cap);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return ret;
 	}
 }

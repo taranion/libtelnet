@@ -3,6 +3,7 @@
  */
 package org.prelle.telnet;
 
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.System.Logger;
@@ -14,20 +15,27 @@ import org.prelle.telnet.TelnetConstants.ControlCode;
  * @author prelle
  *
  */
-public class TelnetInputStream extends InputStream {
+public class TelnetInputStream extends FilterInputStream {
 
 	private final static Logger logger = System.getLogger("telnet.lvl2");
 
-	private InputStream in;
 	private TelnetStreamListener listener;
 	private boolean higherLevelControl = false;
+
+	/** If stickyCRLF is true, then we're a machine, like an IBM PC,
+    where a Newline is a CR followed by LF.  On UNIX, this is false
+    because Newline is represented with just a LF character. */
+	boolean         stickyCRLF = false;
+	boolean         seenCR = false;
+
+	public boolean  binaryMode = false;
 
 	//-----------------------------------------------------------------
 	/**
 	 */
 	public TelnetInputStream(TelnetStreamListener list, InputStream in) {
+		super(in);
 		this.listener = list;
-		this.in = in;
 	}
 
 	//-----------------------------------------------------------------
@@ -51,7 +59,7 @@ public class TelnetInputStream extends InputStream {
 			int ret = in.read();
 			if (in instanceof TelnetDebuggingInputStream)
 				((TelnetDebuggingInputStream)in).setInControlMode(false);
-			logger.log(Level.DEBUG,"Read in higher level control "+ret);
+			logger.log(Level.TRACE,"Read in higher level control "+ret);
 			return ret;
 		}
 		
@@ -60,9 +68,43 @@ public class TelnetInputStream extends InputStream {
 			if (in instanceof TelnetDebuggingInputStream)
 				((TelnetDebuggingInputStream)in).setInControlMode(false);
 			int data = in.read();
+			logger.log(Level.TRACE, "RCV {0} ({1})", data, (char)data);
 
-			if (data<240)
+			if (data<240) {
+
+		        /* If last time we determined we saw a CRLF pair, and we're
+		           not turning that into just a Newline (that is, we're
+		           stickyCRLF), then return the LF part of that sticky
+		           pair now. */
+
+		        if (seenCR) {
+		            seenCR = false;
+		            return '\n';
+		        }
+
+		        if (data== '\r') {    /* CR */
+		        	data = in.read();
+					logger.log(Level.TRACE, "RCV2 {0} ({1})", data, (char)data);
+		            switch (data) {
+		            default:
+		            case -1:                        /* this is an error */
+		            	throw new IOException("misplaced CR in input");
+
+		            case 0:                         /* NUL - treat CR as CR */
+		                return '\r';
+
+		            case '\n':                      /* CRLF - treat as NL */
+		                if (stickyCRLF) {
+		                    seenCR = true;
+		                    return '\r';
+		                } else {
+							logger.log(Level.TRACE, "RCV2 send NL");
+		                    return '\n';
+		                }
+		            }
+		        }
 				return data;
+			}
 			
 			// Found a control code
 			ControlCode code = ControlCode.getCodeFor(data);
@@ -80,14 +122,42 @@ public class TelnetInputStream extends InputStream {
 		} while (true);
 	}
 
-	//-----------------------------------------------------------------
-	/* (non-Javadoc)
-	 * @see java.io.InputStream#read()
-	 */
-	@Override
-	public int read(byte[] b) throws IOException {
-		return in.read(b);
-	}
+//	//-----------------------------------------------------------------
+//	/* (non-Javadoc)
+//	 * @see java.io.InputStream#read()
+//	 */
+//	@Override
+//	public int read(byte[] b) throws IOException {
+//		return in.read(b);
+//	}
+
+    /** read into a byte array */
+    public int read(byte bytes[]) throws IOException {
+        return read(bytes, 0, bytes.length);
+    }
+
+    /**
+     * Read into a byte array at offset <i>off</i> for length <i>length</i>
+     * bytes.
+     */
+    @Override
+    public int read(byte bytes[], int off, int length) throws IOException {
+        if (binaryMode)
+            return super.read(bytes, off, length);
+
+        int c;
+        int offStart = off;
+
+        while (--length >= 0) {
+            c = read();
+            if (c == -1)
+                break;
+            if (c == '\n')
+            	break;
+            bytes[off++] = (byte)c;
+        }
+        return (off > offStart) ? off - offStart : -1;
+    }
 
 	//-----------------------------------------------------------------
 	/* (non-Javadoc)

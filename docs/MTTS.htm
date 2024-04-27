@@ -1,0 +1,230 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head>
+		<title>MTTS (Mud Terminal Type Standard)</title>
+		<link href="MTTS-Dateien/protocols.css" rel="stylesheet" type="text/css" media="">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+		<meta name="description" content="MTTS (Mud Terminal Type Standard) specification.">
+	</head>
+
+	<body>
+		<table width="100%" height="40" align="top">
+			<tbody><tr>
+				<td width="143"></td>
+				<td width="70%" align="left" class="title">Mud Terminal Type Standard</td>
+				<td>&nbsp;</td>
+			</tr>
+		</tbody></table>
+
+		<table width="135" align="left">
+			<tbody><tr>
+				<td class="sidebar">
+
+MTTS<br>
+<a href="https://mudhalla.net/tintin/protocols/mtts/index.php#PROTOCOL">• Protocol</a><br>
+<a href="https://mudhalla.net/tintin/protocols/mtts/index.php#LINKS">• Links</a><br>
+<br>
+<br>
+<br>
+<br>
+<a href="https://tintin.mudhalla.net/protocols/eor">EOR</a><br>
+<a href="https://tintin.mudhalla.net/protocols/gmcp">GMCP</a><br>
+<a href="https://tintin.mudhalla.net/protocols/mccp">MCCP</a><br>
+<a href="https://tintin.mudhalla.net/protocols/mmcp">MMCP</a><br>
+<a href="https://tintin.mudhalla.net/protocols/mnes">MNES</a><br>
+<a href="https://tintin.mudhalla.net/protocols/msdp">MSDP</a><br>
+<a href="https://tintin.mudhalla.net/protocols/mslp">MSLP</a><br>
+<a href="https://tintin.mudhalla.net/protocols/mssp">MSSP</a><br>
+MTTS				</td>
+			</tr>
+			<tr>
+				<td width="135" height="36" style="background-color:#040; border:1px solid #CC6;">
+					<center><a href="https://mudhalla.net/"><img src="MTTS-Dateien/mudhalla_logo.png" width="135" height="36" border="0" alt="MUDhalla is a website dedicated to multiplayer text adventure games, also known as MUDs."></a></center>
+				</td>
+			</tr>
+		</tbody></table>
+
+
+		<table width="10" height="100%" align="left">
+			<tbody><tr>
+				<td></td>
+			</tr>
+		</tbody></table>
+
+		<table width="70%" align="left">
+
+<tbody><tr><td class="promo"><a name="STANDARD"></a></td></tr><tr><td></td></tr>
+<tr><td class="promo">MUD servers often want to know the various 
+capabilities of a Mud Client. While various methods exist there is no 
+consistent nor guaranteed way to do so.</td></tr><tr><td></td></tr>
+<tr><td class="promo">The Mud Terminal Type Standard seeks to address 
+these issues by providing a transparant and straight forward standard 
+for Mud Clients to communicate their terminal capabilities. It does so 
+by extending and standardizing RFC1091 which describes the Telnet 
+Terminal-Type Option.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promobar" style="line-height:24px;"><strong><big>The TTYPE Protocol</big></strong></td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo">TTYPE is implemented as a Telnet option <a href="https://tintin.mudhalla.net/rfc/rfc854">RFC854</a>, <a href="https://tintin.mudhalla.net/rfc/rfc855">RFC855</a>. The server and client negotiate the use of the TTYPE option as they would any other telnet option as detailed in <a href="https://tintin.mudhalla.net/rfc/rfc1091">RFC1091</a>.
+ Once agreement has been reached on the use of the option, option 
+sub-negotiation is used to exchange information between the server and 
+client.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Server Commands</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="premo">IAC DO &nbsp; TTYPE &nbsp;&nbsp; Indicates the server wants to receive TTYPE information.</td></tr><tr><td></td></tr>
+<tr><td class="premo">IAC DONT TTYPE &nbsp;&nbsp; Indicates the server wants to discontinue receiving TTYPE information.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Client Commands</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="premo">IAC WILL TTYPE &nbsp;&nbsp; Indicates the client will send TTYPE information.</td></tr><tr><td></td></tr>
+<tr><td class="premo">IAC WONT TTYPE &nbsp;&nbsp;  Indicates the client will not send TTYPE information.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Handshake</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo">When a client connects to a TTYPE enabled server 
+the server should send IAC DO TTYPE. The client should respond with 
+either IAC WILL TTYPE or IAC WONT TTYPE. Once the server receives IAC 
+WILL TTYPE the client and the server can send TTYPE sub-negotiations.</td></tr><tr><td></td></tr>
+<tr><td class="promo">The client should never initiate a negotiation, in
+ the case this does happen the server should abide by the state change. 
+To avoid trigger loops the server should not respond to negotiations 
+from the client, unless it correctly implements the Q method in <a href="https://tintin.mudhalla.net/rfc/rfc1143">RFC 1143</a>.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Disabling TTYPE</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo">When a typical MUD server performs a copyover it 
+loses all previously exchanged TTYPE data. If this is the case, before 
+the actual copyover, the MUD server should send IAC DONT TTYPE, the 
+client in turn should fully disable and reset its TTYPE state. After the
+ copyover has finished the server and client behave as if the client has
+ just connected, so the server should send IAC DO TTYPE.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>TTYPE definitions</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="premo"><pre>TTYPE            24<br><br>IS                0<br>SEND              1<br></pre></td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Example TTYPE handshake</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="premo"><pre wrap="">server - IAC DO TTYPE<br>client - IAC WILL TTYPE<br>server - IAC   SB TTYPE SEND IAC SE<br>client - IAC   SB TTYPE IS   "TINTIN++" IAC SE<br>server - IAC   SB TTYPE SEND IAC SE<br>client - IAC   SB TTYPE IS   "XTERM" IAC SE<br>server - IAC   SB TTYPE SEND IAC SE<br>client - IAC   SB TTYPE IS   "MTTS 137" IAC SE<br>server - IAC   SB TTYPE SEND IAC SE<br>client - IAC   SB TTYPE IS   "MTTS 137" IAC SE<br></pre></td></tr><tr><td></td></tr>
+<tr><td class="promo">The quote characters mean that the encased word is a string, the quotes themselves should not be send.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Mud Client Name</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo">As RFC1091 details the server can request TTYPE 
+information using sub-negotiations. On the first TTYPE SEND request the 
+client should return its name, preferably in all caps. Appending the 
+client version is optional.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Mud Client Terminal Type</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo">On the second TTYPE SEND request the client should
+ return a terminal type, preferably in all caps. Console clients should 
+report the name of the terminal emulator, other clients should report 
+one of the four most generic terminal types.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><table border="0">
+		<tbody><tr> <td width="50">&nbsp;</td> <td width="100">"DUMB"</td>   <td>Terminal has no ANSI color or VT100 support.</td></tr>
+		<tr> <td width="50">&nbsp;</td> <td width="100">"ANSI"</td>   <td>Terminal supports the common <a href="https://mudhalla.net/tintin/info/ansicolor">ANSI color</a> codes. Supporting blink and underline is optional.</td></tr>
+		<tr> <td width="50">&nbsp;</td> <td width="100">"VT100"</td>  <td>Terminal supports most <a href="https://mudhalla.net/tintin/info/vt100">VT100</a> codes and ANSI color codes.</td></tr>
+		<tr> <td width="50">&nbsp;</td> <td width="100">"XTERM"</td>  <td>Terminal supports all VT100 and ANSI color codes, <a href="https://mudhalla.net/tintin/info/256color">256 colors</a>, mouse tracking, and all commonly used <a href="https://mudhalla.net/tintin/info/xterm">xterm console codes</a>.</td></tr>
+		</tbody></table></td></tr><tr><td></td></tr>
+<tr><td class="promo">If 256 color detection for non MTTS compliant 
+servers is a must it's an option to report "ANSI-256COLOR", 
+"VT100-256COLOR", or "XTERM-256COLOR". If -TRUECOLOR is used to indicate
+ <a href="https://mudhalla.net/tintin/info/truecolor">truecolor</a> support the client should also support 256 colors.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Mud Terminal Type Standard</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo">On the third TTYPE SEND request the client should 
+return MTTS followed by a bitvector. The bit values and their names are 
+defined below.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><pre wrap="">           1 "ANSI"              Client supports all common <a href="https://mudhalla.net/tintin/info/ansicolor">ANSI color</a> codes.
+           2 "VT100"             Client supports all common <a href="https://mudhalla.net/tintin/info/vt100">VT100</a> codes.
+           4 "UTF-8"             Client is using UTF-8 character encoding.
+           8 "256 COLORS"        Client supports all <a href="https://mudhalla.net/tintin/info/256color">256 color</a> codes.
+          16 "MOUSE TRACKING"    Client supports xterm mouse tracking.
+          32 "OSC COLOR PALETTE" Client supports <a href="https://mudhalla.net/tintin/info/xterm#OSC">OSC</a> and the <a href="https://mudhalla.net/tintin/info/ansicolor#PALETTE">OSC color palette</a>.
+          64 "SCREEN READER"     Client is using a screen reader.
+         128 "PROXY"             Client is a proxy allowing different users to connect from the same IP address.
+         256 "TRUECOLOR"         Client supports <a href="https://mudhalla.net/tintin/info/truecolor">truecolor</a> codes using semicolon notation.
+         512 "MNES"              Client supports <a href="https://mudhalla.net/tintin/protocols/mnes/">the Mud New Environment Standard</a> for information exchange.
+        1024 "MSLP"              Client supports <a href="https://mudhalla.net/tintin/protocols/mslp/">the Mud Server Link Protocol</a> for clickable link handling.
+        2048 "SSL"               Client supports SSL for data encryption, preferably TLS 1.3 or higher.
+         </pre></td></tr><tr><td></td></tr>
+<tr><td class="promo">The client should add up the numbers of all 
+supported terminal capabilities and print it as ASCII in decimal 
+notation. In the case that a client supports ANSI, UTF-8, as well as 256
+ COLORS, it should respond with "MTTS 13", which is the sum of 1, 4, and
+ 8. The reporting of UTF-8 should be implemented as a user setting, 
+unless the client is certain that a Unicode font is being used.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Cycling</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo">RFC1091 allows for cycling through a list of 
+terminal types in order to select one. Implementing this behavior is 
+optional, but the client must properly report the end of the cycle.</td></tr><tr><td></td></tr>
+<tr><td class="promo">At the fourth TTYPE SEND requests the client 
+should repeat the previous response, reporting MTTS followed by a 
+bitvector. Receiving the same terminal type twice indicates to the 
+server that the end of the list of available terminal types has been 
+reached. If the server sends additional requests the client can either 
+continue to respond with MTTS &lt;bitvector&gt;, reset its cycling state
+ to the initial state and start over, or ignore the request.</td></tr><tr><td></td></tr>
+<tr><td class="promo">If the server sends IAC DONT TTYPE the client's 
+cycling state should be reset to the initial state, as if the client 
+just connected to the server. This behavior allows recovering from a 
+copyover.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Proxies</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo">It's suggested for proxies adding MTTS support to also implement the NEW-ENVIRON telnet option as per <a href="https://tintin.mudhalla.net/rfc/rfc1572">RFC1572</a>.
+ Using the NEW-ENVIRON option the server can send: IAC SB NEW_ENVIRON 
+SEND VAR "IPADDRESS" IAC SE. When receiving this send request the proxy 
+should respond with: IAC SB NEW_ENVIRON IS VAR "IPADDRESS" VALUE 
+"&lt;user's ip address&gt;" IAC SE. See the <a href="https://mudhalla.net/tintin/protocols/mnes/">MNES</a> specification for more information.</td></tr><tr><td></td></tr>
+<tr><td class="promo">The quote characters mean that the encased word is a string, the quotes themselves should not be send.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><a name="LINKS"></a></td></tr><tr><td></td></tr>
+<tr><td class="promobar" style="line-height:24px;"><strong><big>Links</big></strong></td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo">If you have any comments you can email me at mudclient@gmail.com.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Clients</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo"><a href="https://axmud.sourceforge.io/">Axmud</a></td></tr><tr><td></td></tr>
+<tr><td class="promo"><a href="http://mudportal.com/">MUD Portal</a> - Also supports NEW-ENVIRON IPADDRESS reporting.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><a href="http://http//www.gammon.com.au">MUSHclient</a></td></tr><tr><td></td></tr>
+<tr><td class="promo"><a href="https://tintin.mudhalla.net/">TinTin++ Mud Client</a></td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Codebases</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo"><a href="https://github.com/scandum/lowlands">Lowlands</a> - Rudimentary MTTS detection and utilization</td></tr><tr><td></td></tr>
+<tr><td class="promo"><a href="https://github.com/scandum/nekkidmud">NekkidMUD</a> - MTTS detection.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><a href="https://code.google.com/p/zetamuck">ZetaMUCK</a> - MTTS detection and utilization of 16/256 colors and UTF-8.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><a href="http://www.evennia.com/">Evennia</a> - MTTS detection and utilization of 16/256 colors.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><a href="https://github.com/scandum/wickedmud">WickedMUD</a> - MTTS detection.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Discussion</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo"><a href="https://discord.gg/m3wZeSq">MUDhalla Discord channel for TELNET related discussion</a></td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Extensions</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Servers</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo">
+		lolamud.net:6969<br>
+		</td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Snippets</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo"><a href="https://github.com/scandum/mth">Scandum's MUD Telopt Handler</a> - Handles CHARSET, EOR, MCCP2, MCCP3, MSDP, MSDP over GMCP, MSSP, MTTS, NAWS, NEW-ENVIRON, TTYPE, and xterm 256 colors.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><br><br><br><br><br><br><br><br><br><br><br><br></td></tr><tr><td></td></tr>
+
+
+		</tbody></table>
+	
+
+
+</body></html>

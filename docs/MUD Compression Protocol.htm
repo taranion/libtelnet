@@ -1,0 +1,123 @@
+<html>
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=windows-1252">
+<meta name="GENERATOR" content="Microsoft FrontPage 4.0">
+<meta name="ProgId" content="FrontPage.Editor.Document">
+<title>MUD Compression Protocol</title>
+<link rel="stylesheet" type="text/css" href="../common/master.css">
+</head>
+
+<body>
+<!--#include virtual="/common/head.htm" -->
+<p>(<b>Note</b>: This was taken from the <a href="http://abandoned.org/nemon/compress/protocol.html"><font color="blue">abandoned.org/nemon/compress/protocol.html</font></a>
+page.&nbsp; This page no longer seems to exist, so I wanted to preserve the spec
+here.&nbsp; --<i>Zugg.<br>
+</i>Original page now at: <font SIZE="2"><a href="http://www.randomly.org/projects/MCCP/">http://www.randomly.org/projects/MCCP/</a></font>)</p>
+<h1>The Mud Client Compression Protocol - Specification - Version 2</h1>
+<ul>
+  <li>2000/05/30: Version 2: introduced COMPRESS2 to fix the missing IAC on the
+    option subnegotiation sequence for COMPRESS.</li>
+</ul>
+<p>This document describes version 2 of the protocol, using the COMPRESS2
+option. An earlier version described a protocol using the COMPRESS option --
+this is referred to as the version 1 protocol below.
+<p>The protocol used by mcclient is based on 'telnet' option negotiation. See
+RFCs <a href="http://www.freesoft.org/CIE/RFC/854/index.htm">854</a> and <a href="http://www.freesoft.org/CIE/RFC/855/index.htm">855</a>
+for an overview of the mechanism used.
+<p>Compression is currently unidirectional - only output from the mud server is
+compressed. This simplifies the implementation, and also avoids potential
+problems with hostile clients sending data intended to cause problems (via
+crashing or excessive memory/cpu use) with the decompressor. The compressor is
+entirely controlled by the server. While attacks on the client are potentially
+possible, this seems less of a problem as the client is not a shared resource.
+<p>Servers supporting version 2 (this version) of the protocol should indicate
+they support it by offering the COMPRESS2 option (number 86): <code><em>IAC WILL
+COMPRESS2</em></code>. They may also optionally offer the older version 1 option
+(number 85) to support older clients: <code><em>IAC WILL COMPRESS</em></code>.
+Servers should offer COMPRESS2 before COMPRESS to allow newer clients to support
+any extra features added to COMPRESS2 in the future while still supporting
+COMPRESS.
+<p>Clients should respond to the COMPRESS2 option with <code><em>IAC DO
+COMPRESS2</em></code> if they want the server to enable compression. To support
+older servers, clients may respond to the COMPRESS option with <code><em>IAC DO
+COMPRESS</em></code>, although it is recommended that the COMPRESS option is
+refused with <code><em>IAC DONT COMPRESS</em></code> if COMPRESS2 has been
+previously offered by the server.
+<p>There is no requirement for either server or client to support the version 1
+protocol.
+<p>Once either COMPRESS or COMPRESS2 is negotiated, the server may enable
+compression. Since the start point of the compression stream needs to be known,
+the server prefixes the start of the stream with a suboption negotiation packet.
+This is <code><em>IAC SB COMPRESS WILL SE</em></code> for the obsolete COMPRESS
+option (note that this is not a valid suboption negotiation sequence according
+to RFC854/855 -- the terminating SE isn't correctly escaped), or <code><em>IAC
+SB COMPRESS2 IAC SE</em></code> for the COMPRESS2 option.
+<p>Immediately following this, a zlib stream (as defined in <a href="http://www.freesoft.org/CIE/RFC/Orig/rfc1950.txt">RFC
+1950</a> - see also the <a href="http://www.info-zip.org/pub/infozip/zlib/">zlib
+home page</a>) begins.
+<p>In summary, negotiation between server and client takes one of these forms:
+<pre>  version 1 server                      version 1 client
+  IAC WILL COMPRESS
+                                        IAC DO COMPRESS
+  IAC SB COMPRESS WILL SE
+  (compressed stream)
+
+  version 2 server (supporting v1)      version 1 client
+  IAC WILL COMPRESS2
+  IAC WILL COMPRESS
+                                        (nothing) or IAC DONT COMPRESS2
+                                        IAC DO COMPRESS
+  IAC SB COMPRESS WILL SE
+  (compressed stream)
+    
+  version 2 server (not supporting v1)  version 1 client
+  IAC WILL COMPRESS2
+                                        (nothing) or IAC DONT COMPRESS2
+  (uncompressed connection continues)
+    
+  version 1 server                      version 2 client (supporting v1)
+  IAC WILL COMPRESS        
+                                        IAC DO COMPRESS
+  IAC SB COMPRESS WILL SE
+  (compressed stream)
+  
+  version 1 server                      version 2 client (not supporting v1)
+  IAC WILL COMPRESS        
+                                        IAC DONT COMPRESS
+  (uncompressed connection continues)
+  
+  version 2 server                      version 2 client
+  IAC WILL COMPRESS2
+  IAC WILL COMPRESS
+                                        IAC DO COMPRESS2
+                                        IAC DONT COMPRESS
+  IAC SB COMPRESS2 IAC SE
+  (compressed stream)
+</pre>
+<p>The compressed data should be transmitted unescaped. IAC should be sent
+as-is. Telnet option negotiation and IAC escaping continues as normal for the
+uncompressed data stream -- the entire telnet TCP stream is compressed,
+negotiation and all.
+<p>Compression can only be terminated by the server - a normal end to the
+compression stream is assumed to mean &quot;revert to uncompressed mode&quot;.
+It may be desirable for the server to automatically terminate compression when
+an <code><em>IAC DONT COMPRESS</em></code> sequence is received from the client.
+<p>Any decompression errors are unrecoverable, and should result in a
+disconnection. Given that TCP is a reliable transport mechanism, bug-free
+implementations should never encounter compression errors, so this should not
+affect normal operation. When an error <em>is</em> encountered, something has
+gone badly wrong, and it seems hard to recover. Allowing raw (uncompressed)
+option negotiation to reset compression is one possibility, but would require
+that option negotiation take place outside the compressed stream.
+<address>
+  &nbsp;
+</address>
+<address>
+  Oliver Jowett &lt;<a href="mailto:icecube@ihug.co.nz">icecube@ihug.co.nz</a>&gt;,
+  2000/05/30
+</address>
+
+</body>
+
+</html>

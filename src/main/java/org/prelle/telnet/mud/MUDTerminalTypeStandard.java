@@ -7,77 +7,56 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.System.Logger.Level;
 
-import org.prelle.telnet.DoVariable;
 import org.prelle.telnet.TelnetInputStream;
+import org.prelle.telnet.TelnetOptionHandler;
+import org.prelle.telnet.TelnetOptions;
 import org.prelle.telnet.TelnetSocket;
-import org.prelle.telnet.WillVariable;
-import org.prelle.telnet.option.TelnetOption;
 
 /**
  * See http://tintin.sourceforge.net/mtts/
  * @see http://tintin.sourceforge.net/mtts/
  * @author prelle
+ * 
  *
  */
-public class MUDTerminalTypeStandard extends TelnetOption {
+public class MUDTerminalTypeStandard extends TelnetOptionHandler {
 
-	public final static int    CODE = 24;  // oder 70??
 	private final static int	IS   = 0;
 	private final static int	SEND = 1;
-	
-	private final static String NAME = "MTTS";
 
 	static enum RequestState { DEFAULT, CLIENT_NAME, TERMINAL_TYPE, MUD_TERMINAL_TYPE, UNKNOWN} 
-	
+
 	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.option.TelnetOption#setDefaults(org.prelle.telnet.TelnetSocket)
-	 */
-	@Override
-	public void setDefaults(TelnetSocket nvt) {
-		nvt.setOptionVariable(new WillVariable(CODE, false));
-		nvt.setOptionVariable(new DoVariable(CODE, false));
-	}
-	
-	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.option.TelnetOption#getCode()
-	 */
-	@Override
-	public int getCode() {
-		return CODE;
+	public MUDTerminalTypeStandard(int code, String name) {
+		super(code,name);
 	}
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#getName()
-	 */
-	@Override
-	public String getName() {
-		return NAME;
-	}
-
-	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.option.TelnetOption#initialize(org.prelle.telnet.TelnetSocket)
+	 * @see org.prelle.telnet.TelnetOptionHandler#initialize(org.prelle.telnet.TelnetSocket)
 	 */
 	@Override
 	public void initialize(TelnetSocket console) throws IOException {
 		requestUsage(console);
-		
+	}
+
+	//-----------------------------------------------------------------
+	public void requestUsage(TelnetSocket nvt) throws IOException {
 		MUDTerminalTypeData data = new MUDTerminalTypeData();
 		data.setState(RequestState.DEFAULT);
-		console.setOptionState(this, data);
+		nvt.setOptionState(this, data);
+		
+		super.requestUsage(nvt);
 	}
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
+	 * @see org.prelle.telnet.TelnetOptionHandler#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
 	 */
 	@Override
 	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in)
 			throws IOException {
-		logger.log(Level.DEBUG,"performSubNegotiation for "+NAME);
+		logger.log(Level.DEBUG,"performSubNegotiation for "+getName());
 		int sendOrIs = in.read();
 		
 		switch (sendOrIs) {
@@ -122,6 +101,7 @@ public class MUDTerminalTypeStandard extends TelnetOption {
 				data.setMudTerminalType(buf.toString());
 				logger.log(Level.DEBUG,"MUD-Terminal: "+buf.toString());
 				data.setState(RequestState.UNKNOWN);
+				nvt.setOptionState(this, data);
 				nvt.fireOptionDataChanged(this, data);
 				return;
 			default:
@@ -134,11 +114,16 @@ public class MUDTerminalTypeStandard extends TelnetOption {
 	}
 
 	//-----------------------------------------------------------------
-	protected void optionEnabled(TelnetSocket nvt, boolean iAmInitiator) throws IOException {
+	protected void optionEnabled(TelnetSocket nvt, boolean iAmInitiator) {
 		logger.log(Level.INFO,getName()+" enabled");
 		logger.log(Level.DEBUG,"Request MUD terminal type");
 		((MUDTerminalTypeData)nvt.getOptionState(this)).setState(RequestState.CLIENT_NAME);
-		requestNext(nvt);
+		try {
+			requestNext(nvt);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	//-----------------------------------------------------------------
@@ -147,7 +132,7 @@ public class MUDTerminalTypeStandard extends TelnetOption {
 		byte[] send = new byte[6];
 		send[0] = (byte)IAC; 
 		send[1] = (byte)SB; 
-		send[2] = (byte)CODE;
+		send[2] = (byte)TelnetOptions.MTT.getCode();
 		send[3] = (byte)SEND;
 		send[4] = (byte)IAC;
 		send[5] = (byte)SE;

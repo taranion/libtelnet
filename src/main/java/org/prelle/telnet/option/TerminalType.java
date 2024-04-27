@@ -7,11 +7,10 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.System.Logger.Level;
 
-import org.prelle.telnet.DoVariable;
 import org.prelle.telnet.TelnetConstants;
 import org.prelle.telnet.TelnetInputStream;
+import org.prelle.telnet.TelnetOptionHandler;
 import org.prelle.telnet.TelnetSocket;
-import org.prelle.telnet.WillVariable;
 
 /**
  * RFC 1091
@@ -19,55 +18,31 @@ import org.prelle.telnet.WillVariable;
  * @author prelle
  *
  */
-public class TerminalType extends TelnetOption {
-
-	private final static int    CODE = 24;
-	private final static String NAME = "TERMINAL_TYPE";
+public class TerminalType extends TelnetOptionHandler {
 	
 	private final static int IS   = 0;
 	private final static int SEND = 1;
 
 	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.option.TelnetOption#setDefaults(org.prelle.telnet.TelnetSocket)
-	 */
-	@Override
-	public void setDefaults(TelnetSocket nvt) {
-		nvt.setOptionVariable(new WillVariable(CODE, false));
-		nvt.setOptionVariable(new DoVariable(CODE, false));
-	}
-	
-	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.option.TelnetOption#getCode()
-	 */
-	@Override
-	public int getCode() {
-		return CODE;
-	}
-
-	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.option.TelnetOption#getName()
-	 */
-	@Override
-	public String getName() {
-		return NAME;
+	public TerminalType() {
+		super(24,"TTYPE");
 	}
 
 	//-----------------------------------------------------------------
 	/**
 	 * @throws IOException 
-	 * @see org.prelle.telnet.option.TelnetOption#initialize(org.prelle.telnet.TelnetSocket)
+	 * @see org.prelle.telnet.TelnetOptionHandler#initialize(org.prelle.telnet.TelnetSocket)
 	 */
 	@Override
-	public void initialize(TelnetSocket console) throws IOException {
-		requestUsage(console);
+	public void initialize(TelnetSocket nvt) throws IOException {
+		if (!nvt.isInClientMode()) {
+			requestUsage(nvt);
+		}
 	}
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
+	 * @see org.prelle.telnet.TelnetOptionHandler#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
 	 */
 	@Override
 	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in)
@@ -107,7 +82,7 @@ public class TerminalType extends TelnetOption {
 			OutputStream out = nvt.getOutputStream();
 			out.write(TelnetConstants.IAC);
 			out.write(TelnetConstants.SB);
-			out.write(CODE);
+			out.write(getCode());
 			out.write(SEND);
 			out.write(TelnetConstants.IAC);
 			out.write(TelnetConstants.SE);

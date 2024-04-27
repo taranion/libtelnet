@@ -6,11 +6,9 @@ package org.prelle.telnet.mud;
 import java.io.IOException;
 import java.lang.System.Logger.Level;
 
-import org.prelle.telnet.DoVariable;
 import org.prelle.telnet.TelnetInputStream;
+import org.prelle.telnet.TelnetOptionHandler;
 import org.prelle.telnet.TelnetSocket;
-import org.prelle.telnet.WillVariable;
-import org.prelle.telnet.option.TelnetOption;
 
 /**
  * See http://tintin.sourceforge.net/msdp/
@@ -18,52 +16,25 @@ import org.prelle.telnet.option.TelnetOption;
  * @author prelle
  *
  */
-public class MUDServerDataProtocol extends TelnetOption {
+public class MUDServerDataProtocol extends TelnetOptionHandler {
 
-	public final static int    CODE = 69; 
-	
 	private final static int	MSDP_VAR = 1;
 	private final static int	MSDP_VAL = 2;
 	private final static int	MSDP_TABLE_OPEN = 3;
 	private final static int	MSDP_TABLE_CLOSE = 4;
 	private final static int	MSDP_ARRAY_OPEN = 5;
 	private final static int	MSDP_ARRAY_CLOSE = 6;
-	
-	private final static String NAME = "MSDP";
 
 	static enum RequestState { DEFAULT, CLIENT_NAME, TERMINAL_TYPE, MUD_TERMINAL_TYPE, UNKNOWN} 
 	
 	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.option.TelnetOption#setDefaults(org.prelle.telnet.TelnetSocket)
-	 */
-	@Override
-	public void setDefaults(TelnetSocket nvt) {
-		nvt.setOptionVariable(new WillVariable(CODE, false));
-		nvt.setOptionVariable(new DoVariable(CODE, false));
-	}
-	
-	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.option.TelnetOption#getCode()
-	 */
-	@Override
-	public int getCode() {
-		return CODE;
+	public MUDServerDataProtocol() {
+		super(69, "MSDP");
 	}
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#getName()
-	 */
-	@Override
-	public String getName() {
-		return NAME;
-	}
-
-	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.option.TelnetOption#initialize(org.prelle.telnet.TelnetSocket)
+	 * @see org.prelle.telnet.TelnetOptionHandler#initialize(org.prelle.telnet.TelnetSocket)
 	 */
 	@Override
 	public void initialize(TelnetSocket console) throws IOException {
@@ -76,12 +47,12 @@ public class MUDServerDataProtocol extends TelnetOption {
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
+	 * @see org.prelle.telnet.TelnetOptionHandler#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
 	 */
 	@Override
 	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in)
 			throws IOException {
-		logger.log(Level.DEBUG,"performSubNegotiation for "+NAME);
+		logger.log(Level.DEBUG,"performSubNegotiation for "+getName());
 //		int sendOrIs = in.read();
 //		
 //		switch (sendOrIs) {

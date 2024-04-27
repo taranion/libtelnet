@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.prelle.telnet.mud;
+package org.prelle.telnet.option;
 
 import java.io.IOException;
 
@@ -10,16 +10,14 @@ import org.prelle.telnet.TelnetOptionHandler;
 import org.prelle.telnet.TelnetSocket;
 
 /**
- * See http://www.zuggsoft.com/zmud/msp.htm
- * @see http://www.zuggsoft.com/zmud/msp.htm
+ * https://www.ietf.org/proceedings/44/I-D/draft-ietf-tn3270e-telnet-tls-01.txt
  * @author prelle
  *
  */
-public class MUDSoundProtocol extends TelnetOptionHandler {
+public class TelnetTLS extends TelnetOptionHandler {
 
-	//-----------------------------------------------------------------
-	public MUDSoundProtocol() {
-		super(90, "MSP");
+	public TelnetTLS() {
+		super(46, "STARTTLS");
 	}
 
 	//-----------------------------------------------------------------

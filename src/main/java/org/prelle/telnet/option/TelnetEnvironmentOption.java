@@ -1,7 +1,7 @@
 /**
  * 
  */
-package org.prelle.telnet.mud;
+package org.prelle.telnet.option;
 
 import java.io.IOException;
 
@@ -10,16 +10,16 @@ import org.prelle.telnet.TelnetOptionHandler;
 import org.prelle.telnet.TelnetSocket;
 
 /**
- * See http://www.zuggsoft.com/zmud/msp.htm
- * @see http://www.zuggsoft.com/zmud/msp.htm
+ * RFC 857
+ * @see http://tools.ietf.org/html/rfc857
  * @author prelle
  *
  */
-public class MUDSoundProtocol extends TelnetOptionHandler {
+public class TelnetEnvironmentOption extends TelnetOptionHandler {
 
-	//-----------------------------------------------------------------
-	public MUDSoundProtocol() {
-		super(90, "MSP");
+	//-------------------------------------------------------------------
+	public TelnetEnvironmentOption() {
+		super(39, "NEW-ENVIRON");
 	}
 
 	//-----------------------------------------------------------------
@@ -28,7 +28,7 @@ public class MUDSoundProtocol extends TelnetOptionHandler {
 	 */
 	@Override
 	public void initialize(TelnetSocket console) throws IOException {
-		requestUsage(console);
+		// Not sending and not awaiting echo
 	}
 
 	//-----------------------------------------------------------------

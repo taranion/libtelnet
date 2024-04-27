@@ -6,26 +6,16 @@
 		</Console>
 	</Appenders>
 	<Loggers>
-		<Root level="INFO">
+		<Root level="DEBUG">
 			<AppenderRef ref="Console" />
 		</Root>
     <Logger name="sun" level="ERROR"/>
     <Logger name="xml" level="warn"/>
     <Logger name="jdk" level="warn"/>
     <Logger name="javafx" level="info"/>
-    <Logger name="prelle.jfx" level="WARN"/>
-    <Logger name="de.rpgframework.genericrpg.chargen.main" level="DEBUG"/>
-    <Logger name="de.rpgframework.genericrpg.items" level="WARN"/>
-    <Logger name="de.rpgframework.shadowrun.chargen" level="INFO"/>
-    <Logger name="de.rpgframework.shadowrun6.chargen" level="INFO"/>
-
-    <Logger name="de.rpgframework.shadowrun6.chargen.charctrl" level="DEBUG"/>
-    <Logger name="de.rpgframework.shadowrun6.chargen.gen.karma" level="DEBUG"/>
-    <Logger name="de.rpgframework.shadowrun6.chargen.jfx.selector" level="DEBUG"/>
-    <Logger name="de.rpgframework.shadowrun6.chargen.jfx.section" level="DEBUG"/>
-    <Logger name="de.rpgframework.shadowrun6.chargen.proc" level="INFO"/>
-    <Logger name="de.rpgframework.shadowrun6.data" level="DEBUG"/>
-    <Logger name="de.rpgframework.shadowrun6.items" level="INFO"/>
-    <Logger name="de.rpgframework.shadowrun6.proc" level="WARN"/>
-	</Loggers>
+    <Logger name="telnet" level="INFO"/>
+    <Logger name="telnet.lvl1" level="INFO"/>
+    <Logger name="telnet.lvl2" level="INFO"/>
+    <Logger name="telnet.option" level="INFO"/>
+ 	</Loggers>
 </Configuration>

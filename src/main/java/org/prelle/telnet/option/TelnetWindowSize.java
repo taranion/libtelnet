@@ -6,58 +6,27 @@ package org.prelle.telnet.option;
 import java.io.IOException;
 import java.lang.System.Logger.Level;
 
-import org.prelle.telnet.DoVariable;
 import org.prelle.telnet.TelnetInputStream;
+import org.prelle.telnet.TelnetOptionHandler;
+import org.prelle.telnet.TelnetOptions;
 import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetSocket;
-import org.prelle.telnet.WillVariable;
 
 /**
+ * RFC 1073
  * @author prelle
  *
  */
-public class TelnetWindowSize extends TelnetOption {
-
-	private final static int    CODE = 31;
-	private final static String NAME = "NAWS";
-
+public class TelnetWindowSize extends TelnetOptionHandler {
+	
 	//-----------------------------------------------------------------
-	/**
-	 */
-	public TelnetWindowSize() {
-		// TODO Auto-generated constructor stub
+	public TelnetWindowSize(int code, String name) {
+		super(code,name);
 	}
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#setDefaults(org.prelle.telnet.TelnetSocket)
-	 */
-	public void setDefaults(TelnetSocket nvt) {
-		nvt.setOptionVariable(new WillVariable(CODE, false));
-		nvt.setOptionVariable(new DoVariable(CODE, false));
-	}
-
-	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.option.TelnetOption#getCode()
-	 */
-	@Override
-	public int getCode() {
-		return CODE;
-	}
-
-	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.option.TelnetOption#getName()
-	 */
-	@Override
-	public String getName() {
-		return NAME;
-	}
-
-	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.option.TelnetOption#initialize(org.prelle.telnet.TelnetSocket)
+	 * @see org.prelle.telnet.TelnetOptionHandler#initialize(org.prelle.telnet.TelnetSocket)
 	 */
 	@Override
 	public void initialize(TelnetSocket console) throws IOException {
@@ -66,7 +35,7 @@ public class TelnetWindowSize extends TelnetOption {
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
+	 * @see org.prelle.telnet.TelnetOptionHandler#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
 	 */
 	@Override
 	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in) throws IOException {
@@ -105,12 +74,12 @@ public class TelnetWindowSize extends TelnetOption {
 		
 		TelnetOutputStream out = (TelnetOutputStream) sock.getOutputStream();
 
-		TelnetOption.startSubNegotiation(sock, CODE);
+		TelnetOptionHandler.startSubNegotiation(sock, TelnetOptions.NAWS.getCode());
 		out.write(x>>8);
 		out.write(x%256);
 		out.write(y>>8);
 		out.write(y%256);
-		TelnetOption.endSubNegotiation(sock, CODE);
+		TelnetOptionHandler.endSubNegotiation(sock, TelnetOptions.NAWS.getCode());
 		out.flush();
 	}
 }

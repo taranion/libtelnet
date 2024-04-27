@@ -6,11 +6,10 @@ package org.prelle.telnet.option;
 import java.io.IOException;
 import java.lang.System.Logger.Level;
 
-import org.prelle.telnet.DoVariable;
 import org.prelle.telnet.TelnetInputStream;
+import org.prelle.telnet.TelnetOptionHandler;
 import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetSocket;
-import org.prelle.telnet.WillVariable;
 
 /**
  * RFC 857
@@ -18,84 +17,96 @@ import org.prelle.telnet.WillVariable;
  * @author prelle
  *
  */
-public class TelnetEcho extends TelnetOption {
-
-	public final static int    CODE = 1;
-	public final static String NAME = "ECHO";
-
-	//-----------------------------------------------------------------
+public class TelnetEcho extends TelnetOptionHandler {
+	
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#setDefaults(org.prelle.telnet.TelnetSocket)
+	 * How shall data typed locally be echoed?
 	 */
-	@Override
-	public void setDefaults(TelnetSocket nvt) {
-		nvt.setOptionVariable(new WillVariable(CODE, false));
-		nvt.setOptionVariable(new DoVariable(CODE, false));
+	public static enum SentDataEchoMode {
+		// No echo at all
+		NO_ECHO,
+		// Echo is generated locally
+		LOCAL_ECHO,
+		// Echo is expected to be sent from remote party
+		REMOTE_ECHO
 	}
 	
+	public final static String VAR_ECHO_SENT = "ECHO_SENT";
+	public final static String VAR_ECHO_RCVD = "ECHO_RCVD";
+	
 	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.option.TelnetOption#getCode()
-	 */
-	@Override
-	public int getCode() {
-		return CODE;
+	public TelnetEcho() {
+		super(1,"ECHO");
+	}
+
+	//-----------------------------------------------------------------
+	public TelnetEcho(int code, String name) {
+		super(code,name);
 	}
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#getName()
+	 * @see org.prelle.telnet.TelnetOptionHandler#initialize(org.prelle.telnet.TelnetSocket)
 	 */
 	@Override
-	public String getName() {
-		return NAME;
-	}
-
-	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.option.TelnetOption#initialize(org.prelle.telnet.TelnetSocket)
-	 */
-	@Override
-	public void initialize(TelnetSocket console) throws IOException {
+	public void initialize(TelnetSocket nvt) throws IOException {
 		// Not sending and not awaiting echo
+		nvt.setOptionVariable(TelnetEcho.class, VAR_ECHO_SENT, SentDataEchoMode.NO_ECHO);
+		nvt.setOptionVariable(TelnetEcho.class, VAR_ECHO_RCVD, false);
 	}
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
+	 * @see org.prelle.telnet.TelnetOptionHandler#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
 	 */
 	@Override
 	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in)
 			throws IOException {
 	}
 
-	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.option.TelnetOption#requestUsage(org.prelle.telnet.TelnetSocket)
-	 */
-	public void requestUsage(TelnetSocket nvt) throws IOException {
-		logger.log(Level.DEBUG,"Suggest "+getName());
-		TelnetOutputStream out = (TelnetOutputStream) nvt.getOutputStream();
-		if (!nvt.isInClientMode()) {
-			nvt.getWillVariable(getCode()).setState(true);
-			out.sendWill(getCode());
-		} else {
-			nvt.getDoVariable(getCode()).setState(true);
-			out.sendDo(getCode());
-		}
+
+//	//-----------------------------------------------------------------
+//	/**
+//	 * @see org.prelle.telnet.option.TelnetOptionHandler#requestUsage(org.prelle.telnet.TelnetSocket)
+//	 */
+//	public void requestUsage(TelnetSocket nvt) throws IOException {
+//		logger.log(Level.DEBUG,"Suggest "+getName());
+//		TelnetOutputStream out = (TelnetOutputStream) nvt.getOutputStream();
+//		if (!nvt.isInClientMode()) {
+//			nvt.getWillVariable(getCode()).setState(true);
+//			out.sendWill(getCode());
+//		} else {
+//			nvt.getDoVariable(getCode()).setState(true);
+//			out.sendDo(getCode());
+//		}
+//	}
+//
+//	//-----------------------------------------------------------------
+//	public void requestStop(TelnetSocket nvt) throws IOException {
+//		logger.log(Level.DEBUG,"Stop "+getName());
+//		TelnetOutputStream out = (TelnetOutputStream) nvt.getOutputStream();
+//		if (!nvt.isInClientMode()) {
+//			nvt.getWillVariable(getCode()).setState(false);
+//			out.sendWont(getCode());
+//		} else {
+//			nvt.getDoVariable(getCode()).setState(false);
+//			out.sendDont(getCode());
+//		}
+//	}
+
+	//-------------------------------------------------------------------
+	public static boolean shouldGenerateLocalEcho(TelnetSocket nvt) {
+		SentDataEchoMode  mode = (SentDataEchoMode) nvt.getOptionVariable(TelnetEcho.class, VAR_ECHO_SENT);
+		if (mode!=null && mode==SentDataEchoMode.LOCAL_ECHO)
+			return true;
+		return false;
 	}
 
-	//-----------------------------------------------------------------
-	public void requestStop(TelnetSocket nvt) throws IOException {
-		logger.log(Level.DEBUG,"Stop "+getName());
-		TelnetOutputStream out = (TelnetOutputStream) nvt.getOutputStream();
-		if (!nvt.isInClientMode()) {
-			nvt.getWillVariable(getCode()).setState(false);
-			out.sendWont(getCode());
-		} else {
-			nvt.getDoVariable(getCode()).setState(false);
-			out.sendDont(getCode());
-		}
+	//-------------------------------------------------------------------
+	public static boolean shouldGenerateRemoteEcho(TelnetSocket nvt) {
+		Boolean remoteEcho= (Boolean) nvt.getOptionVariable(TelnetEcho.class, VAR_ECHO_RCVD);
+		if (remoteEcho!=null && remoteEcho)
+			return true;
+		return false;
 	}
-
 }

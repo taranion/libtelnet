@@ -15,13 +15,9 @@ import java.net.SocketException;
 import java.net.SocketImpl;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.prelle.telnet.option.TelnetEcho;
-import org.prelle.telnet.option.TelnetOption;
 
 /**
  * @author prelle
@@ -31,21 +27,45 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 
 	private final static Logger logger = System.getLogger("telnet.lvl3");
 
-	private TelnetInputStream in;
-	private TelnetOutputStream out;
+	private TelnetInputStream debugIn;
+	private TelnetOutputStream debugOut;
 	private boolean inClientMode;
-	private Map<Integer,WillVariable> willVariables = new HashMap<Integer, WillVariable>();
-	private Map<Integer,DoVariable>   doVariables   = new HashMap<Integer, DoVariable>();
-	private Map<TelnetOption,Object> optionState = new HashMap<TelnetOption, Object>();
+	
+	/**
+	 * These options should be supported on this socket
+	 */
+	private List<TelnetOptions> supportedOptions = new ArrayList<TelnetOptions>();
+	private Map<Class<? extends TelnetOptionHandler>, Map<String, Object>> optionVariables = new HashMap<>();
+//	private Map<Integer,WillVariable> willVariables = new HashMap<Integer, WillVariable>();
+////	/** Has DO been sent? */
+//	private Map<Integer,DoVariable>   doVariables   = new HashMap<Integer, DoVariable>();
+	private Map<TelnetOptionHandler,Object> optionState = new HashMap<TelnetOptionHandler, Object>();
 	private List<TelnetOptionListener> optionListener = new ArrayList<TelnetOptionListener>();
+	private List<TelnetOptions> answerExpected = new ArrayList<TelnetOptions>();
+	private List<TelnetOptions> activeFeatures = new ArrayList<TelnetOptions>();
+	
+	public static TelnetSocketBuilder builder() {
+		return new TelnetSocketBuilder();
+	}
 
 	//-----------------------------------------------------------------
 	/**
+	 * @param passiveSupport 
 	 */
-	public TelnetSocket() {
+	public TelnetSocket(List<TelnetOptions> supported, List<TelnetOptions> passiveSupport) {
 		inClientMode = false;
-		
-		loadVariableDefaults();
+		this.supportedOptions = new ArrayList<TelnetOptions>(supported);
+		this.supportedOptions.addAll(passiveSupport);
+	}
+
+	//-----------------------------------------------------------------
+	public TelnetSocket(TelnetSocketBuilder builder) throws UnknownHostException, IOException {
+		super(builder.host, builder.port);
+		inClientMode = true;	
+		this.activeFeatures   = new ArrayList<TelnetOptions>(builder.activelyRequest);
+		this.supportedOptions = new ArrayList<TelnetOptions>(builder.passiveSupport);
+		getInputStream();
+		getOutputStream();
 	}
 
 	//-----------------------------------------------------------------
@@ -126,13 +146,6 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 
 	//-----------------------------------------------------------------
 	private void loadVariableDefaults() {
-		// Load default values for all variables
-		for (TelnetOption option : TelnetConfiguration.getKnownOptions()) {
-			// Load defaults
-			option.setDefaults(this);
-		}
-		logger.log(Level.DEBUG,"Do-Variables   = "+doVariables.values());
-		logger.log(Level.DEBUG,"Will-Variables = "+willVariables.values());		
 	}
 
 	//-----------------------------------------------------------------
@@ -141,15 +154,11 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 	 */
 	@Override
 	public InputStream getInputStream() throws IOException {
-		if (out==null)
-			out = new TelnetOutputStream(
-					new TelnetDebuggingOutputStream(super.getOutputStream()));
-
-		if (in==null)
-			in = new TelnetInputStream(
+		if (debugIn==null)
+			debugIn = new TelnetInputStream(
 					this,
 					new TelnetDebuggingInputStream(super.getInputStream()));
-		return in;
+		return debugIn;
 	}
 
 	//-----------------------------------------------------------------
@@ -158,15 +167,10 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 	 */
 	@Override
 	public OutputStream getOutputStream() throws IOException {
-		if (in==null)
-			in = new TelnetInputStream(
-					this,
-					new TelnetDebuggingInputStream(super.getInputStream()));
-
-		if (out==null)
-			out = new TelnetOutputStream(
+		if (debugOut==null)
+			debugOut = new TelnetOutputStream(
 					new TelnetDebuggingOutputStream(super.getOutputStream()));
-		return out;
+		return debugOut;
 	}
 
 	//-----------------------------------------------------------------
@@ -197,23 +201,48 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 	}
 
 	//-----------------------------------------------------------------
+	public TelnetOptions getFromSupportedOptions(int optionCode) {
+		for (TelnetOptions opt : supportedOptions) {
+			if (opt.getCode()==optionCode)
+				return opt;
+		}
+		return null;
+	}
+
+	//-----------------------------------------------------------------
 	/* (non-Javadoc)
 	 * @see org.prelle.telnet.TelnetStreamListener#receivedWILL(int)
 	 */
 	@Override
 	public void receivedWILL(int optionCode) {
-		TelnetOption option = TelnetConfiguration.getOption(optionCode);
+		TelnetOptions known = TelnetOptions.valueOf(optionCode);
+		TelnetOptions option = getFromSupportedOptions(optionCode);
 		try {
-			if (option==null) {
-				logger.log(Level.WARNING,"remote party offers option unknown option "+optionCode);
-				out.sendDont(optionCode);
+			if (option==null && known==null) {
+				logger.log(Level.WARNING,"remote party offers unknown option {0}", optionCode);
+				debugOut.sendDont(optionCode);
+				return;
+			}
+			if (option==null && known!=null) {
+				logger.log(Level.WARNING,"remote party offers unsupported option {0} ({1})", known.getCode(), optionCode);
+				debugOut.sendDont(optionCode);
+				return;
+			}
+		
+			// Did we request this?
+			boolean wasRequested = answerExpected.contains(option);
+			TelnetOptionHandler handler = option.getOptionHandler();
+			if (wasRequested) {
+				logger.log(Level.WARNING,"remote party agrees to do {0} ({1})", option.name(), optionCode);
+				answerExpected.remove(option);
+				handler.optionEnabled(this, true);
+				activeFeatures.add(option);
 			} else {
-				logger.log(Level.INFO,"remote party offers "+option.getName());
-//				WillVariable cfg = getWillVariable(optionCode);
-//				if (cfg.getState())
-					option.processWill(this);
-//				else
-//					option.processWont(this);
+				// We did not request this
+				logger.log(Level.WARNING,"remote party offers {0} ({1}), but we did not request this", handler.getName(), optionCode);
+				debugOut.sendDo(optionCode);
+				// DOes it make sense to inform handler about this?
+				//handler.remotePartyOffered(this);
 			}
 		} catch (IOException e) {
 			logger.log(Level.ERROR,"Could not answer that WILL offer: "+e,e);
@@ -226,16 +255,32 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 	 */
 	@Override
 	public void receivedWONT(int optionCode) {
-		TelnetOption option = TelnetConfiguration.getOption(optionCode);
+		TelnetOptions known = TelnetOptions.valueOf(optionCode);
+		TelnetOptions option = getFromSupportedOptions(optionCode);
 		try {
-			if (option==null) {
-				logger.log(Level.WARNING,"remote party rejects option unknown option "+optionCode);
-			} else {
-				logger.log(Level.INFO,"remote party rejects "+option.getName());
-				option.processWont(this);
+			if (option==null && known==null) {
+				logger.log(Level.WARNING,"remote party rejects unknown option {0}", optionCode);
+				return;
 			}
-		} catch (IOException e) {
-			logger.log(Level.ERROR,"Could not answer that WILL offer: "+e,e);
+			if (option==null && known!=null) {
+				logger.log(Level.WARNING,"remote party rejects unsupported option {0} ({1})", known.getCode(), optionCode);
+				return;
+			}
+			
+			// Did we request this?
+			boolean wasRequested = answerExpected.contains(option);
+			TelnetOptionHandler handler = option.getOptionHandler();
+			if (wasRequested) {
+				logger.log(Level.WARNING,"remote party rejected to do {0} ({1})", option.name(), optionCode);
+				answerExpected.remove(option);
+				// Does it make sense to inform handler?
+				handler.optionDisabled(this, true);
+			} else {
+				// We did not request this
+				logger.log(Level.WARNING,"Weird! Remote party sends unsolicited WONT for {0} ({1})", option.name(), optionCode);
+			}
+		} catch (Exception e) {
+			logger.log(Level.ERROR,"Could not answer that WONT answer: "+e,e);
 		}
 	}
 
@@ -245,17 +290,36 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 	 */
 	@Override
 	public void receivedDO(int optionCode) {
-		TelnetOption option = TelnetConfiguration.getOption(optionCode);
+		TelnetOptions known = TelnetOptions.valueOf(optionCode);
+		TelnetOptions option = getFromSupportedOptions(optionCode);
 		try {
-			if (option==null) {
-				logger.log(Level.WARNING,"remote party performs option unknown option "+optionCode);
-				out.sendWont(optionCode);
-			} else {
-				logger.log(Level.INFO,"remote party performs "+option.getName());
-				option.processDo(this);
+			if (option==null && known==null) {
+				logger.log(Level.WARNING,"remote party requests unknown option {0}", optionCode);
+				debugOut.sendWont(optionCode);
+				return;
 			}
+			if (option==null && known!=null) {
+				logger.log(Level.WARNING,"remote party requests unsupported option {0} ({1})", known.getCode(), optionCode);
+				debugOut.sendWont(optionCode);
+				return;
+			}
+			
+			// Did we request this?
+			boolean wasRequested = answerExpected.contains(option);
+			TelnetOptionHandler handler = option.getOptionHandler();
+			if (wasRequested) {
+				logger.log(Level.WARNING,"remote party accepts offer to do {0} ({1})", option.name(), optionCode);
+				handler.optionEnabled(this, true);
+				answerExpected.remove(option);
+			} else {
+				// We did not request this
+				logger.log(Level.WARNING,"remote party requests to do {0} ({1})", option.name(), optionCode);
+				handler.optionEnabled(this, false);
+				debugOut.sendWill(optionCode);
+			}
+			activeFeatures.add(option);
 		} catch (IOException e) {
-			logger.log(Level.ERROR,"Could not answer that WILL offer: "+e,e);
+			logger.log(Level.ERROR,"Could not answer that DO request: "+e,e);
 		}
 	}
 
@@ -265,17 +329,34 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 	 */
 	@Override
 	public void receivedDONT(int optionCode) {
-		TelnetOption option = TelnetConfiguration.getOption(optionCode);
+		TelnetOptions known = TelnetOptions.valueOf(optionCode);
+		TelnetOptions supported = getFromSupportedOptions(optionCode);
 		try {
-			if (option==null) {
-				logger.log(Level.WARNING,"remote party performs option unknown option "+optionCode);
-				out.sendWont(optionCode);
-			} else {
-				logger.log(Level.INFO,"remote party performs "+option.getName());
-				option.processDont(this);
+			if (supported==null && known==null) {
+				logger.log(Level.WARNING,"remote party stops unknown option {0}", optionCode);
+				return;
 			}
-		} catch (IOException e) {
-			logger.log(Level.ERROR,"Could not answer that WILL offer: "+e,e);
+			if (supported==null && known!=null) {
+				logger.log(Level.WARNING,"remote party stops unsupported option {0} ({1})", known.getCode(), optionCode);
+				return;
+			}
+			
+			// Did we request this?
+			boolean wasRequested = answerExpected.contains(supported);
+			TelnetOptionHandler handler = supported.getOptionHandler();
+			if (wasRequested) {
+				logger.log(Level.WARNING,"remote party rejects out offer to do {0} ({1})", supported.name(), optionCode);
+				answerExpected.remove(supported);
+				handler.optionDisabled(this, true);
+				// Does it make sense to inform handler?
+				//handler.remotePartyRejected(this);
+			} else {
+				// We did not request this
+				logger.log(Level.WARNING,"Weird! Remote party sends unsolicited DONT for {0} ({1})", supported.name(), optionCode);
+				handler.optionDisabled(this, false);
+			}
+		} catch (Exception e) {
+			logger.log(Level.ERROR,"Could not answer that WONT answer: "+e,e);
 		}
 	}
 
@@ -285,15 +366,17 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 	 */
 	@Override
 	public void receivedSubnegotiationBegin(int optionCode) {
-		TelnetOption option = TelnetConfiguration.getOption(optionCode);
+		TelnetOptions supported = getFromSupportedOptions(optionCode);
+		TelnetOptionHandler option = supported.getOptionHandler();
+//		TelnetOption option = TelnetConfiguration.getOption(optionCode);
 		try {
 			if (option==null) {
 				logger.log(Level.WARNING,"remote party performs subnegitation for unknown option "+optionCode);
 			} else {
-				logger.log(Level.INFO,"subnegotiation startet for "+option.getName());
-				in.setHigherLevelControl(true);
-				option.performSubNegotiation(this, in);
-				in.setHigherLevelControl(false);
+				logger.log(Level.DEBUG,"subnegotiation startet for "+option.getName());
+				debugIn.setHigherLevelControl(true);
+				option.performSubNegotiation(this, debugIn);
+				debugIn.setHigherLevelControl(false);
 			}
 		} catch (IOException e) {
 			logger.log(Level.ERROR,"Could not answer that WILL offer: "+e,e);
@@ -316,41 +399,54 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 		this.inClientMode = inClientMode;
 	}
 
-	//-----------------------------------------------------------------
-	public WillVariable getWillVariable(int code) {
-		return willVariables.get(code);
+//	//-----------------------------------------------------------------
+//	public WillVariable getWillVariable(int code) {
+//		return willVariables.get(code);
+//	}
+//
+//	//-----------------------------------------------------------------
+//	public DoVariable getDoVariable(int code) {
+//		return doVariables.get(code);
+//	}
+//
+//	//--------------------------------------------------------------
+//	public boolean[] getDoWillStatesFor(TelnetOptionHandler opt) {
+//		boolean[] ret = new boolean[]{
+//				doVariables.get(opt.getCode()).getState(), 
+//				willVariables.get(opt.getCode()).getState()};
+//		logger.log(Level.DEBUG,"Do/Will states for "+opt.getName()+" are: "+Arrays.toString(ret));
+//		return ret;
+//	}
+//
+//	//-----------------------------------------------------------------
+//	public void setOptionVariable(TelnetVariable variable) {
+//		if (variable instanceof WillVariable)
+//			willVariables.put(variable.getName(), (WillVariable) variable);
+//		else if (variable instanceof DoVariable)
+//			doVariables.put(variable.getName(), (DoVariable) variable);
+//		
+//	}
+	
+	//-------------------------------------------------------------------
+	public void setOptionVariable(Class<? extends TelnetOptionHandler> option, String variable, Object value) {
+		Map<String,Object>  perOptionVars = optionVariables.getOrDefault(variable, new HashMap<>());
+		perOptionVars.put(variable, value);
+		optionVariables.put(option, perOptionVars);
+	}
+	
+	//-------------------------------------------------------------------
+	public Object getOptionVariable(Class<? extends TelnetOptionHandler> option, String variable) {
+		Map<String,Object>  perOptionVars = optionVariables.getOrDefault(variable, new HashMap<>());
+		return perOptionVars.get(variable);
 	}
 
 	//-----------------------------------------------------------------
-	public DoVariable getDoVariable(int code) {
-		return doVariables.get(code);
-	}
-
-	//--------------------------------------------------------------
-	public boolean[] getDoWillStatesFor(TelnetOption opt) {
-		boolean[] ret = new boolean[]{
-				doVariables.get(opt.getCode()).getState(), 
-				willVariables.get(opt.getCode()).getState()};
-		logger.log(Level.DEBUG,"Do/Will states for "+opt.getName()+" are: "+Arrays.toString(ret));
-		return ret;
-	}
-
-	//-----------------------------------------------------------------
-	public void setOptionVariable(TelnetVariable variable) {
-		if (variable instanceof WillVariable)
-			willVariables.put(variable.getName(), (WillVariable) variable);
-		else if (variable instanceof DoVariable)
-			doVariables.put(variable.getName(), (DoVariable) variable);
-		
-	}
-
-	//-----------------------------------------------------------------
-	public void setOptionState(TelnetOption option, Object stateObject) {
+	public void setOptionState(TelnetOptionHandler option, Object stateObject) {
 		optionState.put(option, stateObject);
 	}
 
 	//-----------------------------------------------------------------
-	public Object getOptionState(TelnetOption option) {
+	public Object getOptionState(TelnetOptionHandler option) {
 		return optionState.get(option);
 	}
 
@@ -361,7 +457,8 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 	}
 
 	//-----------------------------------------------------------------
-	public void fireOptionDataChanged(TelnetOption option,Object data) {
+	public void fireOptionDataChanged(TelnetOptionHandler option,Object data) {
+		logger.log(Level.DEBUG, "fireOptionDataChange({0})", data.getClass().getSimpleName());
 		for (TelnetOptionListener list : optionListener)
 			try {
 				list.telnetOptionDataChanged(this, option, data);
@@ -372,17 +469,74 @@ public class TelnetSocket extends Socket implements TelnetStreamListener {
 
 	//-----------------------------------------------------------------
 	public void requestEcho() throws IOException {
-		TelnetConfiguration.getOption(TelnetEcho.CODE).requestUsage(this);
+		TelnetOptions.ECHO.getOptionHandler().requestUsage(this);
+//		if (TelnetConfiguration.getOption(TelnetEcho.CODE)!=null)
+//			TelnetConfiguration.getOption(TelnetEcho.CODE).requestUsage(this);
 	}
 
-	//-----------------------------------------------------------------
-	public boolean isEchoEnabled() throws IOException {
-		return doVariables.get(TelnetEcho.CODE).getState();
-	}
+//	//-----------------------------------------------------------------
+//	public boolean isEchoEnabled() throws IOException {
+//		return doVariables.get(TelnetEcho.CODE).getState();
+//	}
 
 	//-----------------------------------------------------------------
 	public void stopEcho() throws IOException {
-		TelnetConfiguration.getOption(TelnetEcho.CODE).requestStop(this);
+		TelnetOptions.ECHO.getOptionHandler().requestStop(this);
 	}
 
+	//-----------------------------------------------------------------
+	public void expectedAnswerFor(TelnetOptions option) {
+		if (!answerExpected.contains(option))
+			answerExpected.add(option);
+	}
+	
+	//-------------------------------------------------------------------
+	public boolean isFeatureActive(TelnetOptions option) {
+		return activeFeatures.contains(option);
+	}
+	
+	public static class TelnetSocketBuilder {
+		
+		private String host;
+		private int port;
+	    /** Send DO requests for these options on incoming connections */
+	    private List<TelnetOptions> activelyRequest = new ArrayList<>();
+	    /** */
+	    private List<TelnetOptions> passiveSupport = new ArrayList<>();
+	    
+	    private TelnetSocketBuilder() {
+	    	activelyRequest = new ArrayList<TelnetOptions>();
+	    	passiveSupport  = new ArrayList<TelnetOptions>();
+	    }
+	    public TelnetSocketBuilder connectTo(String host, int port) {
+	    	this.host = host;
+	    	this.port = port;
+	    	return this;
+	    }
+
+		//-----------------------------------------------------------------
+		public TelnetSocketBuilder activelyRequest(TelnetOptions value) {
+			activelyRequest.add(value);
+			logger.log(Level.DEBUG, "I will ask server to perform {0} ({1})", value.name(), value.getCode());
+			return this;
+		}
+
+		//-----------------------------------------------------------------
+		public TelnetSocketBuilder passivelySupport(TelnetOptions value) {
+			passiveSupport.add(value);
+			logger.log(Level.DEBUG, "I will tell clients that I support {0} ({1})", value.name(), value.getCode());
+			return this;
+		}
+
+		//-----------------------------------------------------------------
+		public TelnetSocketBuilder withMTP() {
+			activelyRequest(TelnetOptions.MTP);
+			return this;
+		}
+		
+		//-----------------------------------------------------------------
+		public TelnetSocket build() throws UnknownHostException, IOException {
+			return new TelnetSocket(this);
+		}
+	}
 }

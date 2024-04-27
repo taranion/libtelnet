@@ -5,51 +5,24 @@ package org.prelle.telnet.option;
 
 import java.io.IOException;
 
-import org.prelle.telnet.DoVariable;
 import org.prelle.telnet.TelnetInputStream;
+import org.prelle.telnet.TelnetOptionHandler;
 import org.prelle.telnet.TelnetSocket;
-import org.prelle.telnet.WillVariable;
 
 /**
  * @author prelle
  *
  */
-public class TransmitBinary extends TelnetOption {
-
-	private final static int    CODE = 0;
-	private final static String NAME = "TRANSMIT_BINARY";
+public class TransmitBinary extends TelnetOptionHandler {
 
 	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.option.TelnetOption#setDefaults(org.prelle.telnet.TelnetSocket)
-	 */
-	@Override
-	public void setDefaults(TelnetSocket nvt) {
-		nvt.setOptionVariable(new WillVariable(CODE, false));
-		nvt.setOptionVariable(new DoVariable(CODE, false));
-	}
-	
-	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.option.TelnetOption#getCode()
-	 */
-	@Override
-	public int getCode() {
-		return CODE;
+	public TransmitBinary() {
+		super(0, "TRANSMIT_BINARY");
 	}
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#getName()
-	 */
-	@Override
-	public String getName() {
-		return NAME;
-	}
-
-	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.option.TelnetOption#initialize(org.prelle.telnet.TelnetSocket)
+	 * @see org.prelle.telnet.TelnetOptionHandler#initialize(org.prelle.telnet.TelnetSocket)
 	 */
 	@Override
 	public void initialize(TelnetSocket console) throws IOException {
@@ -58,7 +31,7 @@ public class TransmitBinary extends TelnetOption {
 
 	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
+	 * @see org.prelle.telnet.TelnetOptionHandler#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
 	 */
 	@Override
 	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in)

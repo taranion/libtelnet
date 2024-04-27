@@ -3,6 +3,7 @@
  */
 package org.prelle.telnet;
 
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.System.Logger;
@@ -12,18 +13,17 @@ import java.lang.System.Logger.Level;
  * @author prelle
  *
  */
-public class TelnetDebuggingInputStream extends InputStream implements TelnetConstants {
+public class TelnetDebuggingInputStream extends FilterInputStream implements TelnetConstants {
 
 	private final static Logger logger = System.getLogger("telnet.lvl1");
 	
-	private InputStream real;
 	private boolean inControlMode = false;
 	
 	//-----------------------------------------------------------------
 	/**
 	 */
 	public TelnetDebuggingInputStream(InputStream in) {
-		real = in;
+		super(in);
 	}
 
 	//-----------------------------------------------------------------
@@ -32,7 +32,7 @@ public class TelnetDebuggingInputStream extends InputStream implements TelnetCon
 	 */
 	@Override
 	public int read() throws IOException {
-		int data = real.read();
+		int data = super.read();
 		
 		ControlCode code = ControlCode.getCodeFor(data);
 		if (code!=null)
@@ -46,42 +46,6 @@ public class TelnetDebuggingInputStream extends InputStream implements TelnetCon
 		return data;
 	}
 
-	//-----------------------------------------------------------------
-	/* (non-Javadoc)
-	 * @see java.io.InputStream#read()
-	 */
-	@Override
-	public int read(byte[] b) throws IOException {
-		logger.log(Level.DEBUG,"read(byte[])");
-		return real.read(b);
-	}
-
-	//-----------------------------------------------------------------
-	/* (non-Javadoc)
-	 * @see java.io.InputStream#skip(long)
-	 */
-	@Override
-	public long skip(long amount) throws IOException {
-		return real.skip(amount);
-	}
-
-	//-----------------------------------------------------------------
-	/* (non-Javadoc)
-	 * @see java.io.InputStream#available()
-	 */
-	@Override
-	public int available() throws IOException {
-		return real.available();
-	}
-
-	//-----------------------------------------------------------------
-	/* (non-Javadoc)
-	 * @see java.io.InputStream#close()
-	 */
-	@Override
-	public void close() throws IOException {
-		real.close();
-	}
 
 	//-----------------------------------------------------------------
 	/**

@@ -15,13 +15,13 @@ import org.prelle.telnet.TelnetSocket;
  * @author prelle
  *
  */
-public class MUDSoundProtocol extends TelnetOptionHandler {
+public class MUDClientCompression1 extends TelnetOptionHandler {
 
 	//-----------------------------------------------------------------
-	public MUDSoundProtocol() {
-		super(90, "MSP");
+	public MUDClientCompression1() {
+		super(85, "COMPRESS");
 	}
-
+	
 	//-----------------------------------------------------------------
 	/**
 	 * @see org.prelle.telnet.TelnetOptionHandler#initialize(org.prelle.telnet.TelnetSocket)

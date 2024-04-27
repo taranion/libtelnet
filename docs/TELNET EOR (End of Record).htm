@@ -1,0 +1,105 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+
+<html>
+	<head>
+		<title>TELNET EOR (End of Record)</title>
+		<link href="../protocols.css" rel="stylesheet" type="text/css">
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta http-equiv='content-type' content='text/html; charset=utf-8'>
+		<meta name="description" content="EOR (End of Record) specification.">
+		<meta http-equiv="pragma" content="no-cache">
+	</head>
+
+	<body>
+		<table width='100%' height='40' align='top'>
+			<tr>
+				<td width='143'></td>
+				<td width='70%' align='left' class='title'>End of Record</td>
+				<td>&nbsp;</td>
+			</tr>
+		</table>
+
+		<table width='135' align='left'>
+			<tr>
+				<td class='sidebar'>
+
+EOR<br>
+<a href="#LINKS">&bull; Links</a><br>
+<br>
+<br>
+<br>
+<br>
+<br>
+EOR<br>
+<a href="https://tintin.mudhalla.net/protocols/gmcp">GMCP</a><br>
+<a href="https://tintin.mudhalla.net/protocols/mccp">MCCP</a><br>
+<a href="https://tintin.mudhalla.net/protocols/mmcp">MMCP</a><br>
+<a href="https://tintin.mudhalla.net/protocols/mnes">MNES</a><br>
+<a href="https://tintin.mudhalla.net/protocols/msdp">MSDP</a><br>
+<a href="https://tintin.mudhalla.net/protocols/mslp">MSLP</a><br>
+<a href="https://tintin.mudhalla.net/protocols/mssp">MSSP</a><br>
+<a href="https://tintin.mudhalla.net/protocols/mtts">MTTS</a>				</td>
+			</tr>
+			<tr>
+				<td width='135' height='36' style='background-color:#040; border:1px solid #CC6;'>
+					<center><a href="https://mudhalla.net"><img src="https://mudhalla.net/mudhalla_logo.png" width="135" height="36" border="0" alt="MUDhalla is a website dedicated to multiplayer text adventure games, also known as MUDs." /></a></center>
+				</td>
+			</tr>
+		</table>
+
+
+		<table width='10' height='100%' align="left">
+			<tr>
+				<td></td>
+			</tr>
+		</table>
+
+		<table width='70%' align="left">
+
+<tr><td class='promo'><a name='PROTOCOL'></a></td></tr><tr><td></td></tr>
+<tr><td class='promo'><a name='MCCP2'></a></td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promobar' style='line-height:24px;'><strong><big>The TELNET EOR option</big></strong></td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'>The TELNET EOR (End of Record) option allows a MUD server to mark the end of a prompt.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'>EOR is implemented as a Telnet option <a href='https://tintin.mudhalla.net/rfc/rfc854'>RFC854</a>, <a href='https://tintin.mudhalla.net/rfc/rfc855'>RFC855</a>. The server and client negotiate the use of the EOR option as they would any other telnet option as detailed in <a href='https://tintin.mudhalla.net/rfc/rfc885'>RFC885</a>. Once agreement has been reached on the use of the option, IAC EOR is used to mark prompts. A prompt is considered any line that does not end with \r\n.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><strong><big>Server Commands</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan='1'><hr noshade color='#2B3856'></td></tr><tr><td></td></tr>
+<tr><td class='premo'>IAC WILL TELOPT_EOR &nbsp;&nbsp; Indicates the server wants to enable EOR support.</td></tr><tr><td></td></tr>
+<tr><td class='premo'>IAC WONT TELOPT_EOR &nbsp;&nbsp; Indicates the server wants to disable EOR support.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><strong><big>Client Commands</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan='1'><hr noshade color='#2B3856'></td></tr><tr><td></td></tr>
+<tr><td class='premo'>IAC DO&nbsp;&nbsp; TELOPT_EOR &nbsp;&nbsp Indicates the client supports EOR.</td></tr><tr><td></td></tr>
+<tr><td class='premo'>IAC DONT TELOPT_EOR &nbsp;&nbsp Indicates the client does not support EOR.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><strong><big>Handshake</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan='1'><hr noshade color='#2B3856'></td></tr><tr><td></td></tr>
+<tr><td class='promo'>When a client connects to a server the server should send IAC WILL TELOPT_EOR. The client should respond with either IAC DO TELOPT_EOR or IAC DONT TELOPT_EOR. If the server receives IAC DO TELOPT_EOR it can begin appending IAC EOR to the end of prompts.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><strong><big>EOR definitions</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan='1'><hr noshade color='#2B3856'></td></tr><tr><td></td></tr>
+<tr><td class='premo'><pre>TELOPT_EOR  25<br>EOR        239</pre></td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><a name='LINKS'></a></td></tr><tr><td></td></tr>
+<tr><td class='promobar' style='line-height:24px;'><strong><big>Links</strong</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'>If you want a link added, you can email me at mudclient@gmail.com.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><strong><big>Clients supporting EOR</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan='1'><hr noshade color='#2B3856'></td></tr><tr><td></td></tr>
+<tr><td class='promo'><a href='http://en.wikipedia.org/wiki/Comparison_of_MUD_clients'>Comparison of MUD clients</a> - Wikipedia contains an up to date list of the EOR support of MUD clients.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br></td></tr><tr><td></td></tr>
+<tr><td class='promo'><strong><big>Snippets</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan='1'><hr noshade color='#2B3856'></td></tr><tr><td></td></tr>
+<tr><td class='promo'><a href='https://github.com/scandum/mth'>Scandum's MUD Telopt Handler</a> - Handles CHARSET, EOR, MCCP2, MCCP3, MSDP, MSSP, MTTS, NAWS, NEW-ENVIRON, TTYPE, and xterm 256 colors.</td></tr><tr><td></td></tr>
+<tr><td class='promo'><br><br><br><br><br><br><br><br><br><br><br><br></td></tr><tr><td></td></tr>
+
+
+		</table>
+	</body>
+
+</html>
