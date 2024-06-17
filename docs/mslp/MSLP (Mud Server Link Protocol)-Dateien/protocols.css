@@ -1,0 +1,148 @@
+body
+{
+	background-color:	#387C44;
+	font-family: 		Verdana, Arial, Helvetica, sans-serif;
+	font-size:		11pt;
+	color:			#CCCC99;
+	font-weight:		bold;
+	margin-left:		5px;
+	margin-right:		5px;
+}
+
+td, th
+{
+	font-family:		Verdana, Arial, Helvetica, sans-serif;
+	font-size:		11pt;
+	line-height:		24px;
+	color:			#333333;
+}
+
+.title
+{
+	font-family:		"Courier New", Courier, mono;
+	font-size:		18pt;
+	color:			#EEEEEE;
+	letter-spacing:		12px;
+	text-align:		center;
+}
+
+
+.subtitle
+{
+	font-family:		"Courier New", Courier, mono;
+	font-size:		16pt;
+	line-height:		30px;
+	color:			#003300;
+}
+
+.sidebar
+{
+	font-family:		"Courier New", Courier, mono;
+	font-size:		12pt;
+	padding:		3px;
+	background-color:	#387C44;
+	color:			#000000;
+	font-weight:		bold;
+	border:			1px solid #CCCC99;
+}
+
+.promobar
+{
+	font-family:		"Courier New", Courier, mono;
+	font-size:		14pt;
+	color:			#1B2846;
+	font-weight:		bold;
+}
+
+.menubar
+{
+	font-family:		"Courier New", Courier, mono;
+	font-size:		12pt;
+	line-height:		14px;
+	padding:		3px;
+	color:			#000000;
+	font-weight:		normal;
+	border:			1px solid #660000;
+}
+
+.promo
+{
+	font-family:		"Courier New", Courier, mono;
+	color:			#000000;
+	font-size:		12pt;
+	line-height:		normal;
+	font-weight:		normal;
+	text-align:             justify;
+}
+
+.premo
+{
+	font-family:		"Courier New", Courier, mono;
+	color:			#EEEEEE;
+	font-size:		12pt;
+	line-height:		normal;
+	font-weight:		normal;
+}
+	
+a:link
+{
+	font-family:		"Courier New", Courier, mono;
+	font-size:		12pt;
+	font-weight:		bold;
+	color:			#2B3856;
+	text-decoration:	none;
+}
+
+a:visited
+{
+	font-family:		"Courier New", Courier, mono;
+	font-size:		12pt;
+	font-weight:		bold;
+	color:			#0B1836;
+	text-decoration:	none;
+}
+
+a:hover
+{
+	font-family:		"Courier New", Courier, mono;
+	font-size:		12pt;
+	font-weight:		bold;
+	color:			#4B5876;
+	text-decoration:	none;
+}
+
+ol
+{
+	font-family:		Verdana, Arial, Helvetica, sans-serif;
+	font-size:		12pt;
+	color:			#CCCC66;
+	font-weight:		normal;
+	line-height:		normal;
+}
+
+.contents
+{
+	font-family:		"Courier New", Courier, mono;
+	font-size:		12pt;
+	font-weight:		bold;
+	color:			#CCCC33;
+}
+
+ul
+{
+	font-family:		Verdana, Arial, Helvetica, sans-serif;
+	font-size:		12pt;
+	font-weight:		normal;
+	color:			#BBBB00;
+	list-style-type:	circle;
+	list-style-position:	outside;
+}
+
+li
+{
+	font-family:		Verdana, Arial, Helvetica, sans-serif;
+	color:			#D1D1A1;
+	font-size:		12pt;
+	line-height:		normal;
+	font-weight:		normal;
+}

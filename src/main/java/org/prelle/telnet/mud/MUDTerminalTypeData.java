@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package org.prelle.telnet.mud;
 
@@ -11,11 +11,20 @@ import java.util.List;
  *
  */
 public class MUDTerminalTypeData {
-	
+
 	public static enum Capability {
 		ANSI(1),
 		VT100(2),
 		UTF8(4),
+		COLOR256(8),
+		MOUSE_TRACKING(16),
+		OSC_COLOR_PALETTE(32),
+		SCREEN_READER(64),
+		PROXY(128),
+		TRUECOLOR(256),
+		MNES(512),
+		MSLP(1024),
+		SSL(2048)
 		;
 		int bit;
 		Capability(int bit) {
@@ -28,7 +37,7 @@ public class MUDTerminalTypeData {
 	private String clientName;
 	private String terminalType;
 	/**
-	 * 
+	 *
 	 *       1 "ANSI"              Client supports all common ANSI color codes.
 	 *       2 "VT100"             Client supports all common VT100 codes.
 	 *       4 "UTF-8"             Client is using UTF-8 character encoding.
@@ -40,15 +49,15 @@ public class MUDTerminalTypeData {
 	 *     256 "TRUECOLOR"         Client supports truecolor codes using semicolon notation.
 	 *     512 "MNES"              Client supports the Mud New Environment Standard for information exchange.
 	 *    1024 "MSLP"              Client supports the Mud Server Link Protocol for clickable link handling.
-	 *    2048 "SSL"               Client supports SSL for data encryption, preferably TLS 1.3 or higher.       
+	 *    2048 "SSL"               Client supports SSL for data encryption, preferably TLS 1.3 or higher.
 	 */
 	private String mudTerminalType;
-	
+
 	//-----------------------------------------------------------------
 	public String toString() {
 		return String.format("Client: %s,  Terminal: %s, MTT: %s = %s", clientName, terminalType, mudTerminalType, getCapabilities());
 	}
-	
+
 	//-----------------------------------------------------------------
 	/**
 	 * @return the clientName
@@ -98,7 +107,7 @@ public class MUDTerminalTypeData {
 	public String getMudTerminalType() {
 		return mudTerminalType;
 	}
-	
+
 	//-----------------------------------------------------------------
 	/**
 	 * @param mudTerminalType the mudTerminalType to set
@@ -106,7 +115,7 @@ public class MUDTerminalTypeData {
 	public void setMudTerminalType(String mudTerminalType) {
 		this.mudTerminalType = mudTerminalType;
 	}
-	
+
 	//-----------------------------------------------------------------
 	public List<Capability> getCapabilities() {
 		if (!mudTerminalType.startsWith("MTTS "))

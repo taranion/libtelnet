@@ -1,11 +1,13 @@
 /**
- * 
+ *
  */
 package org.prelle.telnet.mud;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.System.Logger.Level;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.prelle.telnet.TelnetInputStream;
 import org.prelle.telnet.TelnetOptionHandler;
@@ -16,7 +18,7 @@ import org.prelle.telnet.TelnetSocket;
  * See http://tintin.sourceforge.net/mtts/
  * @see http://tintin.sourceforge.net/mtts/
  * @author prelle
- * 
+ *
  *
  */
 public class MUDTerminalTypeStandard extends TelnetOptionHandler {
@@ -24,7 +26,7 @@ public class MUDTerminalTypeStandard extends TelnetOptionHandler {
 	private final static int	IS   = 0;
 	private final static int	SEND = 1;
 
-	static enum RequestState { DEFAULT, CLIENT_NAME, TERMINAL_TYPE, MUD_TERMINAL_TYPE, UNKNOWN} 
+	static enum RequestState { DEFAULT, CLIENT_NAME, TERMINAL_TYPE, MUD_TERMINAL_TYPE, UNKNOWN}
 
 	//-----------------------------------------------------------------
 	public MUDTerminalTypeStandard(int code, String name) {
@@ -45,7 +47,7 @@ public class MUDTerminalTypeStandard extends TelnetOptionHandler {
 		MUDTerminalTypeData data = new MUDTerminalTypeData();
 		data.setState(RequestState.DEFAULT);
 		nvt.setOptionState(this, data);
-		
+
 		super.requestUsage(nvt);
 	}
 
@@ -58,7 +60,7 @@ public class MUDTerminalTypeStandard extends TelnetOptionHandler {
 			throws IOException {
 		logger.log(Level.DEBUG,"performSubNegotiation for "+getName());
 		int sendOrIs = in.read();
-		
+
 		switch (sendOrIs) {
 		case IS:
 			// Remote side sends data - read until IAC
@@ -70,7 +72,7 @@ public class MUDTerminalTypeStandard extends TelnetOptionHandler {
 					logger.log(Level.TRACE,"SN: IAC");
 					break;
 				}
-				
+
 				logger.log(Level.TRACE,"SN: "+dat+"  ("+ (char)dat + ")");
 				buf.append( (char)dat );
 			}
@@ -79,7 +81,7 @@ public class MUDTerminalTypeStandard extends TelnetOptionHandler {
 				logger.log(Level.WARNING,"Expected subnegotiation end, but found "+dat);
 			}
 			logger.log(Level.TRACE,"SN: IAC");
-			
+
 			MUDTerminalTypeData data = (MUDTerminalTypeData) nvt.getOptionState(this);
 			switch (data.getState()) {
 			case CLIENT_NAME:
@@ -99,7 +101,7 @@ public class MUDTerminalTypeStandard extends TelnetOptionHandler {
 			case MUD_TERMINAL_TYPE:
 				// Answer to third TTYPE SEND is a specific MUD terminal type
 				data.setMudTerminalType(buf.toString());
-				logger.log(Level.DEBUG,"MUD-Terminal: "+buf.toString());
+				logger.log(Level.INFO,"MUD-Terminal: "+buf.toString());
 				data.setState(RequestState.UNKNOWN);
 				nvt.setOptionState(this, data);
 				nvt.fireOptionDataChanged(this, data);
@@ -110,7 +112,7 @@ public class MUDTerminalTypeStandard extends TelnetOptionHandler {
 		default:
 			logger.log(Level.WARNING,"Don't know what to do with sendOrIs="+sendOrIs);
 		}
-		
+
 	}
 
 	//-----------------------------------------------------------------
@@ -130,14 +132,14 @@ public class MUDTerminalTypeStandard extends TelnetOptionHandler {
 	public static void requestNext(TelnetSocket nvt) throws IOException {
 		OutputStream out = nvt.getOutputStream();
 		byte[] send = new byte[6];
-		send[0] = (byte)IAC; 
-		send[1] = (byte)SB; 
+		send[0] = (byte)IAC;
+		send[1] = (byte)SB;
 		send[2] = (byte)TelnetOptions.MTT.getCode();
 		send[3] = (byte)SEND;
 		send[4] = (byte)IAC;
 		send[5] = (byte)SE;
 		out.write(send);
-		out.flush();		
+		out.flush();
 	}
 
 }

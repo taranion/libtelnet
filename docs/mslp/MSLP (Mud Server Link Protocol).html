@@ -1,0 +1,146 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html><head>
+		<title>MSLP (Mud Server Link Protocol)</title>
+		<link href="MSLP%20(Mud%20Server%20Link%20Protocol)-Dateien/protocols.css" rel="stylesheet" type="text/css">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+		<meta name="description" content="MSLP (Mud Server Link Protocol) specification.">
+		<meta http-equiv="pragma" content="no-cache">
+	</head>
+
+	<body>
+		<table width="100%" height="40" align="top">
+			<tbody><tr>
+				<td width="143"></td>
+				<td width="70%" align="left" class="title">Mud Server Link Protocol</td>
+				<td>&nbsp;</td>
+			</tr>
+		</tbody></table>
+
+		<table width="135" align="left">
+			<tbody><tr>
+				<td class="sidebar">
+
+MSLP<br>
+<a href="https://mudhalla.net/tintin/protocols/mslp/index.php#PROTOCOL">• Protocol</a><br>
+<a href="https://mudhalla.net/tintin/protocols/mslp/index.php#VARIABLES">• Variables</a><br>
+<a href="https://mudhalla.net/tintin/protocols/mslp/index.php#LINKS">• Links</a><br>
+<br>
+<br>
+<br>
+<a href="https://tintin.mudhalla.net/protocols/eor">EOR</a><br>
+<a href="https://tintin.mudhalla.net/protocols/gmcp">GMCP</a><br>
+<a href="https://tintin.mudhalla.net/protocols/mccp">MCCP</a><br>
+<a href="https://tintin.mudhalla.net/protocols/mmcp">MMCP</a><br>
+<a href="https://tintin.mudhalla.net/protocols/mnes">MNES</a><br>
+<a href="https://tintin.mudhalla.net/protocols/msdp">MSDP</a><br>
+MSLP<br>
+<a href="https://tintin.mudhalla.net/protocols/mssp">MSSP</a><br>
+<a href="https://tintin.mudhalla.net/protocols/mtts">MTTS</a>				</td>
+			</tr>
+			<tr>
+				<td width="135" height="36" style="background-color:#040; border:1px solid #CC6;">
+					<center><a href="https://mudhalla.net/"><img src="MSLP%20(Mud%20Server%20Link%20Protocol)-Dateien/mudhalla_logo.png" width="135" height="36" border="0" alt="MUDhalla is a website dedicated to multiplayer text adventure games, also known as MUDs."></a></center>
+				</td>
+			</tr>
+		</tbody></table>
+
+
+		<table width="10" height="100%" align="left">
+			<tbody><tr>
+				<td></td>
+			</tr>
+		</tbody></table>
+
+		<table width="70%" align="left">
+
+<tbody><tr><td class="promo"><a name="PROTOCOL"></a></td></tr><tr><td></td></tr>
+<tr><td class="promo">In 1998 the MXP (Mud eXtension Protocol) was 
+developed by the author of zMUD which among other things allows the 
+embedding of clickable links. The problem with MXP lies in that it 
+contains a lot of other things and adds requirements that go far beyond 
+the scope of something as simple as a clickable link.</td></tr><tr><td></td></tr>
+<tr><td class="promo">MSLP seeks to exclusively address the task of handling clickable links.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promobar" style="line-height:24px;"><strong><big>The MSLP Protocol</big></strong></td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo">MSLP is negotiated by using the <a href="https://mudhalla.net/tintin/protocols/mtts">MTTS</a> standard.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Simple Links</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo">To create the most basic link you need to insert 
+text between the \e[4m and \e[24m codes. These are the VT100 codes to 
+enable and disable underline. These exact codes must be used, so 
+something like \e[32;4m, \e[04m, or any other random variant, would not 
+be a valid start of a simple link. When clicked the client should send 
+the command contained between the two tags to the server.</td></tr><tr><td></td></tr>
+<tr><td class="promo">Since most clients will support underline, and 
+there may be instances where you don't want to underline a link, you can
+ use the \e[4;24m code as an alternative to start a simple link that is 
+not underlined, you must still end the link using \e[24m.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Complex Links</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo">If you want to create a complex link you need to use an OSC (Operating System Command) VT100 sequence.</td></tr><tr><td></td></tr>
+<tr><td class="promo">The simple link stays the same, but it must be 
+prefixed by the \e]68;1;;\a sequence. OSC 68;1 supports two arguments, 
+the first argument is a label, which can be used to describe what kind 
+of link you are sending. Labels are case sensitive. The second argument 
+is the command that is to be sent back to the server.</td></tr><tr><td></td></tr>
+<tr><td class="premo">\e]68;1;SEND;say Hello World!\a\e[4m(click me)\e[24m</td></tr><tr><td></td></tr>
+<tr><td class="promo">In the example above SEND is used as the label, which should be in all upper case letters. The text <u>(click me)</u> is printed, and when clicked the client should send 'say Hello World!' to the server.</td></tr><tr><td></td></tr>
+<tr><td class="promo">If you send an unrecognized OSC code to a proper 
+VT100 capable terminal the code will be ignored and it won't be 
+displayed. Do make sure to add the \a code to terminate the OSC 
+sequence. Not doing so is likely to result in odd behavior.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Labels</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo">As mentioned previously, labels are case sensitive. They serve to distinguish various types of links.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong>SEND</strong></td></tr><tr><td></td></tr>
+<tr><td class="promo">The most commonly used label is likely to be the 
+SEND label. The second argument is the command that is to be sent to the
+ server.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong>MENU</strong></td></tr><tr><td></td></tr>
+<tr><td class="promo">The MENU label is used to create a pop-up menu of links.</td></tr><tr><td></td></tr>
+<tr><td class="premo">\e]68;1;MENU;{a tasty donut}{buy donut}{a loaf of bread}{buy bread}{a big tomato}{buy tomato}\a\e[4mshopping list\e[24m</td></tr><tr><td></td></tr>
+<tr><td class="promo">The second argument of the MENU label is a list of
+ key / value pairs separated by braces. The first item of the pair 
+should contain the name, and the second item of the pair should contain 
+the command.</td></tr><tr><td></td></tr>
+<tr><td class="promo">Since each key/value pair exists of two items 
+there is no need for commas, and subsequently they are not a 
+requirement, nor allowed. If you however feel the need to distinguish 
+key value pairs it is allowed to add one or more spaces as following.</td></tr><tr><td></td></tr>
+<tr><td class="premo">\e]68;1;MENU;{a tasty donut}{buy donut}  {a loaf of bread}{buy bread}  {a big tomato}{buy tomato}\a\e[4mshopping list\e[24m</td></tr><tr><td></td></tr>
+<tr><td class="promo">Including curly braces in the item name or command
+ is not allowed, and the total number of opening braces must match the 
+total number of closing braces for the link to be valid. The \ character
+ is assumed to be literal and cannot be used for escaping. The \a and \0
+ sequence cannot be used. Other than that there are no real restrictions
+ on what may be included.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Secure Links</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo">Secure links are created with the \e]68;2;;\a sequence. Secure links are reserved for internal use by the client.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Jump Marks</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo">Jumps marks are created with the \e]68;4;;\a 
+sequence. The first argument is an optional label. The second argument 
+should be a marker name.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Jump Links</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo">Jump links are created with the \e]68;5;;\a 
+sequence. The first argument is an optional label. The second argument 
+should be a marker name. When clicked the client should search the 
+scrollback buffer for a matching Jump Mark and move to it.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><a name="LINKS"></a></td></tr><tr><td></td></tr>
+<tr><td class="promobar" style="line-height:24px;"><strong><big>Links</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo">If you want a link added you can email me at mudclient@gmail.com.</td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Clients</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+<tr><td class="promo"><a href="https://tintin.mudhalla.net/">TinTin++ Mud Client</a> - As of v2.02.04. Requires setting '#config mouse on' and '#event {SHORT-CLICKED LINK SEND MOUSE BUTTON ONE} #send {%4}'</td></tr><tr><td></td></tr>
+<tr><td class="promo"><br></td></tr><tr><td></td></tr>
+<tr><td class="promo"><strong><big>Codebases</big></strong></td></tr><tr><td></td></tr>
+<tr><td colspan="1"><hr noshade="noshade" color="#2B3856"></td></tr><tr><td></td></tr>
+</tbody></table></body></html>
