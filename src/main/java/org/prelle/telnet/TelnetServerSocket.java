@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package org.prelle.telnet;
 
@@ -9,9 +9,10 @@ import java.lang.System.Logger.Level;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.prelle.telnet.TelnetSocket.OptionEntry;
 
 /**
  * @author prelle
@@ -20,11 +21,8 @@ import java.util.Map;
 public class TelnetServerSocket extends ServerSocket {
 
     private final static Logger logger = System.getLogger("telnet.lvl3");
-    
-    /** Send DO requests for these options on incoming connections */
-    private List<TelnetOptions> activelyRequest = new ArrayList<>();
-    /** */
-    private List<TelnetOptions> passiveSupport = new ArrayList<>();
+
+    private List<OptionEntry> options = new ArrayList<>();
 
 	//-----------------------------------------------------------------
 	public TelnetServerSocket(int port) throws IOException {
@@ -37,30 +35,31 @@ public class TelnetServerSocket extends ServerSocket {
 	}
 
 	//-----------------------------------------------------------------
-	public TelnetServerSocket activelyRequest(TelnetOptions value) {
-		activelyRequest.add(value);
-		logger.log(Level.DEBUG, "I will ask clients to perform {0} ({1})", value.name(), value.getCode());
+	public TelnetServerSocket support(TelnetOptionHandler value, Role role) {
+		options.add(new OptionEntry(value, role));
+		if (role==Role.REQUESTER) {
+			logger.log(Level.DEBUG, "I will ask clients to perform {0} ({1})", value.getName(), value.getCode());
+		} else if (role==Role.PROVIDER){
+			logger.log(Level.DEBUG, "I will tell clients that I support {0} ({1})", value.name, value.getCode());
+		} else {
+			logger.log(Level.DEBUG, "I will tell clients that I support {0} ({1}), but only if asked", value.name, value.getCode());
+		}
+
 		return this;
 	}
 
-	//-----------------------------------------------------------------
-	public TelnetServerSocket passivelySupport(TelnetOptions value) {
-		passiveSupport.add(value);
-		logger.log(Level.DEBUG, "I will tell clients that I support {0} ({1})", value.name(), value.getCode());
-		return this;
-	}
-
-	//-----------------------------------------------------------------
-	public TelnetServerSocket withNAWS() {
-		activelyRequest(TelnetOptions.NAWS);
-		return this;
-	}
-
-	//-----------------------------------------------------------------
-	public TelnetServerSocket withMUDTerminalTypeStandard() {
-		activelyRequest(TelnetOptions.MTT);
-		return this;
-	}
+//	//-----------------------------------------------------------------
+//	public TelnetServerSocket withNAWS() {
+//		activelyRequest(TelnetOption.NAWS);
+//		return this;
+//	}
+//
+//	//-----------------------------------------------------------------
+//	public TelnetServerSocket withMUDTerminalTypeStandard() {
+//		activelyRequest(TelnetOption.MTT);
+//		return this;
+//	}
+//
 
 	//-----------------------------------------------------------------
 	/* (non-Javadoc)
@@ -68,30 +67,19 @@ public class TelnetServerSocket extends ServerSocket {
 	 */
 	@Override
 	public Socket accept() throws IOException {
-		TelnetSocket ret = new TelnetSocket(activelyRequest, passiveSupport);
+		TelnetSocket ret = new TelnetSocket(options);
 		logger.log(Level.DEBUG,"Waiting for new connections");
 		implAccept(ret);
 
-		logger.log(Level.DEBUG, "Actively request: "+activelyRequest);
-		logger.log(Level.DEBUG, "Passive support : "+passiveSupport);
-		
+		logger.log(Level.DEBUG, "Actively request: {0},"+options.stream().filter(opt -> opt.role==Role.REQUESTER).collect(Collectors.toList()));
+		logger.log(Level.DEBUG, "Passive support : {0},"+options.stream().filter(opt -> opt.role==Role.PROVIDER).collect(Collectors.toList()));
+
 		/*
 		 * Send all by default enabled variables
 		 */
 		logger.log(Level.DEBUG,"Incoming connection from {0},Port {1} - now initialize options", ret.getInetAddress().getHostAddress(), ret.getPort());
-		for (TelnetOptions option : activelyRequest) {
-			logger.log(Level.DEBUG,"..Request "+option.name());
-			option.getOptionHandler().requestUsage(ret);
-		}
-		for (TelnetOptions option : passiveSupport) {
-			logger.log(Level.DEBUG,"..Indicate "+option.name());
-			option.getOptionHandler().indicateSupport(ret);
-		}
-//		for (TelnetOption option : TelnetConfiguration.getKnownOptions()) {
-//			logger.log(Level.DEBUG,"..Initialize "+option.getName());
-//			option.initialize(ret);
-//		}
-		
+		ret.initialize();
+
 		logger.log(Level.DEBUG,"LEAVE accept()");
 		return ret;
 	}

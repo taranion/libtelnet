@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package org.prelle.telnet;
 
@@ -12,6 +12,7 @@ import org.prelle.telnet.TelnetOptionHandler;
 import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetSocket;
 import org.prelle.telnet.mud.MUDTerminalTypeStandard;
+import org.prelle.telnet.option.TerminalType;
 
 /**
  * @author prelle
@@ -20,21 +21,26 @@ import org.prelle.telnet.mud.MUDTerminalTypeStandard;
 public class ActiveUsage implements TelnetOptionListener {
 
     private final static Logger logger = System.getLogger("app");
-	
+
 	private Thread thread;
 
 	//-----------------------------------------------------------------
 	/**
 	 * @param args
-	 * @throws IOException 
+	 * @throws IOException
 	 */
 	public static void main(String[] args) throws IOException {
 		new ActiveUsage();
 	}
 
 	public ActiveUsage() throws IOException {
-
-		TelnetSocket socket = new TelnetSocket("rom.mud.de", 4000);
+//		TelnetSocket socket = new TelnetSocket("rom.mud.de", 4000)
+		TelnetSocket socket = new TelnetSocket("mg.mud.de", 4711)
+//		TelnetSocket socket = new TelnetSocket("lost.wishes.net", 5555)
+				.support(new TelnetOptionHandler(0,"TRANSMIT_BINARY"), Role.REQUESTER)
+				.support(new TelnetOptionHandler(1,"ECHO"), Role.REQUESTER)
+				.support(new TerminalType("ActiveUsage","XTERM","MTTS 0"), Role.PROVIDER)
+				;
 		InputStream in = socket.getInputStream();
 		while (true) {
 			int foo = in.read();

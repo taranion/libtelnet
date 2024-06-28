@@ -3,17 +3,16 @@ package org.prelle.telnet.mud;
 import java.io.IOException;
 import java.lang.System.Logger.Level;
 
-import org.prelle.telnet.TelnetInputStream;
 import org.prelle.telnet.TelnetOptionHandler;
-import org.prelle.telnet.TelnetOptions;
 import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetSocket;
-import org.prelle.telnet.option.TelnetWindowSizeData;
 
 /**
- * 
+ *
  */
 public class MUDTilemapProtocol extends TelnetOptionHandler {
+
+	public final static int CODE = 100;
 
 	public static class TileMapData {
 		private int[][] mapData;
@@ -27,17 +26,7 @@ public class MUDTilemapProtocol extends TelnetOptionHandler {
 
 	//-------------------------------------------------------------------
 	public MUDTilemapProtocol() {
-		super(100, "MTP");
-	}
-
-	//-------------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.TelnetOptionHandler#initialize(org.prelle.telnet.TelnetSocket)
-	 */
-	@Override
-	public void initialize(TelnetSocket console) throws IOException {
-		// TODO Auto-generated method stub
-
+		super(CODE, "MTP");
 	}
 
 	//-------------------------------------------------------------------
@@ -45,10 +34,10 @@ public class MUDTilemapProtocol extends TelnetOptionHandler {
 		logger.log(Level.WARNING, "TODO: send map");
 		TelnetOutputStream out = (TelnetOutputStream) socket.getOutputStream();
 
-		TelnetOptionHandler.startSubNegotiation(socket, TelnetOptions.MTP.getCode());
+		TelnetOptionHandler.startSubNegotiation(socket, CODE);
 		out.write(mapData[0].length);
 		out.write(mapData.length);
-		
+
 		for (int y=0; y<mapData.length; y++) {
 			for (int x=0; x<mapData[y].length; x++) {
 				int code = mapData[y][x];
@@ -56,41 +45,41 @@ public class MUDTilemapProtocol extends TelnetOptionHandler {
 				out.write(code%256);
 			}
 		}
-		TelnetOptionHandler.endSubNegotiation(socket, TelnetOptions.MTP.getCode());
+		TelnetOptionHandler.endSubNegotiation(socket, CODE);
 		out.flush();
 
 	}
 
-	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.TelnetOptionHandler#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
-	 */
-	@Override
-	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in) throws IOException {
-		in.setHigherLevelControl(true);
-		// MTP Sub negotiation
-		int w = in.read();
-		int h = in.read();
-		int[][] mapData = new int[h][];
-		for (int y=0; y<h; y++) {
-			mapData[y] = new int[w];
-			for (int x=0; x<w; x++) {
-				int high = in.read();
-				int low  = in.read();
-				int v = high*256 + low;
-				mapData[y][x] = v; 
-			}
-		}
-		
-		logger.log(Level.INFO,"Map: "+ w+"x"+h);
-		
-//		in.readUntilSE();
-		in.read();
-		in.read();
-		in.setHigherLevelControl(false);
-		logger.log(Level.DEBUG,"Map done");
-		
-		nvt.fireOptionDataChanged(this, new TileMapData(w,h,mapData));
-	}
+//	//-----------------------------------------------------------------
+//	/**
+//	 * @see org.prelle.telnet.TelnetOptionHandler#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
+//	 */
+//	@Override
+//	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in) throws IOException {
+//		in.setHigherLevelControl(true);
+//		// MTP Sub negotiation
+//		int w = in.read();
+//		int h = in.read();
+//		int[][] mapData = new int[h][];
+//		for (int y=0; y<h; y++) {
+//			mapData[y] = new int[w];
+//			for (int x=0; x<w; x++) {
+//				int high = in.read();
+//				int low  = in.read();
+//				int v = high*256 + low;
+//				mapData[y][x] = v;
+//			}
+//		}
+//
+//		logger.log(Level.INFO,"Map: "+ w+"x"+h);
+//
+////		in.readUntilSE();
+//		in.read();
+//		in.read();
+//		in.setHigherLevelControl(false);
+//		logger.log(Level.DEBUG,"Map done");
+//
+//		nvt.fireOptionDataChanged(this, new TileMapData(w,h,mapData));
+//	}
 
 }

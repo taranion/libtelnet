@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package org.prelle.telnet;
 
@@ -12,63 +12,65 @@ import java.lang.System.Logger.Level;
  * @author prelle
  *
  */
-public abstract class TelnetOptionHandler implements TelnetConstants {
+public class TelnetOptionHandler implements TelnetConstants {
 
 	protected final static Logger logger = System.getLogger("telnet.option");
 
 	protected int code;
 	protected String name;
-	
+
 	//-----------------------------------------------------------------
-	protected TelnetOptionHandler(int code, String name) {
+	public TelnetOptionHandler(int code, String name) {
 		this.code = code;
 		this.name = name;
 	}
 
 	public String getName() { return name; }
 	public int getCode() { return code; }
+	public String toString() { return name+"("+code+")"; }
 
-	public abstract void initialize(TelnetSocket console) throws IOException;
-
-	//-------------------------------------------------------------------
-	/**
-	 * @param ret
-	 */
-	public void indicateSupport(TelnetSocket nvt) throws IOException {
-		logger.log(Level.DEBUG,"Indicate support for {0}, clientmode={1}",getName(),nvt.isInClientMode());
-		nvt.expectedAnswerFor(nvt.getFromSupportedOptions(getCode()));
-		TelnetOutputStream out = (TelnetOutputStream) nvt.getOutputStream();
-		out.sendWill(getCode());
-	}
-
-	//-----------------------------------------------------------------
-	public void requestUsage(TelnetSocket nvt) throws IOException {
-		logger.log(Level.DEBUG,"Suggest "+getName()+" , clientmode="+nvt.isInClientMode());
-		nvt.expectedAnswerFor(nvt.getFromSupportedOptions(getCode()));
-		TelnetOutputStream out = (TelnetOutputStream) nvt.getOutputStream();
-		if (nvt.isInClientMode()) {
-//			nvt.getWillVariable(getCode()).setState(true);
-			out.sendWill(getCode());
-		} else {
-//			nvt.getDoVariable(getCode()).setState(true);
-			out.sendDo(getCode());
-		}
-	}
-
-	//-----------------------------------------------------------------
-	public void requestStop(TelnetSocket nvt) throws IOException {
-		logger.log(Level.DEBUG,"Desire stopping "+getName());
-		nvt.expectedAnswerFor(nvt.getFromSupportedOptions(getCode()));
-		TelnetOutputStream out = (TelnetOutputStream) nvt.getOutputStream();
-		if (nvt.isInClientMode()) {
-//			nvt.getWillVariable(getCode()).setState(false);
-			out.sendWont(getCode());
-		} else {
-//			nvt.getDoVariable(getCode()).setState(true);
-			out.sendDont(getCode());
-		}
-	}
-
+//	//-------------------------------------------------------------------
+//	public void initialize(TelnetSocket console) throws IOException {
+//
+//	}
+//
+//	//-------------------------------------------------------------------
+//	/**
+//	 * @param ret
+//	 */
+//	public void indicateSupport(TelnetSocket nvt) throws IOException {
+//		logger.log(Level.DEBUG,"Indicate support for {0}, clientmode={1}",getName(),nvt.isInClientMode());
+//		nvt.expectedAnswerFor(nvt.getFromSupportedOptions(getCode()));
+//		TelnetOutputStream out = (TelnetOutputStream) nvt.getOutputStream();
+//		out.sendWill(getCode());
+//	}
+//
+//	//-----------------------------------------------------------------
+//	public void requestUsage(TelnetSocket nvt) throws IOException {
+//		logger.log(Level.DEBUG,"Suggest "+getName()+" , clientmode="+nvt.isInClientMode());
+//		nvt.expectedAnswerFor(nvt.getFromSupportedOptions(getCode()));
+//		TelnetOutputStream out = (TelnetOutputStream) nvt.getOutputStream();
+//		if (nvt.isInClientMode()) {
+//			out.sendWill(getCode());
+//		} else {
+//			out.sendDo(getCode());
+//		}
+//	}
+//
+//	//-----------------------------------------------------------------
+//	public void requestStop(TelnetSocket nvt) throws IOException {
+//		logger.log(Level.DEBUG,"Desire stopping "+getName());
+//		nvt.expectedAnswerFor(nvt.getFromSupportedOptions(getCode()));
+//		TelnetOutputStream out = (TelnetOutputStream) nvt.getOutputStream();
+//		if (nvt.isInClientMode()) {
+////			nvt.getWillVariable(getCode()).setState(false);
+//			out.sendWont(getCode());
+//		} else {
+////			nvt.getDoVariable(getCode()).setState(true);
+//			out.sendDont(getCode());
+//		}
+//	}
+//
 //	//-----------------------------------------------------------------
 //	/**
 //	 * @see org.prelle.telnet.option.TelnetOptionHandler#requestNotUsage()
@@ -137,12 +139,12 @@ public abstract class TelnetOptionHandler implements TelnetConstants {
 //	public void processWill(TelnetSocket nvt) throws IOException {
 //		NegotiationState state = nvt.getNegotiationState(getCode());
 //		if (nvt.isInClientMode()) {
-//			
+//
 //		} else {
 //			logger.log(Level.DEBUG,"Enabled {0} (remote party accepted)", getName());
 //			optionEnabled(nvt, true);
 //			nvt.setNegotiationState(getCode(), NegotiationState.REMOTE_CONFIRMED);
-//			
+//
 //		}
 ////		boolean[] states = nvt.getDoWillStatesFor(this);
 ////		boolean doState = states[0];
@@ -207,43 +209,57 @@ public abstract class TelnetOptionHandler implements TelnetConstants {
 //			logger.log(Level.DEBUG,"Ignore WONT when I sent a WONT");
 //		}
 //	}
-	
-
-	//-----------------------------------------------------------------
-	protected void optionEnabled(TelnetSocket nvt, boolean iAmInitiator) throws IOException {
-		logger.log(Level.DEBUG,"No subnegotiation for {0}", getName());
-	}
-
-	//-----------------------------------------------------------------
-	protected void optionDisabled(TelnetSocket nvt, boolean iAmInitiator) {
-		logger.log(Level.INFO,getName()+" not supported");
-	}
-
+//
+//
+//	//-----------------------------------------------------------------
+//	protected void optionEnabled(TelnetSocket nvt, boolean iAmInitiator) throws IOException {
+//		logger.log(Level.DEBUG,"No subnegotiation for {0}", getName());
+//	}
+//
+//	//-----------------------------------------------------------------
+//	protected void optionDisabled(TelnetSocket nvt, boolean iAmInitiator) {
+//		logger.log(Level.INFO,getName()+" not supported");
+//	}
+//
 //	//-----------------------------------------------------------------
 //	public boolean isEnabledByDefault() {
 //		return false;
 //	}
+//
+//	//-----------------------------------------------------------------
+//	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in) throws IOException {
+//
+//	}
 
-	//-----------------------------------------------------------------
-	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in) throws IOException {
-		
-	}
-	
 	//-----------------------------------------------------------------
 	protected static void startSubNegotiation(TelnetSocket sock, int code) throws IOException {
 		OutputStream out = sock.getOutputStream();
 		out.write(IAC);
 		out.write(SB);
-		out.write(code);		
+		out.write(code);
 	}
-	
+
 	//-----------------------------------------------------------------
 	protected static void endSubNegotiation(TelnetSocket sock, int code) throws IOException {
 		OutputStream out = sock.getOutputStream();
 		out.write(IAC);
 		out.write(SE);
-		out.write(code);		
+		out.write(code);
 	}
 
-	
+	//-----------------------------------------------------------------
+	/**
+	 * Called after the use of a option has been confirmed
+	 */
+	public void initializeAs(Role role, TelnetSocket origin, TelnetOutputStream out) {
+		if (role==Role.PROVIDER) return;
+		logger.log(Level.WARNING, "Forgot to implement initialization for {0} / {1} as {2}",name, getClass().getName(), role);
+	}
+
+	//-----------------------------------------------------------------
+	public void handleSubnegotiation(Role role, int[] values, TelnetSocket origin, TelnetOutputStream out) {
+		logger.log(Level.WARNING, "Forgot to implement dealing with subnegotiation for {0} / {1}",name, getClass().getName());
+	}
+
+
 }

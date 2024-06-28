@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package org.prelle.telnet;
 
@@ -13,9 +13,10 @@ import java.net.Socket;
 
 import org.prelle.telnet.TelnetOptionHandler;
 import org.prelle.telnet.TelnetOptionListener;
-import org.prelle.telnet.TelnetOptions;
+import org.prelle.telnet.TelnetOptionDeleteMe;
 import org.prelle.telnet.TelnetServerSocket;
 import org.prelle.telnet.TelnetSocket;
+import org.prelle.telnet.option.TransmitBinary;
 
 /**
  * @author prelle
@@ -24,30 +25,31 @@ import org.prelle.telnet.TelnetSocket;
 public class PassiveUsage implements Runnable, TelnetOptionListener {
 
     private final static Logger logger = System.getLogger("app");
-	
+
 	private Thread thread;
 	private TelnetServerSocket serverSocket;
 
 	//-----------------------------------------------------------------
 	/**
 	 * @param args
-	 * @throws IOException 
+	 * @throws IOException
 	 */
 	public static void main(String[] args) throws IOException {
-//		new PassiveUsage();
-		new ActiveUsage();
+		new PassiveUsage();
+//		new ActiveUsage();
 	}
 
 	public PassiveUsage() throws IOException {
 		serverSocket = new TelnetServerSocket(4000)
-				.passivelySupport(TelnetOptions.ECHO)
-				.passivelySupport(TelnetOptions.EOR)
-				.passivelySupport(TelnetOptions.MSP)
-				.withMUDTerminalTypeStandard()
-				.withNAWS()
+				.support(new TransmitBinary(), Role.PROVIDER)
+//				.passivelySupport(TelnetOptions.ECHO)
+//				.passivelySupport(TelnetOptions.EOR)
+//				.passivelySupport(TelnetOptions.MSP)
+//				.withMUDTerminalTypeStandard()
+//				.withNAWS()
 				;
-		
-		
+
+
 		thread = new Thread(this,"ThreadCheck");
 		thread.start();
 		System.getLogger("app").log(Level.INFO, "Waiting on port 4000");
@@ -60,21 +62,21 @@ public class PassiveUsage implements Runnable, TelnetOptionListener {
 				Socket vanillaSocket = serverSocket.accept();
 				TelnetSocket socket = (TelnetSocket)vanillaSocket;
 				socket.addOptionListener(this);
-				
+
 				OutputStream out = socket.getOutputStream();
 				logger.log(Level.DEBUG,"Incoming connection via "+socket.getClass()+" and output via "+out);
 				PrintWriter pw = new PrintWriter(out);
 				pw.print("Wie heisst Du? ");
 //				socket.requestEcho();
 				pw.flush();
-				
+
 				int data = -1;
 				InputStream in = socket.getInputStream();
 				do {
 					data = in.read();
-					if (socket.isFeatureActive(TelnetOptions.ECHO)) {
-						out.write(data);
-					}
+//					if (socket.isFeatureActive(TelnetOption.ECHO)) {
+//						out.write(data);
+//					}
 				} while (data!=-1);
 			} catch (IOException e1) {
 				// TODO Auto-generated catch block
@@ -103,6 +105,6 @@ public class PassiveUsage implements Runnable, TelnetOptionListener {
 	public void telnetOptionDataChanged(TelnetSocket nvt,
 			TelnetOptionHandler option, Object data) {
 		logger.log(Level.INFO,"Telnet Option Data Changed: "+option.getClass().getSimpleName()+" = "+data);
-		
+
 	}
 }

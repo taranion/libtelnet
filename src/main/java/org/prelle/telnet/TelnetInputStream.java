@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package org.prelle.telnet;
 
@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.prelle.telnet.TelnetConstants.ControlCode;
 
@@ -17,10 +19,13 @@ import org.prelle.telnet.TelnetConstants.ControlCode;
  */
 public class TelnetInputStream extends FilterInputStream {
 
-	private final static Logger logger = System.getLogger("telnet.lvl2");
+	private final static Logger logger = System.getLogger("telnet.lvl1.in");
 
-	private TelnetStreamListener listener;
-	private boolean higherLevelControl = false;
+
+
+	private TelnetSocket listener;
+	private boolean commandMode;
+	private boolean dataIsSubnegotiation;
 
 	/** If stickyCRLF is true, then we're a machine, like an IBM PC,
     where a Newline is a CR followed by LF.  On UNIX, this is false
@@ -30,21 +35,47 @@ public class TelnetInputStream extends FilterInputStream {
 
 	public boolean  binaryMode = false;
 
+	private List<Integer> subNegotiationBuffer = new ArrayList<>();
+	private int subNegotiationFor;
+
 	//-----------------------------------------------------------------
 	/**
 	 */
-	public TelnetInputStream(TelnetStreamListener list, InputStream in) {
+	public TelnetInputStream(TelnetSocket list, InputStream in) {
 		super(in);
 		this.listener = list;
 	}
 
 	//-----------------------------------------------------------------
-	private ControlCode readNextCode() throws IOException {
+	public void setBinaryMode(boolean enabled) {
+		if (!binaryMode && enabled) {
+			logger.log(Level.INFO, "Enable 8 bit binary transfer");
+		} else if (binaryMode && !enabled) {
+			logger.log(Level.WARNING, "Disable 8 bit binary transfer");
+		}
+		binaryMode = enabled;
+	}
+
+	//-----------------------------------------------------------------
+	public boolean isInBinaryMode() {
+		return binaryMode;
+	}
+
+//	//-----------------------------------------------------------------
+//	private ControlCode readNextCode() throws IOException {
+//		int data = in.read();
+//		ControlCode code = ControlCode.getCodeFor(data);
+//		if (code==null)
+//			throw new IOException("Expected control code but found "+data);
+//		return code;
+//	}
+
+	//-----------------------------------------------------------------
+	private int tracingRead() throws IOException {
 		int data = in.read();
-		ControlCode code = ControlCode.getCodeFor(data);
-		if (code==null)
-			throw new IOException("Expected control code but found "+data);
-		return code;
+		String name = (data>=240)?ControlCode.getCodeFor(data).name():"";
+		logger.log(Level.TRACE, "RCV {0} {1} ", data, name);
+		return data;
 	}
 
 	//-----------------------------------------------------------------
@@ -53,72 +84,187 @@ public class TelnetInputStream extends FilterInputStream {
 	 */
 	@Override
 	public int read() throws IOException {
-		if (higherLevelControl) {
-			if (in instanceof TelnetDebuggingInputStream)
-				((TelnetDebuggingInputStream)in).setInControlMode(true);
-			int ret = in.read();
-			if (in instanceof TelnetDebuggingInputStream)
-				((TelnetDebuggingInputStream)in).setInControlMode(false);
-			logger.log(Level.TRACE,"Read in higher level control "+ret);
-			return ret;
-		}
-		
-		// Loop until next data is received
-		do {
-			if (in instanceof TelnetDebuggingInputStream)
-				((TelnetDebuggingInputStream)in).setInControlMode(false);
-			int data = in.read();
-			logger.log(Level.TRACE, "RCV {0} ({1})", data, (char)data);
-
-			if (data<240) {
-
-		        /* If last time we determined we saw a CRLF pair, and we're
-		           not turning that into just a Newline (that is, we're
-		           stickyCRLF), then return the LF part of that sticky
-		           pair now. */
-
-		        if (seenCR) {
-		            seenCR = false;
-		            return '\n';
-		        }
-
-		        if (data== '\r') {    /* CR */
-		        	data = in.read();
-					logger.log(Level.TRACE, "RCV2 {0} ({1})", data, (char)data);
-		            switch (data) {
-		            default:
-		            case -1:                        /* this is an error */
-		            	throw new IOException("misplaced CR in input");
-
-		            case 0:                         /* NUL - treat CR as CR */
-		                return '\r';
-
-		            case '\n':                      /* CRLF - treat as NL */
-		                if (stickyCRLF) {
-		                    seenCR = true;
-		                    return '\r';
-		                } else {
-							logger.log(Level.TRACE, "RCV2 send NL");
-		                    return '\n';
-		                }
-		            }
-		        }
-				return data;
-			}
-			
-			// Found a control code
-			ControlCode code = ControlCode.getCodeFor(data);
-			if (in instanceof TelnetDebuggingInputStream)
-				((TelnetDebuggingInputStream)in).setInControlMode(true);
-
+		if (commandMode) {
+			int commandRaw = tracingRead();
+			ControlCode code = ControlCode.getCodeFor(commandRaw);
 			switch (code) {
-			case IAC:
-				processIAC();
-				continue;
+			case IAC : return 255;
+			case WILL: case WONT:
+			case DO  : case DONT:
+				if (dataIsSubnegotiation) {
+					logger.log(Level.WARNING, "Receive an IAC {0} while in SB mode", code);
+				}
+				int cmdVal = tracingRead();
+				commandMode = false;;
+				if (cmdVal==-1) {
+					logger.log(Level.WARNING, "Connection reset");
+					return -1;
+				}
+				listener.processCommand(new TelnetCommand(code, cmdVal));
+				break;
+			case SB:
+				// Subnegotiation begin
+				subNegotiationFor = tracingRead();
+				if (subNegotiationFor==-1) {
+					logger.log(Level.WARNING, "Connection reset");
+					commandMode = false;;
+					return -1;
+				}
+				logger.log(Level.DEBUG, "Subnegotiation begins for {0}", subNegotiationFor);
+				dataIsSubnegotiation = true;
+				commandMode = false;;
+				subNegotiationBuffer.clear();
+				break;
+			case SE:
+				// Subnegotiation end
+				logger.log(Level.DEBUG, "Subnegotiation ends for {0}: {1}",subNegotiationFor,subNegotiationBuffer);
+				int[] values = new int[subNegotiationBuffer.size()];
+				int i=0;
+				for (Integer v : subNegotiationBuffer) values[i++]=v;
+				listener.processSubnegotiation(subNegotiationFor,values);
+				subNegotiationBuffer.clear();
+				dataIsSubnegotiation = false;
+				break;
 			default:
-				logger.log(Level.WARNING,"Don't know what to do with code "+code);
+				commandMode = false;;
+				listener.processCommand(new TelnetCommand(code));
+			}
+		}
+
+		if (dataIsSubnegotiation) {
+			readInSubnegotiationMode();
+		}
+
+		// Loop until next data is received
+		commandMode = false;;
+//		do {
+			int data = -1;
+			while (true) {
+				data = in.read();
+				logger.log(Level.TRACE, "RCV DATA {0} ({1})", data, (char)data);
+//				try {
+//					throw new RuntimeException("Trace");
+//				} catch (Exception e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+				if (data==-1)
+					return data;
+				// If not in binary mode, codes >128 can be ignored
+				if (data>=128 && !binaryMode && data<255) {
+					logger.log(Level.WARNING, "Ignore character code {0} / {1} because not in binary mode",data, (char)data);
+				} else
+					break;
 			}
 
+			if (data==255) {
+				commandMode = true;
+				return read();
+			}
+//		} while (true);
+			return data;
+	}
+
+//	//-----------------------------------------------------------------
+//	private int readInDataMode() throws IOException {
+//		// Loop until next data is received
+//		do {
+//			int data = -1;
+//			while (true) {
+//				data = in.read();
+//				logger.log(Level.TRACE, "RCV {0} ({1})", data, (char)data);
+//				if (data==-1)
+//					return data;
+//				// If not in binary mode, codes >128 can be ignored
+//				if (data>=128 && !binaryMode && data<255) {
+//					logger.log(Level.WARNING, "Ignore character code {0} / {1} because not in binary mode",data, (char)data);
+//				} else
+//					break;
+//			}
+//
+//			if (data==255) {
+//				commandMode = true;
+//				return read();
+//			}
+//		} while (true);
+//	}
+
+//	//-----------------------------------------------------------------
+//	private int readInCommandMode() throws IOException {
+//		int commandRaw = in.read();
+//		logger.log(Level.TRACE, "RCV {0} ", commandRaw);
+//		ControlCode code = ControlCode.getCodeFor(commandRaw);
+//		switch (code) {
+//		case IAC : return 255;
+//		case WILL: case WONT:
+//		case DO  : case DONT:
+//			int cmdVal = in.read();
+//			logger.log(Level.TRACE, "RCV {0} ", cmdVal);
+//			commandMode = false;;
+//			if (cmdVal==-1) {
+//				logger.log(Level.WARNING, "Connection reset");
+//				return -1;
+//			}
+//			listener.processCommand(new TelnetCommand(code, cmdVal));
+//			break;
+//		case SB:
+//			// Subnegotiation begin
+//			cmdVal = in.read();
+//			logger.log(Level.TRACE, "RCV {0} ", cmdVal);
+//			if (cmdVal==-1) {
+//				logger.log(Level.WARNING, "Connection reset");
+//				commandMode = false;;
+//				return -1;
+//			}
+//			logger.log(Level.DEBUG, "Subnegotiation begins for {0}", cmdVal);
+//			dataIsSubnegotiation = true;
+//			commandMode = false;;
+//			subnegotiationBuffer.clear();
+//			break;
+//		case SE:
+//			// Subnegotiation end
+//			logger.log(Level.WARNING, "Subnegotiation ends "+subnegotiationBuffer);
+//			System.exit(1);
+//			break;
+//		default:
+//			commandMode = false;;
+//			listener.processCommand(new TelnetCommand(code));
+//		}
+//
+//		if (dataIsSubnegotiation) {
+//			readInCommandMode();
+//		}
+//		return readInDataMode();
+//	}
+
+	//-----------------------------------------------------------------
+	private int readInSubnegotiationMode() throws IOException {
+		do {
+			int data = -1;
+			while (true) {
+				data = tracingRead();
+				if (data==-1)
+					return data;
+				// If not in binary mode, codes >128 can be ignored
+				if (data>=128 && !binaryMode && data<255) {
+					logger.log(Level.WARNING, "Ignore character code {0} / {1} because not in binary mode",data, (char)data);
+				} else
+					break;
+			}
+
+			if (data==255) {
+				data = tracingRead();
+				if (data==ControlCode.SE.code()) {
+					dataIsSubnegotiation = false;
+					int[] values = new int[subNegotiationBuffer.size()];
+					int i=0; for (Integer  t: subNegotiationBuffer) values[i++]=t;
+					listener.processSubnegotiation(subNegotiationFor, values);
+					return data;
+				} else if (data<255) {
+					logger.log(Level.WARNING, "Received a control code !=SE {0} while in sub-negotiation",data);
+				}
+			}
+			subNegotiationBuffer.add(data);
 		} while (true);
 	}
 
@@ -186,45 +332,45 @@ public class TelnetInputStream extends FilterInputStream {
 		in.close();
 	}
 
-	//-----------------------------------------------------------------
-	private void processIAC() throws IOException {
-		//		mode = Mode.RCV_IAC;
-		ControlCode code = readNextCode();
-
-		logger.log(Level.DEBUG,"IAC "+code);
-		int next = -1;
-		switch (code) {
-		case IP:
-			logger.log(Level.DEBUG,"Interrupt Process Requested");
-			listener.receivedInterruptProcess();
-			break;
-		case GA:
-			listener.receivedGoAheadSignal();
-			break;
-		case WILL:
-			next = in.read();
-			listener.receivedWILL(next);
-			break;
-		case WONT:
-			next = in.read();
-			listener.receivedWONT(next);
-			break;
-		case DO:
-			next = in.read();
-			listener.receivedDO(next);
-			break;
-		case DONT:
-			next = in.read();
-			listener.receivedDONT(next);
-			break;
-		case SB:
-			next = in.read();
-			listener.receivedSubnegotiationBegin(next);
-			break;
-		default:
-			logger.log(Level.WARNING,"Received unprocessed "+code);
-		}
-	}
+//	//-----------------------------------------------------------------
+//	private void processIAC() throws IOException {
+//		//		mode = Mode.RCV_IAC;
+//		ControlCode code = readNextCode();
+//
+//		logger.log(Level.DEBUG,"IAC "+code);
+//		int next = -1;
+//		switch (code) {
+//		case IP:
+//			logger.log(Level.DEBUG,"Interrupt Process Requested");
+//			listener.receivedInterruptProcess();
+//			break;
+//		case GA:
+//			listener.receivedGoAheadSignal();
+//			break;
+//		case WILL:
+//			next = in.read();
+//			listener.receivedWILL(next);
+//			break;
+//		case WONT:
+//			next = in.read();
+//			listener.receivedWONT(next);
+//			break;
+//		case DO:
+//			next = in.read();
+//			listener.receivedDO(next);
+//			break;
+//		case DONT:
+//			next = in.read();
+//			listener.receivedDONT(next);
+//			break;
+//		case SB:
+//			next = in.read();
+//			listener.receivedSubnegotiationBegin(next);
+//			break;
+//		default:
+//			logger.log(Level.WARNING,"Received unprocessed "+code);
+//		}
+//	}
 
 //	//-----------------------------------------------------------------
 //	public void readUntilSE() throws IOException {
@@ -245,16 +391,16 @@ public class TelnetInputStream extends FilterInputStream {
 //			logger.log(Level.WARNING,"Expected IAC SE but found IAC "+data2);
 //		}
 //	}
-
-	//-----------------------------------------------------------------
-	/**
-	 * Switch the stream into a dumb mode, letting the higher level
-	 * interpret the bytes
-	 * @param b
-	 */
-	public void setHigherLevelControl(boolean higherLevel) {
-		higherLevelControl = higherLevel;
-	}
+//
+//	//-----------------------------------------------------------------
+//	/**
+//	 * Switch the stream into a dumb mode, letting the higher level
+//	 * interpret the bytes
+//	 * @param b
+//	 */
+//	public void setHigherLevelControl(boolean higherLevel) {
+//		inIACMode = higherLevel;
+//	}
 
 	//-----------------------------------------------------------------
 	/**

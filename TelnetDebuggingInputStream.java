@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package org.prelle.telnet;
 
@@ -16,9 +16,9 @@ import java.lang.System.Logger.Level;
 public class TelnetDebuggingInputStream extends FilterInputStream implements TelnetConstants {
 
 	private final static Logger logger = System.getLogger("telnet.lvl1");
-	
+
 	private boolean inControlMode = false;
-	
+
 	//-----------------------------------------------------------------
 	/**
 	 */
@@ -33,7 +33,7 @@ public class TelnetDebuggingInputStream extends FilterInputStream implements Tel
 	@Override
 	public int read() throws IOException {
 		int data = super.read();
-		
+
 		ControlCode code = ControlCode.getCodeFor(data);
 		if (code!=null)
 			logger.log(Level.DEBUG,String.format("RCV %s", code.toString()));
@@ -59,7 +59,7 @@ public class TelnetDebuggingInputStream extends FilterInputStream implements Tel
 	/**
 	 * @param inControlMode the inControlMode to set
 	 */
-	public void setInControlMode(boolean inControlMode) {
+	public void setInContdrolMode(boolean inControlMode) {
 		this.inControlMode = inControlMode;
 	}
 

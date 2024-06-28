@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package org.prelle.telnet.option;
 
@@ -20,22 +20,22 @@ public class TimingMark extends TelnetOptionHandler {
 		super(6, "TIMING_MARK");
 	}
 
-	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.TelnetOptionHandler#initialize(org.prelle.telnet.TelnetSocket)
-	 */
-	@Override
-	public void initialize(TelnetSocket console) {
-		// Not sending and not awaiting echo
-	}
-
-	//-----------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.TelnetOptionHandler#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
-	 */
-	@Override
-	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in)
-			throws IOException {
-	}
+//	//-----------------------------------------------------------------
+//	/**
+//	 * @see org.prelle.telnet.TelnetOptionHandler#initialize(org.prelle.telnet.TelnetSocket)
+//	 */
+//	@Override
+//	public void initialize(TelnetSocket console) {
+//		// Not sending and not awaiting echo
+//	}
+//
+//	//-----------------------------------------------------------------
+//	/**
+//	 * @see org.prelle.telnet.TelnetOptionHandler#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
+//	 */
+//	@Override
+//	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in)
+//			throws IOException {
+//	}
 
 }

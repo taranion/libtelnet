@@ -1,0 +1,124 @@
+body { 
+    COLOR: midnightblue;
+	background-color: #F8F8F8;
+	font-family: Verdana, Arial, Helvetica, sans-serif;
+	font-size: 11px;
+	scrollbar-face-color: #7E98CB;
+	scrollbar-highlight-color: #C4D2ED;
+	scrollbar-shadow-color: #7E98CB;
+	scrollbar-3dlight-color: #C4D2ED;
+	scrollbar-arrow-color:  #021A4A;
+	scrollbar-track-color: #C4D2ED;
+	scrollbar-darkshadow-color: #021A4A;
+	margin-top: 15px;
+	margin-left: 10px;
+	margin-right: 10px;
+	margin-bottom: 0px;
+	padding: 0px;
+}
+h1           { font-family: Verdana; color: #0000FF }
+h2           { font-family: Verdana; color: #0000FF }
+h3           { font-family: Verdana; color: #0000FF }
+h4           { font-family: Verdana; color: #0000FF }
+h5           { font-family: Verdana; color: #0000FF }
+h6           { font-family: Verdana; color: #0000FF }
+p            { font-family: Verdana; color: midnightblue; font-size: 10pt }
+dt           { color: #0000FF; font-weight: bold }
+pre          { color: #000000 }
+a:link  { font-family: Verdana; font-weight: normal; color: blue; }
+a:visited  { font-family: Verdana; font-weight: normal; color: #C44D88; }
+TD
+{
+    FONT-FAMILY: Verdana, Tahoma, Arial;
+    FONT-SIZE: 12px
+}
+TD.content
+{
+    FONT-FAMILY: Verdana, Tahoma, Arial;
+    FONT-SIZE: 12px
+}
+TD.rn
+{
+    FONT-FAMILY: Verdana, Tahoma, Arial;
+    FONT-SIZE: 10px
+}
+P.small
+{
+    FONT-FAMILY: Verdana, Tahoma, Arial;
+    FONT-SIZE: 10px
+}
+.normal
+{
+    FONT-FAMILY: Verdana, Tahoma, Arial;
+    FONT-SIZE: 12px
+}
+.small
+{
+    FONT-FAMILY: Verdana, Tahoma, Arial;
+    FONT-SIZE: 11px
+}
+.formitem
+{
+    FONT-FAMILY: Verdana, Tahoma, Arial;
+    FONT-SIZE: 9pt
+}
+.error
+{
+    COLOR: #ff0000;
+    FONT-FAMILY: Verdana, Tahoma, Arial;
+    FONT-SIZE: 10px
+}
+.large
+{
+	FONT-FAMILY: Verdana, Tahoma, Arial;
+	FONT-SIZE: 14px;
+}
+.white
+{
+    COLOR: #ffffff;
+    FONT-FAMILY: Verdana, Tahoma, Arial;
+    FONT-SIZE: 12px
+}
+.red
+{
+    COLOR: #9e5427;
+    FONT-FAMILY: Verdana, Tahoma, Arial;
+    FONT-SIZE: 12px;
+    FONT-WEIGHT: bold
+}
+
+.validFormEntry
+{
+	COLOR: #0033cc;
+	FONT-FAMILY: Verdana, Arial, Helvetica, 'MS Sans Serif';
+	FONT-SIZE: 10pt;
+	FONT-WEIGHT: bold
+}
+.invalidFormEntry
+{
+	COLOR: #cc0000;
+	FONT-FAMILY: Verdana, Arial, Helvetica, 'MS Sans Serif';
+	FONT-SIZE: 10px;
+	FONT-WEIGHT: bold
+}
+.bullet {
+	font-weight: bold;
+	color: #FF9933;
+}
+.author {
+	font-size: 10px;
+	background-color: #A9C6E2;
+	margin: 16px;
+	padding: 8px;
+	border: 2px solid #3366CC;
+}
+#banner {
+  background: url(/common/mountain.gif) no-repeat;
+  background-color: #88B8E4;
+  height: 102px;
+}
+#menubar {
+  background: url(/common/band.gif);
+  background-color: #88B8E4;
+  height: 22px;
+}

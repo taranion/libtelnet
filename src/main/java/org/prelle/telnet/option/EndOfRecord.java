@@ -1,7 +1,7 @@
 /**
  *
  */
-package org.prelle.telnet.mud;
+package org.prelle.telnet.option;
 
 import java.io.IOException;
 
@@ -15,11 +15,18 @@ import org.prelle.telnet.TelnetSocket;
  * @author prelle
  *
  */
-public class MUDExtensionProtocol extends TelnetOptionHandler {
+public class EndOfRecord extends TelnetOptionHandler {
+
+	public final static int CODE = 25;
 
 	//-----------------------------------------------------------------
-	public MUDExtensionProtocol() {
-		super(91,"MXP");
+	public EndOfRecord() {
+		super(CODE,"EOR");
+	}
+
+	//-----------------------------------------------------------------
+	public EndOfRecord(int code, String name) {
+		super(code,name);
 	}
 
 //	//-----------------------------------------------------------------
@@ -28,7 +35,7 @@ public class MUDExtensionProtocol extends TelnetOptionHandler {
 //	 */
 //	@Override
 //	public void initialize(TelnetSocket console) throws IOException {
-//
+////		requestUsage(console);
 //	}
 //
 //	//-----------------------------------------------------------------

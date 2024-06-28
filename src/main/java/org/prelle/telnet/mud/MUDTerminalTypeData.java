@@ -118,11 +118,23 @@ public class MUDTerminalTypeData {
 
 	//-----------------------------------------------------------------
 	public List<Capability> getCapabilities() {
+		if (mudTerminalType==null) return List.of();
 		if (!mudTerminalType.startsWith("MTTS "))
 			return List.of();
 		List<Capability> ret = new ArrayList<MUDTerminalTypeData.Capability>();
 		try {
 			int vector = Integer.parseInt(mudTerminalType.substring(5));
+			return convertToList(vector);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return ret;
+	}
+
+	//-----------------------------------------------------------------
+	public static List<Capability> convertToList(int vector) {
+		List<Capability> ret = new ArrayList<MUDTerminalTypeData.Capability>();
+		try {
 			for (Capability cap : Capability.values()) {
 				if ((vector & cap.getBit())>0)
 					ret.add(cap);
