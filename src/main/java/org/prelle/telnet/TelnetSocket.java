@@ -14,9 +14,14 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * @author prelle
@@ -29,6 +34,9 @@ public class TelnetSocket extends Socket {
 		OFFERED,
 		REQUESTED,
 		CONFIRMED,
+		CONFIRMED_EXCHANGING,
+		/** Subnegotiation finished */
+		CONFIRMED_EXCHANGED,
 		REJECTED
 	}
 
@@ -55,7 +63,8 @@ public class TelnetSocket extends Socket {
 	private List<TelnetOptionListener> optionListener = new ArrayList<>();
 	private Charset charset = StandardCharsets.ISO_8859_1;
 
-	private boolean interrupted = false;
+	private TimerTask waitForOptions;
+	private static Timer timer = new Timer("SocketOptionTimer");
 
 	public static TelnetSocketBuilder builder() {
 		return new TelnetSocketBuilder();
@@ -182,6 +191,60 @@ public class TelnetSocket extends Socket {
 		return (TelnetInputStream) getInputStream();
 	}
 
+	//-------------------------------------------------------------------
+	private ModeState getModeState(int option) {
+		ModeState state = modeStates.get(option);
+		if (state==null) {
+			state=ModeState.UNKNOWN;
+			modeStates.put(option, state);
+		}
+		return state;
+	}
+
+	//-----------------------------------------------------------------
+	private void changeModeState(int option, ModeState newState) {
+		ModeState oldState = modeStates.get(option);
+		modeStates.put(option, newState);
+
+		if (oldState==newState)
+			return;
+
+		logger.log(Level.DEBUG, "Change state of {0} to {1}", options.get(option).handler.name, newState);
+		// Check if this new mode finished something
+		boolean finishedSomething = (newState==ModeState.REJECTED || newState==ModeState.CONFIRMED || newState==ModeState.CONFIRMED_EXCHANGED);
+		if (!finishedSomething)
+			return;
+
+		// Check if all modes are handled
+		boolean missing = false;
+		for (Entry<Integer, ModeState> pair : modeStates.entrySet()) {
+			if (pair.getValue()!=ModeState.CONFIRMED && pair.getValue()!=ModeState.REJECTED && pair.getValue()!=ModeState.CONFIRMED_EXCHANGED) {
+				missing = true;
+			}
+		}
+		if (!missing) {
+			// All options have been answered
+			logger.log(Level.DEBUG, "All option handling has been finished");
+			try {waitForOptions.cancel();} catch (Exception e) {}
+			fireOptionPhaseDone();
+		}
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * This method is called by a timer to make sure we are not indefinitely
+	 * waiting for answers to option offers.
+	 */
+	private void stopWaitingForOptionAnswers() {
+		for (Entry<Integer, ModeState> pair : modeStates.entrySet()) {
+//			logger.log(Level.INFO, "Current state of {0} is {1}", pair.getKey(), pair.getValue());
+			if (pair.getValue()!=ModeState.CONFIRMED && pair.getValue()!=ModeState.REJECTED && pair.getValue()!=ModeState.CONFIRMED_EXCHANGED) {
+				logger.log(Level.WARNING, "No answer to option {0} - assume it REJECTED", pair.getKey());
+				changeModeState(pair.getKey(), ModeState.REJECTED);
+			}
+		}
+	}
+
 	//-----------------------------------------------------------------
 	public TelnetSocket support(TelnetOptionHandler handler, Role role) {
 		logger.log(Level.DEBUG, "offer option {0} ({1})", handler.name, handler.code);
@@ -197,17 +260,37 @@ public class TelnetSocket extends Socket {
 
 	//-----------------------------------------------------------------
 	void initialize() throws IOException {
-		for (OptionEntry support : options.values()) {
+		List<OptionEntry> tmp = new ArrayList<>(options.values());
+		Collections.sort(tmp, new Comparator<OptionEntry>() {
+			@Override
+			public int compare(OptionEntry o1, OptionEntry o2) {
+				// TODO Auto-generated method stub
+				return - Integer.compare(o1.handler.code, o2.handler.code);
+			}
+		});
+
+		for (OptionEntry support : tmp) {
 			if (support.role==Role.PROVIDER) {
 				logger.log(Level.DEBUG," indicate support for {0}", support.handler);
-				modeStates.put(support.handler.code, ModeState.OFFERED);
-				out().sendDo(support.handler.getCode());
+				changeModeState(support.handler.code, ModeState.OFFERED);
+				out().sendWill(support.handler.getCode());
+			} else if (support.role==Role.REJECT_OUTRIGHT){
+				logger.log(Level.DEBUG,"  Preemptively reject {0}", support.handler);
+				out().sendWont(support.handler.getCode());
 			} else {
 				logger.log(Level.DEBUG,"  Request {0}", support.handler);
-				modeStates.put(support.handler.code, ModeState.REQUESTED);
+				changeModeState(support.handler.code, ModeState.REQUESTED);
 				out().sendDo(support.handler.getCode());
 			}
 		}
+
+		// Timer to stop deadlock should one or more Telnet option not
+		// being answered (BeipMu and the ECHO option)
+		waitForOptions = new TimerTask() {
+			public void run() {
+				stopWaitingForOptionAnswers();
+			}};
+		timer.schedule(waitForOptions, 2000);
 	}
 
 //	//-----------------------------------------------------------------
@@ -450,45 +533,49 @@ public class TelnetSocket extends Socket {
 	}
 
 	//-----------------------------------------------------------------
+	/**
+	 * All WILL and DOs have been exchanged
+	 */
+	public void fireOptionPhaseDone() {
+		logger.log(Level.DEBUG, "fireOptionPhaseDone()");
+		for (TelnetOptionListener list : optionListener)
+			try {
+				list.telnetSupportedOptionsKnown(this);
+			} catch (Exception e) {
+				logger.log(Level.ERROR,"Error calling "+list.getClass()+".telnetSupportedOptionsKnown: "+e,e);
+			}
+	}
+
+	//-----------------------------------------------------------------
 	public void fireOptionDataChanged(TelnetOptionHandler option,Object data) {
 		logger.log(Level.DEBUG, "fireOptionDataChange({0})", data.getClass().getSimpleName());
-		for (TelnetOptionListener list : optionListener)
+		for (TelnetOptionListener list : optionListener) {
 			try {
 				list.telnetOptionDataChanged(this, option, data);
 			} catch (Exception e) {
 				logger.log(Level.ERROR,"Error calling "+list.getClass()+".telnetOptionDataChanged: "+e,e);
 			}
+		}
+		changeModeState(option.code, ModeState.CONFIRMED_EXCHANGED);
 	}
-//
-//	//-----------------------------------------------------------------
-//	public void requestEcho() throws IOException {
-//		TelnetOption.ECHO.getOptionHandler().requestUsage(this);
-////		if (TelnetConfiguration.getOption(TelnetEcho.CODE)!=null)
-////			TelnetConfiguration.getOption(TelnetEcho.CODE).requestUsage(this);
-//	}
-//
-////	//-----------------------------------------------------------------
-////	public boolean isEchoEnabled() throws IOException {
-////		return doVariables.get(TelnetEcho.CODE).getState();
-////	}
-//
-//	//-----------------------------------------------------------------
-//	public void stopEcho() throws IOException {
-//		TelnetOption.ECHO.getOptionHandler().requestStop(this);
-//	}
-//
-//	//-----------------------------------------------------------------
-//	public void expectedAnswerFor(TelnetOption option) {
-//		if (!answerExpected.contains(option))
-//			answerExpected.add(option);
-//	}
+
+	//-----------------------------------------------------------------
+	public void fireFeatureActive(TelnetOptionHandler option, boolean state) {
+		logger.log(Level.DEBUG, "fireFeatureActive({0})", state);
+		for (TelnetOptionListener list : optionListener)
+			try {
+				list.telnetOptionStatusChange(this, option, state);
+			} catch (Exception e) {
+				logger.log(Level.ERROR,"Error calling "+list.getClass()+".telnetOptionStatusChange: "+e,e);
+			}
+	}
 
 	//-------------------------------------------------------------------
 	public boolean isFeatureActive(int code) {
 		OptionEntry support = options.get(code);
 		if (support==null) return false;
 		ModeState state = getModeState(code);
-		return state==ModeState.CONFIRMED;
+		return state==ModeState.CONFIRMED || state==ModeState.CONFIRMED_EXCHANGED;
 	}
 
 	public static class TelnetSocketBuilder {
@@ -544,16 +631,6 @@ public class TelnetSocket extends Socket {
 //		return modeStates.containsKey(option);
 //	}
 
-	//-------------------------------------------------------------------
-	private ModeState getModeState(int option) {
-		ModeState state = modeStates.get(option);
-		if (state==null) {
-			state=ModeState.UNKNOWN;
-			modeStates.put(option, state);
-		}
-		return state;
-	}
-
 //	//-------------------------------------------------------------------
 //	private boolean getCurrentLocalSendingState(int option) {
 //		return getModeState(option).localWillSend;
@@ -581,7 +658,7 @@ public class TelnetSocket extends Socket {
 			if (supported!=null) {
 				// Generally we do support to send this option
 				ModeState state = getModeState(option);
-				if (state==ModeState.CONFIRMED) {
+				if (state==ModeState.CONFIRMED || state==ModeState.CONFIRMED_EXCHANGING || state==ModeState.CONFIRMED_EXCHANGED) {
 					/*
 					 * From RFC 854
 					 * b. If a party receives what appears to be a request to enter some
@@ -592,12 +669,15 @@ public class TelnetSocket extends Socket {
 					logger.log(Level.DEBUG, "Remote party asks us to do {0} ({1}), but we already confirmed that", name, option);
 				} else {
 					logger.log(Level.INFO, "Remote party asks us to do {0} ({1}) and will do that", name, option);
-					modeStates.put(option, ModeState.CONFIRMED);
+					changeModeState(option, ModeState.CONFIRMED);
 					if (option==0)
 						out().setBinaryMode(true);
 					out().sendWill(command.getData());
 					if (supported.role==Role.PROVIDER) {
-						optCls.initializeAs(supported.role, this, out());
+						boolean needsSubNeg = optCls.initializeAs(supported.role, this, out());
+						if (needsSubNeg)
+							changeModeState(option, ModeState.CONFIRMED_EXCHANGING);
+						fireFeatureActive(optCls,true);
 					}
 				}
 			} else {
@@ -613,7 +693,7 @@ public class TelnetSocket extends Socket {
 			if (supported!=null) {
 				// Generally we do support to receive this option
 				ModeState state = getModeState(option);
-				if (state==ModeState.CONFIRMED) {
+				if (state==ModeState.CONFIRMED || state==ModeState.CONFIRMED_EXCHANGING || state==ModeState.CONFIRMED_EXCHANGED) {
 					/*
 					 * From RFC 854
 					 * b. If a party receives what appears to be a request to enter some
@@ -622,13 +702,16 @@ public class TelnetSocket extends Socket {
   					 * negotiation.
 					 */
 				} else {
-					modeStates.put(option, ModeState.CONFIRMED);
+					changeModeState(option, ModeState.CONFIRMED);
 					if (option==0)
 						in().setBinaryMode(true);
 					logger.log(Level.INFO, "Remote party offers to do {0} ({1}) and we will let it do that", name, option);
 					out().sendDo(command.getData());
 					if (supported.role==Role.REQUESTER) {
-						optCls.initializeAs(supported.role, this, out());
+						boolean needsSubNeg = optCls.initializeAs(supported.role, this, out());
+						if (needsSubNeg)
+							changeModeState(option, ModeState.CONFIRMED_EXCHANGING);
+						fireFeatureActive(optCls,true);
 					}
 				}
 			} else {
@@ -638,17 +721,19 @@ public class TelnetSocket extends Socket {
 			break;
 		case WONT:
 			option = command.getData();
-			optCls = (options.containsKey(option))?options.get(option).handler:null;
-			name = (optCls!=null)?optCls.getName():"UNKNOWN";
-			modeStates.put(option, ModeState.REJECTED);
+			optCls = (options.containsKey(option))?options.get(option).handler:new TelnetOptionHandler(option, "UNKNOWN");
+			name = optCls.getName();
+			changeModeState(option, ModeState.REJECTED);
 			logger.log(Level.INFO, "Remote party does not support {0} ({1})", name, option);
+			fireFeatureActive(optCls,false);
 			break;
 		case DONT:
 			option = command.getData();
-			optCls = (options.containsKey(option))?options.get(option).handler:null;
+			optCls = (options.containsKey(option))?options.get(option).handler:new TelnetOptionHandler(option, "UNKNOWN");
 			name = (optCls!=null)?optCls.getName():"UNKNOWN";
-			modeStates.put(option, ModeState.REJECTED);
+			changeModeState(option, ModeState.REJECTED);
 			logger.log(Level.INFO, "Remote party does not want us to do {0} ({1})", name, option);
+			fireFeatureActive(optCls,false);
 			break;
 		case IP:
 			// Interrupt process

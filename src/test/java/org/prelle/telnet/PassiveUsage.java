@@ -11,12 +11,9 @@ import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.net.Socket;
 
-import org.prelle.telnet.TelnetOptionHandler;
-import org.prelle.telnet.TelnetOptionListener;
-import org.prelle.telnet.TelnetOptionDeleteMe;
-import org.prelle.telnet.TelnetServerSocket;
-import org.prelle.telnet.TelnetSocket;
-import org.prelle.telnet.option.TransmitBinary;
+import org.prelle.telnet.option.LineMode;
+import org.prelle.telnet.option.SuppressGoAhead;
+import org.prelle.telnet.option.TelnetEcho;
 
 /**
  * @author prelle
@@ -41,7 +38,8 @@ public class PassiveUsage implements Runnable, TelnetOptionListener {
 
 	public PassiveUsage() throws IOException {
 		serverSocket = new TelnetServerSocket(4000)
-				.support(new TransmitBinary(), Role.PROVIDER)
+				.support(new SuppressGoAhead(), Role.PROVIDER)
+				.support(new TelnetEcho(), Role.PROVIDER)
 //				.passivelySupport(TelnetOptions.ECHO)
 //				.passivelySupport(TelnetOptions.EOR)
 //				.passivelySupport(TelnetOptions.MSP)
@@ -74,8 +72,9 @@ public class PassiveUsage implements Runnable, TelnetOptionListener {
 				InputStream in = socket.getInputStream();
 				do {
 					data = in.read();
+					System.out.println("Read "+data+" as "+(char)data);
 //					if (socket.isFeatureActive(TelnetOption.ECHO)) {
-//						out.write(data);
+						out.write(data);
 //					}
 				} while (data!=-1);
 			} catch (IOException e1) {
@@ -107,4 +106,14 @@ public class PassiveUsage implements Runnable, TelnetOptionListener {
 		logger.log(Level.INFO,"Telnet Option Data Changed: "+option.getClass().getSimpleName()+" = "+data);
 
 	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetOptionListener#telnetOptionStatusChange(org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOptionHandler, boolean)
+	 */
+	@Override
+	public void telnetOptionStatusChange(TelnetSocket nvt, TelnetOptionHandler option, boolean active) {
+		logger.log(Level.INFO, "Feature {0} is {1}", option.getName(), active?"enabled":"disabled");
+	}
+
 }

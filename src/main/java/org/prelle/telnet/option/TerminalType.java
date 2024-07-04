@@ -123,7 +123,7 @@ public class TerminalType extends TelnetOptionHandler {
 			for (int i=1; i<values.length; i++) data[i-1]=(byte) values[i];
 			String value = new String(data, origin.getCharset());
 			if (role==Role.REQUESTER) {
-				logger.log(Level.DEBUG, "TERMINAL_TYPE: Received {0}", value);
+				logger.log(Level.INFO, "TERMINAL_TYPE: Received {0}", value);
 				if (!received.contains(value) && !"UNKNOWN".equals(value)) {
 					received.add(value);
 					try {
@@ -182,15 +182,17 @@ public class TerminalType extends TelnetOptionHandler {
 	 * @see org.prelle.telnet.TelnetOptionHandler#initializeAs(org.prelle.telnet.Role)
 	 */
 	@Override
-	public void initializeAs(Role role, TelnetSocket nvt, TelnetOutputStream out) {
-		if (role==Role.PROVIDER) return;
+	public boolean initializeAs(Role role, TelnetSocket nvt, TelnetOutputStream out) {
+		if (role==Role.PROVIDER) return false;
 		logger.log(Level.DEBUG, "Ask remote party to send terminal types");
 		try {
 			requestNext(out);
+			return true;
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		return false;
 	}
 
 	//-------------------------------------------------------------------

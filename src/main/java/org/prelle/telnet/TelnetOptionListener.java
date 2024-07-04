@@ -1,5 +1,5 @@
 /**
- * 
+ *
  */
 package org.prelle.telnet;
 
@@ -9,6 +9,10 @@ package org.prelle.telnet;
  */
 public interface TelnetOptionListener {
 
+	public default void telnetSupportedOptionsKnown(TelnetSocket nvt) {}
+
+	public void telnetOptionStatusChange(TelnetSocket nvt, TelnetOptionHandler option, boolean active);
+
 	public void telnetOptionDataChanged(TelnetSocket nvt, TelnetOptionHandler option, Object data);
-	
+
 }

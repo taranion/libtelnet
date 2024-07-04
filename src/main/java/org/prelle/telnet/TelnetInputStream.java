@@ -37,6 +37,7 @@ public class TelnetInputStream extends FilterInputStream {
 
 	private List<Integer> subNegotiationBuffer = new ArrayList<>();
 	private int subNegotiationFor;
+	private boolean characterMode;
 
 	//-----------------------------------------------------------------
 	/**
@@ -142,12 +143,6 @@ public class TelnetInputStream extends FilterInputStream {
 			while (true) {
 				data = in.read();
 				logger.log(Level.TRACE, "RCV DATA {0} ({1})", data, (char)data);
-//				try {
-//					throw new RuntimeException("Trace");
-//				} catch (Exception e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
 				if (data==-1)
 					return data;
 				// If not in binary mode, codes >128 can be ignored
@@ -422,6 +417,22 @@ public class TelnetInputStream extends FilterInputStream {
 			}
 		} while (data>31);
 		return buf.toString();
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @return the characterMode
+	 */
+	public boolean isCharacterMode() {
+		return characterMode;
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @param characterMode the characterMode to set
+	 */
+	public void setCharacterMode(boolean characterMode) {
+		this.characterMode = characterMode;
 	}
 
 }

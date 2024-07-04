@@ -3,12 +3,12 @@
  */
 package org.prelle.telnet.option;
 
-import java.io.IOException;
 import java.lang.System.Logger.Level;
+import java.util.Arrays;
 
-import org.prelle.telnet.TelnetConstants;
-import org.prelle.telnet.TelnetInputStream;
+import org.prelle.telnet.Role;
 import org.prelle.telnet.TelnetOptionHandler;
+import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetSocket;
 
 /**
@@ -21,79 +21,64 @@ public class LineMode extends TelnetOptionHandler {
 	private final static int FORWARDMASK = 2;
 	private final static int SLC         = 3;
 
-	private final static int EDIT     = 1;
-	private final static int TRAPSIG  = 2;
-	private final static int MODE_ACK = 4;
-	private final static int SOFT_TAB = 8;
-	private final static int LIT_ECHO = 16;
+	static enum ModeBit {
+		EDIT(1),
+		TRAPSIG(2),
+		MODE_ACK(4),
+		SOFT_TAB(8),
+		LIT_ECHO(16)
+		;
+		int value;
+		ModeBit(int value) {
+			this.value = value;
+		}
+	}
 
-	private final static int SLC_SYNCH = 1;
-	private final static int SLC_BRK   = 2;
-	private final static int SLC_IP    = 3;
-	private final static int SLC_AO    = 4;
-	private final static int SLC_AYT   = 5;
-	private final static int SLC_EOR   = 6;
-	private final static int SLC_ABORT = 7;
-	private final static int SLC_EOF   = 8;
-	private final static int SLC_SUSP  = 9;
-	private final static int SLC_EC    = 10;
-	private final static int SLC_EL    = 11;
-	private final static int SLC_EW    = 12;
-	private final static int SLC_RP    = 13;
-	private final static int SLC_LNEXT = 14;
-	private final static int SLC_XON   = 15;
-	private final static int SLC_XOFF  = 16;
-	private final static int SLC_FORW1 = 17;
-	private final static int SLC_FORW2 = 18;
-	private final static int SLC_MCL   = 19;
-	private final static int SLC_MCR   = 20;
-    private final static int SLC_MCWL  = 21;
-    private final static int SLC_MCWR  = 22;
-    private final static int SLC_MCBOL = 23;
-    private final static int SLC_MCEOL = 24;
-    private final static int SLC_INSRT = 25;
-    private final static int SLC_OVER  = 26;
-    private final static int SLC_ECR   = 27;
-    private final static int SLC_EWR   = 28;
-    private final static int SLC_EBOL  = 29;
-    private final static int SLC_EEOL  =  30;
-
-    private final static String FUNCTIONS[] = {
-    	"-0-",
-		"SLC_SYNCH",
-		"SLC_BRK",
-		"SLC_IP",
-		"SLC_AO",
-		"SLC_AYT",
-		"SLC_EOR",
-		"SLC_ABORT",
-		"SLC_EOF",
-		"SLC_SUSP",
-
-		"SLC_EC",
-		"SLC_EL",
-		"SLC_EW",
-		"SLC_RP",
-		"SLC_LNEXT",
-		"SLC_XON",
-		"SLC_XOFF",
-		"SLC_FORW1",
-		"SLC_FORW2",
-		"SLC_MCL",
-
-		"SLC_MCR",
-		"SLC_MCWL",
-		"SLC_MCBOL",
-		"SLC_MCEOL",
-		"SLC_INSRT",
-		"SLC_OVER",
-		"SLC_ECR",
-		"SLC_EWR",
-		"SLC_EBOL",
-
-		"SLC_EEOL",
-    };
-
+	static enum SLCType {
+		SYNCH(1),
+		BRK  (2),
+		IP   (3),
+		AO   (4),
+		AYT  (5),
+		EOR  (6),
+		ABORT(7),
+		EOF  (8),
+		SUSP (9),
+		EC   (10),
+		EL   (11),
+		EW   (12),
+		RP   (13),
+		LNEXT(14),
+		XON  (15),
+		XOFF (16),
+		FORW1(17),
+		FORW2(18),
+		MCL  (19),
+		MCR  (20),
+	    MCWL (21),
+	    MCWR (22),
+	    MCBOL(23),
+	    MCEOL(24),
+	    INSRT(25),
+	    OVER (26),
+	    ECR  (27),
+	    EWR  (28),
+	    EBOL (29),
+	    EEOL ( 30)
+		;
+		int value;
+		SLCType(int value) {
+			this.value = value;
+		}
+		//-------------------------------------------------------------------
+		public static SLCType valueOf(int code) {
+			for (SLCType func : SLCType.values()) {
+				if (func.value==code)
+					return func;
+			}
+			throw new IllegalArgumentException("Not a SLCcode: "+code);
+		}
+	}
 
     public LineMode() {
     	super(34, "LINEMODE");
@@ -144,5 +129,29 @@ public class LineMode extends TelnetOptionHandler {
 //
 //		in.setHigherLevelControl(false);
 //	}
+
+	//-----------------------------------------------------------------
+	public void handleSubnegotiation(Role role, int[] values, TelnetSocket origin, TelnetOutputStream out) {
+		logger.log(Level.WARNING, "LineMode sub\n"+Arrays.toString(values));
+
+		for (int i=0; i<values.length; i++) {
+			switch (values[i]) {
+			case MODE:
+				logger.log(Level.DEBUG,"Client requests mode mask");
+				logger.log(Level.DEBUG, "MODE");
+				break;
+			case FORWARDMASK:
+				logger.log(Level.DEBUG, "FORWARDMASK");
+				break;
+			case SLC:
+				SLCType type = SLCType.valueOf(values[++i]);
+				int value1 = values[++i];
+				int value2 = values[++i];
+				int code = values[++i];
+				logger.log(Level.DEBUG, "SLC {0}: {1}, {2}, {3}",type, value1, value2, code);
+				break;
+			}
+		}
+	}
 
 }

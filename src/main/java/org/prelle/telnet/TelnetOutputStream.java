@@ -53,6 +53,7 @@ public class TelnetOutputStream extends OutputStream {
 	 */
 	@Override
 	public void write(byte[] data) throws IOException {
+		logger.log(Level.TRACE,"write "+(new String(data)));
 		// Scan how many byte 255 are there
 		int count = 0;
 		for (byte b : data) {

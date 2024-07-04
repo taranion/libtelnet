@@ -41,6 +41,11 @@ public class TelnetEnvironmentOption extends TelnetOptionHandler {
 		super(CODE, "ENVIRON");
 	}
 
+	//-----------------------------------------------------------------
+	public boolean requiresSubnegotiation() {
+		return true;
+	}
+
 //	//-----------------------------------------------------------------
 //	/**
 //	 * @see org.prelle.telnet.TelnetOptionHandler#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
@@ -105,7 +110,7 @@ public class TelnetEnvironmentOption extends TelnetOptionHandler {
 	 * @see org.prelle.telnet.TelnetOptionHandler#initializeAs(org.prelle.telnet.Role)
 	 */
 	@Override
-	public void initializeAs(Role role, TelnetSocket nvt, TelnetOutputStream out) {
+	public boolean initializeAs(Role role, TelnetSocket nvt, TelnetOutputStream out) {
 		if (role==Role.REQUESTER) {;
 			logger.log(Level.DEBUG, "Ask remote party to send environment");
 			try {
@@ -120,6 +125,7 @@ public class TelnetEnvironmentOption extends TelnetOptionHandler {
 				send[7] = (byte)SE;
 				out.writeCommand(send);
 				out.flush();
+				return true;
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -127,6 +133,7 @@ public class TelnetEnvironmentOption extends TelnetOptionHandler {
 		} else {
 			logger.log(Level.WARNING, "Acting as PROVIDER not implemented");
 		}
+		return false;
 	}
 
 	//-------------------------------------------------------------------
@@ -152,7 +159,7 @@ public class TelnetEnvironmentOption extends TelnetOptionHandler {
 
 	//-------------------------------------------------------------------
 	private void processAnswer(int[] data, int offset, TelnetSocket nvt) {
-		logger.log(Level.DEBUG, "ENVIRON: {0}", Arrays.toString(data));
+//		logger.log(Level.TRACE, "ENVIRON: {0}", Arrays.toString(data));
 		Map<String,String> variables = new HashMap<>();
 		StringBuffer keyBuf = new StringBuffer();
 		StringBuffer valBuf = new StringBuffer();
