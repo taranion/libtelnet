@@ -3,11 +3,7 @@
  */
 package org.prelle.telnet.option;
 
-import java.io.IOException;
-
-import org.prelle.telnet.TelnetInputStream;
 import org.prelle.telnet.TelnetOptionHandler;
-import org.prelle.telnet.TelnetSocket;
 
 /**
  * See http://www.zuggsoft.com/zmud/msp.htm

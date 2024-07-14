@@ -33,7 +33,7 @@ public class TelnetInputStream extends FilterInputStream {
 	boolean         stickyCRLF = false;
 	boolean         seenCR = false;
 
-	public boolean  binaryMode = false;
+	public boolean  binaryMode = true;
 
 	private List<Integer> subNegotiationBuffer = new ArrayList<>();
 	private int subNegotiationFor;
@@ -147,8 +147,9 @@ public class TelnetInputStream extends FilterInputStream {
 					return data;
 				// If not in binary mode, codes >128 can be ignored
 				if (data>=128 && !binaryMode && data<255) {
-					logger.log(Level.WARNING, "Ignore character code {0} / {1} because not in binary mode",data, (char)data);
-				} else
+					logger.log(Level.WARNING, "Ignore character code {0} / {2} / {1} because not in binary mode",data, (char)data, Integer.toHexString(data));
+				}
+				else
 					break;
 			}
 

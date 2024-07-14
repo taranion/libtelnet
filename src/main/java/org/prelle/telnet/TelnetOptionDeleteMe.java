@@ -38,7 +38,7 @@ public enum TelnetOptionDeleteMe {
 	TERMINAL_TYPE(24, new TerminalType()),
 	MTT        (24, new MUDTerminalTypeStandard()),
 	EOR        (25, new EndOfRecord()),
-	NAWS       (31, new TelnetWindowSize(31, "NAWS")),
+	NAWS       (31, new TelnetWindowSize()),
 	LINEMODE   (34, new LineMode()),
 	NEW_ENVIRON(39, new TelnetEnvironmentOption()),
 	CHARSET    (42, new TelnetCharset()),
@@ -52,6 +52,8 @@ public enum TelnetOptionDeleteMe {
 	MXP        ( 91, new MUDExtensionProtocol()),
 	ZMP        ( 93, new ZenithMUDProtocol()),
 	MTP        (100, new MUDTilemapProtocol()),
+	MUSHCLIENT (102, new TelnetOptionHandler(98,"MUSHCLIENT")),
+	ATCP       (200, new TelnetOptionHandler(98,"ATCP")),
 	GMCP       (201, new GenericMUDCommunicationProtocol()),
 	;
 

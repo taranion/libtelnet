@@ -47,7 +47,7 @@ public class ActiveUsage implements TelnetOptionListener {
 				.support(new TelnetOptionHandler(0,"TRANSMIT_BINARY"), Role.REQUESTER)
 				.support(new TelnetOptionHandler(1,"ECHO"), Role.REQUESTER)
 				.support(new SuppressGoAhead(), Role.REQUESTER)
-				.support(new TelnetWindowSize(31, "NAWS"), Role.REJECT_OUTRIGHT)
+				.support(new TelnetWindowSize(), Role.REJECT_OUTRIGHT)
 				.support(new TerminalType("ActiveUsage","XTERM","MTTS 0"), Role.PROVIDER)
 				.support(new MUDSoundProtocol(), Role.PROVIDER_SILENT)
 				.support(new MUDServerDataProtocol(), Role.REQUESTER)

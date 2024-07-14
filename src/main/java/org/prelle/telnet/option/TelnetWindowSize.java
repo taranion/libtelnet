@@ -3,12 +3,11 @@
  */
 package org.prelle.telnet.option;
 
-import java.io.IOException;
+import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 
-import org.prelle.telnet.TelnetInputStream;
+import org.prelle.telnet.Role;
 import org.prelle.telnet.TelnetOptionHandler;
-import org.prelle.telnet.TelnetOptionDeleteMe;
 import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetSocket;
 
@@ -19,45 +18,12 @@ import org.prelle.telnet.TelnetSocket;
  */
 public class TelnetWindowSize extends TelnetOptionHandler {
 
-	//-----------------------------------------------------------------
-	public TelnetWindowSize(int code, String name) {
-		super(code,name);
-	}
+	protected final static Logger logger = System.getLogger("telnet.option.naws");
 
-//	//-----------------------------------------------------------------
-//	/**
-//	 * @see org.prelle.telnet.TelnetOptionHandler#initialize(org.prelle.telnet.TelnetSocket)
-//	 */
-//	@Override
-//	public void initialize(TelnetSocket console) throws IOException {
-//		requestUsage(console);
-//	}
-//
-//	//-----------------------------------------------------------------
-//	/**
-//	 * @see org.prelle.telnet.TelnetOptionHandler#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
-//	 */
-//	@Override
-//	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in) throws IOException {
-//		in.setHigherLevelControl(true);
-//		// NAWS Sub negotiation
-//		int x1 = in.read();
-//		int x2 = in.read();
-//		int y1 = in.read();
-//		int y2 = in.read();
-//		int x = x1*256 + x2;
-//		int y = y1*256 + y2;
-//		logger.log(Level.INFO,"Terminal Width = "+ x+"*"+y);
-//
-////		in.readUntilSE();
-//		in.read();
-//		in.read();
-//		in.setHigherLevelControl(false);
-//		logger.log(Level.DEBUG,"Terminal Width done");
-//
-//		nvt.fireOptionDataChanged(this, new TelnetWindowSizeData(x, y));
-//	}
-//
+	//-----------------------------------------------------------------
+	public TelnetWindowSize() {
+		super(31,"NAWS");
+	}
 //	//-----------------------------------------------------------------
 //	/**
 //	 * Inform remote party of the current window size
@@ -82,4 +48,26 @@ public class TelnetWindowSize extends TelnetOptionHandler {
 //		TelnetOptionHandler.endSubNegotiation(sock, TelnetOption.NAWS.getCode());
 //		out.flush();
 //	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetOptionHandler#initializeAs(org.prelle.telnet.Role)
+	 */
+	@Override
+	public boolean initializeAs(Role role, TelnetSocket nvt, TelnetOutputStream out) {
+		return false;
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetOptionHandler#handleSubnegotiation(org.prelle.telnet.Role, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
+	 */
+	@Override
+	public void handleSubnegotiation(Role role, int[] values, TelnetSocket nvt, TelnetOutputStream out) {
+		int x = values[0]*256 + values[1];
+		int y = values[2]*256 + values[3];
+		logger.log(Level.DEBUG,"Terminal size = "+ x+"*"+y);
+		nvt.fireOptionDataChanged(this, new TelnetWindowSizeData(x, y));
+
+	}
 }

@@ -4,17 +4,14 @@
 package org.prelle.telnet.option;
 
 import java.io.IOException;
-import java.io.OutputStream;
+import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.prelle.telnet.Role;
-import org.prelle.telnet.TelnetInputStream;
 import org.prelle.telnet.TelnetOptionHandler;
 import org.prelle.telnet.TelnetOutputStream;
-import org.prelle.telnet.TelnetOptionDeleteMe;
 import org.prelle.telnet.TelnetSocket;
 
 /**
@@ -24,6 +21,8 @@ import org.prelle.telnet.TelnetSocket;
  *
  */
 public class TelnetEnvironmentOption extends TelnetOptionHandler {
+
+	protected final static Logger logger = System.getLogger("telnet.option.environ");
 
 	public final static int CODE = 39;
 

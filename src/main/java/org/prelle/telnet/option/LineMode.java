@@ -4,7 +4,9 @@
 package org.prelle.telnet.option;
 
 import java.lang.System.Logger.Level;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import org.prelle.telnet.Role;
 import org.prelle.telnet.TelnetOptionHandler;
@@ -17,10 +19,6 @@ import org.prelle.telnet.TelnetSocket;
  */
 public class LineMode extends TelnetOptionHandler {
 
-	private final static int MODE        = 1;
-	private final static int FORWARDMASK = 2;
-	private final static int SLC         = 3;
-
 	static enum ModeBit {
 		EDIT(1),
 		TRAPSIG(2),
@@ -31,6 +29,47 @@ public class LineMode extends TelnetOptionHandler {
 		int value;
 		ModeBit(int value) {
 			this.value = value;
+		}
+		public static ModeBit valueOf(int val) {
+			for (ModeBit tmp : ModeBit.values()) {
+				if (tmp.value==val) return tmp;
+			}
+			return null;
+		}
+	}
+
+	static enum Operation {
+		MODE(1),
+		FORWARDMASK(2),
+		SLC(3)
+		;
+		int value;
+		Operation(int value) {
+			this.value = value;
+		}
+		public static Operation valueOf(int val) {
+			for (Operation tmp : Operation.values()) {
+				if (tmp.value==val) return tmp;
+			}
+			return null;
+		}
+	}
+
+	static enum SupportLevel {
+		DEFAULT(3),
+		VALUE(2),
+		CANTCHANGE(1),
+		NOSUPPORT(0)
+		;
+		int value;
+		SupportLevel(int value) {
+			this.value = value;
+		}
+		public static SupportLevel valueOf(int val) {
+			for (SupportLevel tmp : SupportLevel.values()) {
+				if (tmp.value==val) return tmp;
+			}
+			return null;
 		}
 	}
 
@@ -134,24 +173,48 @@ public class LineMode extends TelnetOptionHandler {
 	public void handleSubnegotiation(Role role, int[] values, TelnetSocket origin, TelnetOutputStream out) {
 		logger.log(Level.WARNING, "LineMode sub\n"+Arrays.toString(values));
 
-		for (int i=0; i<values.length; i++) {
-			switch (values[i]) {
-			case MODE:
-				logger.log(Level.DEBUG,"Client requests mode mask");
-				logger.log(Level.DEBUG, "MODE");
-				break;
-			case FORWARDMASK:
-				logger.log(Level.DEBUG, "FORWARDMASK");
-				break;
-			case SLC:
-				SLCType type = SLCType.valueOf(values[++i]);
-				int value1 = values[++i];
-				int value2 = values[++i];
-				int code = values[++i];
-				logger.log(Level.DEBUG, "SLC {0}: {1}, {2}, {3}",type, value1, value2, code);
-				break;
+		Operation op = Operation.valueOf(values[0]);
+		logger.log(Level.INFO, "IAC SB LINEMODE "+op);
+		switch (op) {
+		case MODE:
+			int mask = values[1];
+			logger.log(Level.INFO, "IAC SB LINEMODE MODE "+mask);
+			break;
+		case SLC:
+			for (int i=1; i<values.length;) {
+				int funct = values[i++];
+				int modif = values[i++];
+				int chara = values[i++];
+				SLCType type = SLCType.valueOf(funct);
+				SupportLevel level = SupportLevel.valueOf( modif&7);
+				boolean ack = (modif&128)>0;
+				boolean flushIn = (modif&64)>0;
+				boolean flushOut = (modif&32)>0;
+				List<String> tmp = new ArrayList<>();
+				tmp.add(level.name());
+				if (ack) tmp.add("ACK");
+				if (flushIn) tmp.add("FLUSH_IN");
+				if (flushOut) tmp.add("FLUSH_OUT");
+				switch (level) {
+				case DEFAULT:
+					logger.log(Level.DEBUG, "Operation {0} is supported and should use default characters - {2}", type, Integer.toHexString(chara), tmp);
+					break;
+				case VALUE:
+					logger.log(Level.DEBUG, "Operation {0} is supported and uses character 0x{1} - which can be changed - {2}", type, Integer.toHexString(chara), tmp);
+					break;
+				case CANTCHANGE:
+					logger.log(Level.DEBUG, "Operation {0} is supported and uses character 0x{1} - this cannot be changed - {2}", type, Integer.toHexString(chara), tmp);
+					break;
+				case NOSUPPORT:
+					logger.log(Level.DEBUG, "Operation {0} is not supported ",type);
+					break;
+				}
 			}
+			break;
+		default:
+			logger.log(Level.WARNING, "Unhandled "+op);
 		}
+
 	}
 
 }

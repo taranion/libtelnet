@@ -53,6 +53,7 @@ public class TelnetOptionHandler implements TelnetConstants {
 	//-----------------------------------------------------------------
 	/**
 	 * Called after the use of a option has been confirmed
+	 * @return TRUE if a subnegotiation is needed
 	 */
 	public boolean initializeAs(Role role, TelnetSocket origin, TelnetOutputStream out) {
 		if (role==Role.PROVIDER) return false;
