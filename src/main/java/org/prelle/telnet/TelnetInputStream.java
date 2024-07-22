@@ -434,6 +434,12 @@ public class TelnetInputStream extends FilterInputStream {
 	 */
 	public void setCharacterMode(boolean characterMode) {
 		this.characterMode = characterMode;
+		try {
+			throw new RuntimeException("Charmode set to "+characterMode);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 }
