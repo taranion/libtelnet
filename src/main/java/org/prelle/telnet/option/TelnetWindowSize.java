@@ -24,30 +24,6 @@ public class TelnetWindowSize extends TelnetOptionHandler {
 	public TelnetWindowSize() {
 		super(31,"NAWS");
 	}
-//	//-----------------------------------------------------------------
-//	/**
-//	 * Inform remote party of the current window size
-//	 * @param sock
-//	 * @param x
-//	 * @param y
-//	 * @throws IOException
-//	 */
-//	public static void sendNewSize(TelnetSocket sock, int x, int y) throws IOException {
-//		if (x>65535)
-//			throw new IllegalArgumentException("X to big");
-//		if (y>65535)
-//			throw new IllegalArgumentException("Y to big");
-//
-//		TelnetOutputStream out = (TelnetOutputStream) sock.getOutputStream();
-//
-//		TelnetOptionHandler.startSubNegotiation(sock, TelnetOption.NAWS.getCode());
-//		out.write(x>>8);
-//		out.write(x%256);
-//		out.write(y>>8);
-//		out.write(y%256);
-//		TelnetOptionHandler.endSubNegotiation(sock, TelnetOption.NAWS.getCode());
-//		out.flush();
-//	}
 
 	//-------------------------------------------------------------------
 	/**
