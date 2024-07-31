@@ -40,69 +40,6 @@ public class TerminalType extends TelnetOptionHandler {
 		answers = compatibility;
 	}
 
-//	//-----------------------------------------------------------------
-//	/**
-//	 * @throws IOException
-//	 * @see org.prelle.telnet.TelnetOptionHandler#initialize(org.prelle.telnet.TelnetSocket)
-//	 */
-//	@Override
-//	public void initialize(TelnetSocket nvt) throws IOException {
-//		if (!nvt.isInClientMode()) {
-//			requestUsage(nvt);
-//		}
-//	}
-//
-//	//-----------------------------------------------------------------
-//	/**
-//	 * @see org.prelle.telnet.TelnetOptionHandler#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
-//	 */
-//	@Override
-//	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in)
-//			throws IOException {
-//		logger.log(Level.DEBUG,"performSubNegotiation");
-//		in.setHigherLevelControl(true);
-//
-//		int isOrSend = in.read();
-//		switch (isOrSend) {
-//		case IS:
-//			StringBuffer buf = new StringBuffer();
-//			int chr = -1;
-//			do {
-//				chr = in.read();
-//				if (chr<240)
-//					buf.append((char)chr);
-//			} while (chr!=255);
-//			logger.log(Level.INFO,"Terminal type = "+buf);
-//
-//			nvt.fireOptionDataChanged(this, buf.toString());
-//			break;
-//		case SEND:
-//		default:
-//			logger.log(Level.WARNING,"Not implemented: "+isOrSend);
-//		}
-//
-//		int se = in.read();
-//		in.setHigherLevelControl(false);
-//		if (se!=TelnetConstants.SE) throw new IOException("Expected SE after terminal types IAC");
-//	}
-//
-//	//-----------------------------------------------------------------
-//	@Override
-//	protected void optionEnabled(TelnetSocket nvt, boolean iAmInitiator) throws IOException {
-//		if (iAmInitiator) {
-//			logger.log(Level.DEBUG,"Requesting terminal type");
-//			OutputStream out = nvt.getOutputStream();
-//			out.write(TelnetConstants.IAC);
-//			out.write(TelnetConstants.SB);
-//			out.write(getCode());
-//			out.write(SEND);
-//			out.write(TelnetConstants.IAC);
-//			out.write(TelnetConstants.SE);
-//			out.flush();
-//		}
-//	}
-//
-
 	//-------------------------------------------------------------------
 	/**
 	 * @see org.prelle.telnet.TelnetOptionHandler#handleSubnegotiation(org.prelle.telnet.Role, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
@@ -113,7 +50,12 @@ public class TerminalType extends TelnetOptionHandler {
 		if (operation==SEND) {
 			logger.log(Level.DEBUG, "Remote party requests terminal type information and we are {0}", role);
 			if (role==Role.PROVIDER) {
-				sendNextFromList(out);
+				try {
+					sendNextFromList(out);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			} else {
 				logger.log(Level.ERROR, "The client requested a terminal type info from us, but we are a server");
 			}
@@ -144,9 +86,10 @@ public class TerminalType extends TelnetOptionHandler {
 	}
 
 	//-----------------------------------------------------------------
-	private void sendNextFromList(TelnetOutputStream out) {
+	private void sendNextFromList(TelnetOutputStream out) throws IOException {
 		if (answers==null || answers.length==0) {
 			out.sendSubNegotiation(code, IS, "UNKNOWN".getBytes(StandardCharsets.ISO_8859_1));
+			return;
 		}
 
 		if (selected==null) {
@@ -160,8 +103,6 @@ public class TerminalType extends TelnetOptionHandler {
 		}
 		logger.log(Level.INFO,"Send terminal type ''{0}''", toSend);
 		out.sendSubNegotiation(code, IS, toSend.getBytes(StandardCharsets.ISO_8859_1));
-
-
 	}
 
 	//-----------------------------------------------------------------

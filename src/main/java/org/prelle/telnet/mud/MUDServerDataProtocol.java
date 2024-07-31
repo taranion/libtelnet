@@ -11,8 +11,8 @@ import org.prelle.telnet.TelnetOptionHandler;
 import org.prelle.telnet.TelnetSocket;
 
 /**
- * See http://tintin.sourceforge.net/msdp/
- * @see http://tintin.sourceforge.net/msdp/
+ * See https://tintin.mudhalla.net/protocols/msdp/
+ * @see https://tintin.mudhalla.net/protocols/msdp/
  * @author prelle
  *
  */

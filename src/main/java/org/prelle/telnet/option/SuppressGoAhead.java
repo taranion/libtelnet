@@ -3,11 +3,7 @@
  */
 package org.prelle.telnet.option;
 
-import java.io.IOException;
-
-import org.prelle.telnet.TelnetInputStream;
 import org.prelle.telnet.TelnetOptionHandler;
-import org.prelle.telnet.TelnetSocket;
 
 /**
  * @author prelle
@@ -15,9 +11,11 @@ import org.prelle.telnet.TelnetSocket;
  */
 public class SuppressGoAhead extends TelnetOptionHandler {
 
+	public final static int CODE = 3;
+
 	//-----------------------------------------------------------------
 	public SuppressGoAhead() {
-		super(3, "SGA");
+		super(CODE, "SGA");
 	}
 
 }

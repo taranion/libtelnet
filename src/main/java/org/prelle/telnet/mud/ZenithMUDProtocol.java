@@ -10,8 +10,8 @@ import org.prelle.telnet.TelnetOptionHandler;
 import org.prelle.telnet.TelnetSocket;
 
 /**
- * See http://www.zuggsoft.com/zmud/msp.htm
- * @see http://www.zuggsoft.com/zmud/msp.htm
+ * See http://discworld.starturtle.net/external/protocols/zmp.html
+ * @see http://discworld.starturtle.net/external/protocols/zmp.html
  * @author prelle
  *
  */

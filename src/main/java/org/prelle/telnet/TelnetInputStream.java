@@ -87,7 +87,12 @@ public class TelnetInputStream extends FilterInputStream {
 	public int read() throws IOException {
 		if (commandMode) {
 			int commandRaw = tracingRead();
+			if (commandRaw==-1)
+				return -1;
 			ControlCode code = ControlCode.getCodeFor(commandRaw);
+			if (code==null) {
+				logger.log(Level.WARNING, "No Controlcode for "+commandRaw);
+			}
 			switch (code) {
 			case IAC : return 255;
 			case WILL: case WONT:
@@ -411,8 +416,8 @@ public class TelnetInputStream extends FilterInputStream {
 			switch(data) {
 			case -1: // Stream dead
 				return null;
-			case 10: // LINEFEED
-				continue;
+//			case 10: // LINEFEED
+//				continue;
 			default:
 				buf.append( (char)data );
 			}

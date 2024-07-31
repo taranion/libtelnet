@@ -3,7 +3,7 @@
  */
 package org.prelle.telnet.mud;
 
-import java.lang.System.Logger.Level;
+import java.io.IOException;
 
 import org.prelle.telnet.Role;
 import org.prelle.telnet.TelnetOptionHandler;
@@ -20,26 +20,28 @@ import org.prelle.telnet.TelnetSocket;
  */
 public class GenericMUDCommunicationProtocol extends TelnetOptionHandler {
 
+	public final static int CODE = 201;
+
 	public static class RawGMCPMessage{
 		private String namespace;
 		private String msg;
 
 		public RawGMCPMessage(int[] values) {
-			StringBuffer namespace = new StringBuffer();
-			StringBuffer msg = new StringBuffer();
+			StringBuffer ns = new StringBuffer();
+			StringBuffer m = new StringBuffer();
 			boolean isNamespace = true;
 			for (int code : values) {
 				if (isNamespace) {
 					if (code==32) {
 						isNamespace=false;
 					} else {
-						namespace.append( (char)code );
+						ns.append( (char)code );
 					}
 				} else
-					msg.append( (char)code );
+					m.append( (char)code );
 			}
-			this.namespace = namespace.toString().trim();
-			this.msg = msg.toString().trim();;
+			this.namespace = ns.toString().trim();
+			this.msg = m.toString().trim();;
 		}
 		public String getNamespace() {
 			return namespace;
@@ -54,7 +56,7 @@ public class GenericMUDCommunicationProtocol extends TelnetOptionHandler {
 
 	//-----------------------------------------------------------------
 	public GenericMUDCommunicationProtocol() {
-		super(201, "GMCP");
+		super(CODE, "GMCP");
 	}
 
 	//-------------------------------------------------------------------
@@ -64,8 +66,14 @@ public class GenericMUDCommunicationProtocol extends TelnetOptionHandler {
 	@Override
 	public void handleSubnegotiation(Role role, int[] values, TelnetSocket nvt, TelnetOutputStream out) {
 		RawGMCPMessage msg = new RawGMCPMessage(values);
-		logger.log(Level.DEBUG,"As {0} we received : {1}", role, msg.getMessage());
+//		logger.log(Level.DEBUG,"As {0} we received2 : {1}", role, msg.getNamespace());
 		nvt.fireOptionDataChanged(this, msg);
+	}
+
+	//-------------------------------------------------------------------
+	public static void send(TelnetOutputStream out, String packName, String command) throws IOException {
+		String full = (command!=null)?(packName+" "+command):packName;
+		sendSubNegotiationString(out, 201, full);
 	}
 
 }

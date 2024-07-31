@@ -10,6 +10,7 @@ package org.prelle.telnet;
 public interface TelnetConstants {
 
 	public static enum ControlCode {
+		EOR(239),
 		SE(240), NOP(241),  DM(242), BREAK(243), IP(244),
 		AE(245), AYT(246),  EC(247), EL(248), GA(249),
 		SB(250), WILL(251), WONT(252), DO(253), DONT(254), IAC(255);
@@ -30,6 +31,7 @@ public interface TelnetConstants {
 		}
 	};
 
+	public final static int EOR  = 239;
 	public final static int SE   = 240;
     //    public final static int NOP  = 241;
     //    public final static int DM   = 242;

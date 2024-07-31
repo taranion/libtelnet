@@ -24,6 +24,11 @@ public class MUDTerminalTypeStandard extends TerminalType {
 		super();
 	}
 
+	//-----------------------------------------------------------------
+	public MUDTerminalTypeStandard(String clientName, String termType, int mtts) {
+		super(clientName, termType, "MTTS "+mtts);
+	}
+
 	//-------------------------------------------------------------------
 	/**
 	 * Called when all information has been received

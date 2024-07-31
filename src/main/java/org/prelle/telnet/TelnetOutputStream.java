@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.nio.charset.StandardCharsets;
 
 import org.prelle.telnet.TelnetConstants.ControlCode;
 
@@ -131,8 +132,24 @@ public class TelnetOutputStream extends OutputStream {
 	}
 
 	//-----------------------------------------------------------------
-	public void sendSubNegotiation(int code, int command, byte[] value) {
+	public void sendSubNegotiation(int code, int command, byte[] value) throws IOException {
 		logger.log(Level.DEBUG,"sub-negotiation for {0}, command {1}, value={2}", code,command);
+		byte[] data = new byte[6+value.length];
+		data[0] = (byte)ControlCode.IAC.code();
+		data[1] = (byte)ControlCode.SB.code();
+		data[2] = (byte)code;
+		data[3] = (byte)command;
+		System.arraycopy(value, 0, data, 4, value.length);
+		data[data.length-2] = (byte)ControlCode.IAC.code();
+		data[data.length-1] = (byte)ControlCode.SE.code();
+		realOut.write(data);
+		realOut.flush();
+	}
+
+	//-----------------------------------------------------------------
+	public void sendSubNegotiation(int code, String line) throws IOException {
+		logger.log(Level.DEBUG,"sub-negotiation for {0}", code);
+		byte[] value = line.getBytes(StandardCharsets.UTF_8);
 		byte[] data = new byte[5+value.length];
 		data[0] = (byte)ControlCode.IAC.code();
 		data[1] = (byte)ControlCode.SB.code();
@@ -140,7 +157,8 @@ public class TelnetOutputStream extends OutputStream {
 		System.arraycopy(value, 0, data, 3, value.length);
 		data[data.length-2] = (byte)ControlCode.IAC.code();
 		data[data.length-1] = (byte)ControlCode.SE.code();
-
+		realOut.write(data);
+		realOut.flush();
 	}
 
 }
