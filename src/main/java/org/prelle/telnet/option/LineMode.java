@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.prelle.telnet.Role;
+import org.prelle.telnet.TelnetConstants;
 import org.prelle.telnet.TelnetOptionHandler;
 import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetSocket;
@@ -20,6 +21,14 @@ import org.prelle.telnet.TelnetSocket;
 public class LineMode extends TelnetOptionHandler {
 
 	static enum ModeBit {
+		/**
+		 * When set, the client side of the connection should process all
+		 * input lines, performing any editing functions, and only send
+		 * completed lines to the remote side.  When unset, client side
+		 * should not process any input from the user, and the server side
+		 * should take care of all character processing that needs to be
+		 * done.
+		 */
 		EDIT(1),
 		TRAPSIG(2),
 		MODE_ACK(4),
@@ -36,6 +45,13 @@ public class LineMode extends TelnetOptionHandler {
 			}
 			return null;
 		}
+		public static List<ModeBit> toModeList(int val) {
+			List<ModeBit> ret = new ArrayList<>();
+			for (ModeBit tmp : ModeBit.values()) {
+				if ((val & tmp.value)>0) ret.add(tmp) ;
+			}
+			return ret;
+		}
 	}
 
 	static enum Operation {
@@ -51,6 +67,7 @@ public class LineMode extends TelnetOptionHandler {
 			for (Operation tmp : Operation.values()) {
 				if (tmp.value==val) return tmp;
 			}
+			logger.log(Level.ERROR, "Unknown operation code {0}",val);
 			return null;
 		}
 	}
@@ -119,6 +136,25 @@ public class LineMode extends TelnetOptionHandler {
 		}
 	}
 
+	public static class LineModesChanged {
+		private List<ModeBit> lineModes;
+		public LineModesChanged(List<ModeBit> modes) {
+			 this.lineModes = modes;
+		}
+		public void setModes(List<ModeBit> modes) { this.lineModes = modes; }
+		public List<ModeBit> getModes() { return this.lineModes; }
+	}
+
+	public static class SendBufferedDataOn {
+		private TelnetConstants.ControlCode request;
+		private List<Integer> codes;
+		public SendBufferedDataOn(TelnetConstants.ControlCode request, List<Integer> codes) {
+			 this.codes = codes;
+			 this.request = request;
+		}
+		public List<Integer> getCodes() { return this.codes; }
+	}
+
     public LineMode() {
     	super(34, "LINEMODE");
     }
@@ -171,16 +207,28 @@ public class LineMode extends TelnetOptionHandler {
 
 	//-----------------------------------------------------------------
 	public void handleSubnegotiation(Role role, int[] values, TelnetSocket origin, TelnetOutputStream out) {
-		logger.log(Level.WARNING, "LineMode sub\n"+Arrays.toString(values));
-
-		Operation op = Operation.valueOf(values[0]);
-		logger.log(Level.INFO, "IAC SB LINEMODE "+op);
+		logger.log(Level.DEBUG, "LineMode sub {0}",Arrays.toString(values));
+		Operation op = null;
+		if (values[0]>=TelnetConstants.WILL) {
+			ControlCode c0 = ControlCode.getCodeFor(values[0]);
+			op = Operation.valueOf(values[1]);
+			logger.log(Level.INFO, "IAC SB LINEMODE {0} {1}", c0, op);
+			int[] remain = new int[values.length-2];
+			System.arraycopy(values, 2, remain, 0, remain.length);
+			forwardMask(role, origin, out, c0, remain);
+			return;
+		} else {
+			op = Operation.valueOf(values[0]);
+		}
 		switch (op) {
 		case MODE:
 			int mask = values[1];
-			logger.log(Level.INFO, "IAC SB LINEMODE MODE "+mask);
+			List<ModeBit> modes = ModeBit.toModeList(mask);
+			logger.log(Level.INFO, "IAC SB LINEMODE MODE "+modes);
+			origin.fireOptionDataChanged(this, new LineModesChanged(modes));
 			break;
 		case SLC:
+			logger.log(Level.INFO, "IAC SB LINEMODE "+op);
 			for (int i=1; i<values.length;) {
 				int funct = values[i++];
 				int modif = values[i++];
@@ -212,9 +260,25 @@ public class LineMode extends TelnetOptionHandler {
 			}
 			break;
 		default:
+			logger.log(Level.INFO, "IAC SB LINEMODE "+op);
 			logger.log(Level.WARNING, "Unhandled "+op);
 		}
 
+	}
+
+	//-------------------------------------------------------------------
+	private void forwardMask(Role role, TelnetSocket origin, TelnetOutputStream out, ControlCode c0, int[] values) {
+		logger.log(Level.WARNING, "Forwardmask {0}: {1}",c0,Arrays.toString(values));
+		List<Integer> codes = new ArrayList<>();
+		for (int i=0; i<values.length; i++) {
+			for (int b=0; b<8; b++) {
+				int code = i*8 + b +1;
+				int mask = 1<<(7-b);
+				if ((values[i] & mask)>0)
+					codes.add(code);
+			}
+		}
+		origin.fireOptionDataChanged(this, new SendBufferedDataOn(c0, codes));
 	}
 
 }

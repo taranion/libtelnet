@@ -226,6 +226,8 @@ public class TelnetSocket extends Socket {
 				logger.log(Level.DEBUG," indicate support for {0}", support.handler);
 				changeModeState(support.handler.code, ModeState.OFFERED);
 				out().sendWill(support.handler.getCode());
+			} else if (support.role==Role.PROVIDER_SILENT){
+				logger.log(Level.DEBUG," do nothing to indicate support for {0}", support.handler);
 			} else if (support.role==Role.REJECT_OUTRIGHT){
 				logger.log(Level.DEBUG,"  Preemptively reject {0}", support.handler);
 				out().sendWont(support.handler.getCode());

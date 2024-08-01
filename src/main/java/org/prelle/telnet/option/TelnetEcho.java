@@ -13,6 +13,8 @@ import org.prelle.telnet.TelnetOptionHandler;
  */
 public class TelnetEcho extends TelnetOptionHandler {
 
+	public final static int CODE = 1;
+
 	/**
 	 * How shall data typed locally be echoed?
 	 */
@@ -30,7 +32,7 @@ public class TelnetEcho extends TelnetOptionHandler {
 
 	//-----------------------------------------------------------------
 	public TelnetEcho() {
-		super(1,"ECHO");
+		super(CODE,"ECHO");
 	}
 
 	//-----------------------------------------------------------------
