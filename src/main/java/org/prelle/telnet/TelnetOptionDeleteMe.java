@@ -52,8 +52,8 @@ public enum TelnetOptionDeleteMe {
 	MXP        ( 91, new MUDExtensionProtocol()),
 	ZMP        ( 93, new ZenithMUDProtocol()),
 	MTP        (100, new MUDTilemapProtocol()),
-	MUSHCLIENT (102, new TelnetOptionHandler(98,"MUSHCLIENT")),
-	ATCP       (200, new TelnetOptionHandler(98,"ATCP")),
+	MUSHCLIENT (102, new TelnetOptionHandler(102,"MUSHCLIENT")),
+	ATCP       (200, new TelnetOptionHandler(200,"ATCP")),
 	GMCP       (201, new GenericMUDCommunicationProtocol()),
 	;
 

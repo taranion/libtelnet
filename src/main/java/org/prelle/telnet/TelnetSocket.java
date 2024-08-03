@@ -420,7 +420,7 @@ public class TelnetSocket extends Socket {
 			TelnetOptionHandler optCls = (options.containsKey(option))?options.get(option).handler:null;
 			String name = (optCls!=null)?optCls.getName():"UNKNOWN";
 			OptionEntry supported = options.get(option);
-			if (supported!=null) {
+			if (supported!=null && supported.role!=Role.REJECT_OUTRIGHT) {
 				// Generally we do support to send this option
 				ModeState state = getModeState(option);
 				if (state==ModeState.CONFIRMED || state==ModeState.CONFIRMED_EXCHANGING || state==ModeState.CONFIRMED_EXCHANGED) {
@@ -455,7 +455,7 @@ public class TelnetSocket extends Socket {
 			optCls = (options.containsKey(option))?options.get(option).handler:null;
 			name = (optCls!=null)?optCls.getName():"UNKNOWN";
 			supported = options.get(option);
-			if (supported!=null) {
+			if (supported!=null && supported.role!=Role.REJECT_OUTRIGHT) {
 				// Generally we do support to receive this option
 				ModeState state = getModeState(option);
 				if (state==ModeState.CONFIRMED || state==ModeState.CONFIRMED_EXCHANGING || state==ModeState.CONFIRMED_EXCHANGED) {

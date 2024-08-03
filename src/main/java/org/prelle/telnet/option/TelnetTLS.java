@@ -3,11 +3,7 @@
  */
 package org.prelle.telnet.option;
 
-import java.io.IOException;
-
-import org.prelle.telnet.TelnetInputStream;
 import org.prelle.telnet.TelnetOptionHandler;
-import org.prelle.telnet.TelnetSocket;
 
 /**
  * https://www.ietf.org/proceedings/44/I-D/draft-ietf-tn3270e-telnet-tls-01.txt

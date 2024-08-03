@@ -20,6 +20,8 @@ import org.prelle.telnet.TelnetSocket;
  */
 public class LineMode extends TelnetOptionHandler {
 
+	public final static int CODE = 34;
+
 	static enum ModeBit {
 		/**
 		 * When set, the client side of the connection should process all
@@ -156,7 +158,7 @@ public class LineMode extends TelnetOptionHandler {
 	}
 
     public LineMode() {
-    	super(34, "LINEMODE");
+    	super(CODE, "LINEMODE");
     }
 
 //	//-----------------------------------------------------------------

@@ -8,14 +8,10 @@ import java.io.InputStream;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 
-import org.prelle.telnet.TelnetOptionHandler;
-import org.prelle.telnet.TelnetOptionListener;
-import org.prelle.telnet.TelnetSocket;
 import org.prelle.telnet.mud.GenericMUDCommunicationProtocol;
 import org.prelle.telnet.mud.MUDServerDataProtocol;
 import org.prelle.telnet.mud.MUDServerStatusProtocol;
 import org.prelle.telnet.mud.MUDSoundProtocol;
-import org.prelle.telnet.mud.MUDTerminalTypeStandard;
 import org.prelle.telnet.option.SuppressGoAhead;
 import org.prelle.telnet.option.TelnetWindowSize;
 import org.prelle.telnet.option.TerminalType;

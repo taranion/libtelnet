@@ -11,7 +11,6 @@ import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.net.Socket;
 
-import org.prelle.telnet.option.LineMode;
 import org.prelle.telnet.option.SuppressGoAhead;
 import org.prelle.telnet.option.TelnetEcho;
 

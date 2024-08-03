@@ -3,12 +3,7 @@
  */
 package org.prelle.telnet.mud;
 
-import java.io.IOException;
-import java.lang.System.Logger.Level;
-
-import org.prelle.telnet.TelnetInputStream;
 import org.prelle.telnet.TelnetOptionHandler;
-import org.prelle.telnet.TelnetSocket;
 
 /**
  * See https://tintin.mudhalla.net/protocols/msdp/

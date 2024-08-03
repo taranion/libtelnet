@@ -35,9 +35,18 @@ public class TelnetEnvironmentOption extends TelnetOptionHandler {
 	private final static int	ESC     = 2;
 	private final static int	USERVAR = 3;
 
+	private Map<String,String> userVars;
+
 	//-------------------------------------------------------------------
 	public TelnetEnvironmentOption() {
 		super(CODE, "ENVIRON");
+		userVars = new HashMap<>();
+	}
+
+	//-------------------------------------------------------------------
+	public TelnetEnvironmentOption(Map<String,String> userVars) {
+		super(CODE, "ENVIRON");
+		this.userVars = userVars;
 	}
 
 	//-----------------------------------------------------------------
