@@ -3,6 +3,7 @@
  */
 package org.prelle.telnet.option;
 
+import java.io.IOException;
 import java.lang.System.Logger.Level;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,7 +23,7 @@ public class LineMode extends TelnetOptionHandler {
 
 	public final static int CODE = 34;
 
-	static enum ModeBit {
+	public static enum ModeBit {
 		/**
 		 * When set, the client side of the connection should process all
 		 * input lines, performing any editing functions, and only send
@@ -281,6 +282,19 @@ public class LineMode extends TelnetOptionHandler {
 			}
 		}
 		origin.fireOptionDataChanged(this, new SendBufferedDataOn(c0, codes));
+	}
+
+	//-------------------------------------------------------------------
+	public static void setFlags(TelnetOutputStream out, List<ModeBit> flags) throws IOException {
+		int flagMask = 0;
+		for (ModeBit flag : flags) {
+			flagMask |= flag.value;
+		}
+
+		startSubNegotiation(out, CODE);
+		out.write(Operation.MODE.value);
+		out.write(flagMask);
+		endSubNegotiation(out, CODE);
 	}
 
 }

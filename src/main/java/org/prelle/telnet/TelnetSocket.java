@@ -25,6 +25,10 @@ import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.prelle.telnet.option.LineMode;
+import org.prelle.telnet.option.LineMode.ModeBit;
+import org.prelle.telnet.option.TelnetEcho;
+
 /**
  * @author prelle
  *
@@ -525,6 +529,42 @@ public class TelnetSocket extends Socket {
 	//-------------------------------------------------------------------
 	public Charset getCharset() {
 		return charset;
+	}
+
+	//-------------------------------------------------------------------
+	public boolean supportsChangingEcho() {
+		return options.containsKey(TelnetEcho.CODE) && options.get(TelnetEcho.CODE).role!=Role.REJECT_OUTRIGHT;
+	}
+
+	//-------------------------------------------------------------------
+	public boolean setEchoingInput(boolean state) {
+		if (!supportsChangingEcho())
+			return false;
+
+//		if (state) {
+//			LineMode.setFlags(out, List.of());
+//		} else {
+//			LineMode.setFlags(out, List.of(ModeBit.EDIT));
+//		}
+		return true;
+	}
+
+	//-------------------------------------------------------------------
+	public boolean supportsCharacterMode() {
+		return options.containsKey(LineMode.CODE) && options.get(LineMode.CODE).role!=Role.REJECT_OUTRIGHT;
+	}
+
+	//-------------------------------------------------------------------
+	public boolean setCharacterMode(boolean state) throws IOException {
+		if (!supportsCharacterMode())
+			return false;
+
+		if (state) {
+			LineMode.setFlags(out, List.of());
+		} else {
+			LineMode.setFlags(out, List.of(ModeBit.EDIT));
+		}
+		return true;
 	}
 
 }
