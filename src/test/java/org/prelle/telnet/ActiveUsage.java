@@ -7,20 +7,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.util.List;
 
-import org.prelle.telnet.mud.GenericMUDCommunicationProtocol;
-import org.prelle.telnet.mud.MUDServerDataProtocol;
-import org.prelle.telnet.mud.MUDServerStatusProtocol;
-import org.prelle.telnet.mud.MUDSoundProtocol;
-import org.prelle.telnet.option.SuppressGoAhead;
-import org.prelle.telnet.option.TelnetWindowSize;
-import org.prelle.telnet.option.TerminalType;
+import org.prelle.telnet.TelnetConstants.ControlCode;
+import org.prelle.telnet.option.LineMode.LineModeConfig;
+import org.prelle.telnet.option.LineMode.LineModeListener;
+import org.prelle.telnet.option.LineMode.ModeBit;
 
 /**
  * @author prelle
  *
  */
-public class ActiveUsage implements TelnetOptionListener {
+public class ActiveUsage implements TelnetSocketListener, LineModeListener {
 
     private final static Logger logger = System.getLogger("app");
 
@@ -40,15 +38,18 @@ public class ActiveUsage implements TelnetOptionListener {
 //		TelnetSocket socket = new TelnetSocket("mg.mud.de", 4711)
 //		TelnetSocket socket = new TelnetSocket("lost.wishes.net", 5555)
 		TelnetSocket socket = new TelnetSocket("backrooms.net", 4000)
-				.support(new TelnetOptionHandler(0,"TRANSMIT_BINARY"), Role.REQUESTER)
-				.support(new TelnetOptionHandler(1,"ECHO"), Role.REQUESTER)
-				.support(new SuppressGoAhead(), Role.REQUESTER)
-				.support(new TelnetWindowSize(), Role.REJECT_OUTRIGHT)
-				.support(new TerminalType("ActiveUsage","XTERM","MTTS 0"), Role.PROVIDER)
-				.support(new MUDSoundProtocol(), Role.PROVIDER_SILENT)
-				.support(new MUDServerDataProtocol(), Role.REQUESTER)
-				.support(new MUDServerStatusProtocol(), Role.REQUESTER)
-				.support(new GenericMUDCommunicationProtocol(), Role.REQUESTER)
+				.support(TelnetOption.LINEMODE.getCode(), ControlCode.WILL, new LineModeConfig())
+				.support(TelnetOption.NAWS.getCode(), ControlCode.WILL)
+//				.support(new TelnetOptionHandler(0,"TRANSMIT_BINARY"), Role.REQUESTER)
+//				.support(new TelnetOptionHandler(1,"ECHO"), Role.REQUESTER)
+//				.support(new SuppressGoAhead(), Role.REQUESTER)
+//				.support(new TelnetWindowSize(), Role.REJECT_OUTRIGHT)
+//				.support(new TerminalType("ActiveUsage","XTERM","MTTS 0"), Role.PROVIDER)
+//				.support(new MUDSoundProtocol(), Role.PROVIDER_SILENT)
+//				.support(new MUDServerDataProtocol(), Role.REQUESTER)
+//				.support(new MUDServerStatusProtocol(), Role.REQUESTER)
+//				.support(new GenericMUDCommunicationProtocol(), Role.REQUESTER)
+				.setOptionListener(TelnetOption.LINEMODE.getCode(), (LineModeListener)this)
 				;
 		InputStream in = socket.getInputStream();
 		while (true) {
@@ -60,23 +61,24 @@ public class ActiveUsage implements TelnetOptionListener {
 		}
 	}
 
-	//-----------------------------------------------------------------
-	/* (non-Javadoc)
-	 * @see org.prelle.telnet.TelnetOptionListener#telnetOptionDataChanged(org.prelle.telnet.NetworkVirtualConsole, org.prelle.telnet.option.TelnetOption, java.lang.Object)
-	 */
-	@Override
-	public void telnetOptionDataChanged(TelnetSocket nvt,
-			TelnetOptionHandler option, Object data) {
-		logger.log(Level.INFO,"Telnet Option Data Changed: "+option.getClass().getSimpleName()+" = "+data);
-	}
-
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetOptionListener#telnetOptionStatusChange(org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOptionHandler, boolean)
+	 * @see org.prelle.telnet.TelnetSocketListener#telnetOptionStatusChange(org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetSubnegotiationHandler, boolean)
 	 */
 	@Override
-	public void telnetOptionStatusChange(TelnetSocket nvt, TelnetOptionHandler option, boolean active) {
-		logger.log(Level.INFO, "Feature {0} is {1}", option.getName(), active?"enabled":"disabled");
+	public void telnetOptionStatusChange(TelnetSocket nvt, TelnetOption option, boolean active) {
+		logger.log(Level.INFO, "Feature {0} is {1}", option.name(), active?"enabled":"disabled");
+	}
+
+	@Override
+	public List<ModeBit> linemodeFlagsSuggested(List<ModeBit> suggested) {
+		System.out.println("Linemode is now "+suggested);
+		return suggested;
+	}
+
+	@Override
+	public void sendFlushOn(List<Integer> flushCodes) {
+		System.err.println("We should flush on "+flushCodes);
 	}
 
 }

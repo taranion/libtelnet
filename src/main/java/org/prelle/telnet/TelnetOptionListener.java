@@ -1,20 +1,14 @@
-/**
- *
- */
 package org.prelle.telnet;
 
+import java.lang.System.Logger.Level;
+
 /**
- * @author prelle
  *
  */
 public interface TelnetOptionListener {
 
-	public default void telnetSupportedOptionsKnown(TelnetSocket nvt) {}
-
-	public void telnetOptionStatusChange(TelnetSocket nvt, TelnetOptionHandler option, boolean active);
-
-	public void telnetOptionDataChanged(TelnetSocket nvt, TelnetOptionHandler option, Object data);
-
-	public default void telnetCommandReceived(TelnetSocket nvt, TelnetCommand command) {}
+	public default void remotePartySent(TelnetSocket socket, int code, TelnetCommand command) {
+		System.getLogger("telnet.option").log(Level.WARNING, "Do-nothing default handler called for {0} : {1}", command, this.getClass());
+	}
 
 }

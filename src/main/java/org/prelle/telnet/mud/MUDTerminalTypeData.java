@@ -6,11 +6,13 @@ package org.prelle.telnet.mud;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.prelle.telnet.option.TerminalType.TerminalTypeData;
+
 /**
  * @author prelle
  *
  */
-public class MUDTerminalTypeData {
+public class MUDTerminalTypeData extends TerminalTypeData {
 
 	public static enum Capability {
 		ANSI(1),
@@ -34,8 +36,6 @@ public class MUDTerminalTypeData {
 	}
 
 	private MUDTerminalTypeStandard.RequestState state;
-	private String clientName;
-	private String terminalType;
 	/**
 	 *
 	 *       1 "ANSI"              Client supports all common ANSI color codes.
@@ -53,9 +53,19 @@ public class MUDTerminalTypeData {
 	 */
 	private String mudTerminalType;
 
+	public MUDTerminalTypeData() {
+		options = new ArrayList<>();
+		options.add("-");
+		options.add("-");
+		options.add("MTTS 0");
+	}
+	public MUDTerminalTypeData(String... values) {
+		options = List.of(values);
+	}
+
 	//-----------------------------------------------------------------
 	public String toString() {
-		return String.format("Client: %s,  Terminal: %s, MTT: %s = %s", clientName, terminalType, mudTerminalType, getCapabilities());
+		return String.format("Client: %s,  Terminal: %s, MTT: %s = %s", getClientName(), getTerminalType(), mudTerminalType, getCapabilities());
 	}
 
 	//-----------------------------------------------------------------
@@ -63,28 +73,32 @@ public class MUDTerminalTypeData {
 	 * @return the clientName
 	 */
 	public String getClientName() {
-		return clientName;
+		return options.get(0);
 	}
 	//-----------------------------------------------------------------
 	/**
 	 * @param clientName the clientName to set
 	 */
-	public void setClientName(String clientName) {
-		this.clientName = clientName;
+	public MUDTerminalTypeData setClientName(String clientName) {
+		options.remove(0);
+		options.add(0, clientName);
+		return this;
 	}
 	//-----------------------------------------------------------------
 	/**
 	 * @return the terminalType
 	 */
 	public String getTerminalType() {
-		return terminalType;
+		return options.get(1);
 	}
 	//-----------------------------------------------------------------
 	/**
 	 * @param terminalType the terminalType to set
 	 */
-	public void setTerminalType(String terminalType) {
-		this.terminalType = terminalType;
+	public MUDTerminalTypeData setTerminalType(String terminalType) {
+		options.remove(1);
+		options.add(1, terminalType);
+		return this;
 	}
 	//-----------------------------------------------------------------
 	/**

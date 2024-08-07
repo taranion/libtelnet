@@ -3,15 +3,15 @@ package org.prelle.telnet.mud;
 import java.lang.System.Logger.Level;
 import java.util.Arrays;
 
-import org.prelle.telnet.Role;
-import org.prelle.telnet.TelnetOptionHandler;
+import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetSocket;
+import org.prelle.telnet.TelnetSubnegotiationHandler;
 
 /**
  *
  */
-public class AardwolfMushclientProtocol extends TelnetOptionHandler {
+public class AardwolfMushclientProtocol extends TelnetSubnegotiationHandler {
 
 	public static enum MUDMode {
 		LOGIN_SCREEN(1),
@@ -35,35 +35,39 @@ public class AardwolfMushclientProtocol extends TelnetOptionHandler {
 		}
 	}
 
+	public static interface AardwolfMushclientListener extends TelnetOptionListener {
+		public void telnetMudModeChanged(MUDMode mode);
+		public void telnetTickReceived();
+	}
+
 
 	private final static int CODE = 102;
 
 	//-------------------------------------------------------------------
-	public AardwolfMushclientProtocol() {
-		super(CODE, "AARDWOLF");
-	}
-
-	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetOptionHandler#handleSubnegotiation(org.prelle.telnet.Role, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
 	@Override
-	public void handleSubnegotiation(Role role, int[] values, TelnetSocket nvt, TelnetOutputStream out) {
-		logger.log(Level.INFO,"As {0} we received2 : {1}", role, Arrays.toString(values));
+	public void handleSubnegotiation(int code, int[] values, TelnetSocket nvt, TelnetOutputStream out) {
+		AardwolfMushclientListener listener = nvt.getOptionListener(CODE);
 		switch (values[0]) {
 		case 100:
 			MUDMode mode = MUDMode.valueOf(values[1]);
+			logger.log(Level.DEBUG,"RCV: mode="+mode);
 			if (mode!=null) {
-				nvt.fireOptionDataChanged(this, mode);
+				if (listener!=null) listener.telnetMudModeChanged(mode);
+				else logger.log(Level.WARNING, "No AardwolfMushclientListener found as TelnetOptionListener");
 			} else {
 				logger.log(Level.ERROR, "Unknown mode {0} for Aardwolf protocol 102", values[1]);
 			}
 		case 101:
 			// Received MUD tick
-			logger.log(Level.WARNING,"TICK received");
+			logger.log(Level.DEBUG,"RCV: TICK");
+			if (listener!=null) listener.telnetTickReceived();
+			else logger.log(Level.WARNING, "No AardwolfMushclientListener found as TelnetOptionListener");
 			break;
 		default:
-			logger.log(Level.WARNING,"TODO: As {0} we received2 : {1}", role, Arrays.toString(values));
+			logger.log(Level.WARNING,"TODO: we received2 : {0}", Arrays.toString(values));
 		}
 	}
 

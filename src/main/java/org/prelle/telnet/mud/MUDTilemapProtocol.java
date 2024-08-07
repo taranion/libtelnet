@@ -3,14 +3,14 @@ package org.prelle.telnet.mud;
 import java.io.IOException;
 import java.lang.System.Logger.Level;
 
-import org.prelle.telnet.TelnetOptionHandler;
+import org.prelle.telnet.TelnetSubnegotiationHandler;
 import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetSocket;
 
 /**
  *
  */
-public class MUDTilemapProtocol extends TelnetOptionHandler {
+public class MUDTilemapProtocol extends TelnetSubnegotiationHandler {
 
 	public final static int CODE = 100;
 
@@ -25,28 +25,23 @@ public class MUDTilemapProtocol extends TelnetOptionHandler {
 	}
 
 	//-------------------------------------------------------------------
-	public MUDTilemapProtocol() {
-		super(CODE, "MTP");
-	}
-
-	//-------------------------------------------------------------------
 	public static void sendMap(TelnetSocket socket, int[][] mapData) throws IOException {
 		logger.log(Level.WARNING, "TODO: send map");
 		TelnetOutputStream out = (TelnetOutputStream) socket.getOutputStream();
 
-		TelnetOptionHandler.startSubNegotiation(socket, CODE);
-		out.write(mapData[0].length);
-		out.write(mapData.length);
-
-		for (int y=0; y<mapData.length; y++) {
-			for (int x=0; x<mapData[y].length; x++) {
-				int code = mapData[y][x];
-				out.write(code>>8);
-				out.write(code%256);
-			}
-		}
-		TelnetOptionHandler.endSubNegotiation(socket, CODE);
-		out.flush();
+//		TelnetOptionHandler.startSubNegotiation(socket, CODE);
+//		out.write(mapData[0].length);
+//		out.write(mapData.length);
+//
+//		for (int y=0; y<mapData.length; y++) {
+//			for (int x=0; x<mapData[y].length; x++) {
+//				int code = mapData[y][x];
+//				out.write(code>>8);
+//				out.write(code%256);
+//			}
+//		}
+//		TelnetOptionHandler.endSubNegotiation(socket, CODE);
+//		out.flush();
 
 	}
 
@@ -81,5 +76,14 @@ public class MUDTilemapProtocol extends TelnetOptionHandler {
 //
 //		nvt.fireOptionDataChanged(this, new TileMapData(w,h,mapData));
 //	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
+	 */
+	@Override
+	public void handleSubnegotiation(int code, int[] values, TelnetSocket origin, TelnetOutputStream out) {
+		logger.log(Level.WARNING, "TODO: Subnegotiate for MTP");
+	}
 
 }

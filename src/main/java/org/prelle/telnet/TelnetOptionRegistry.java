@@ -3,24 +3,27 @@ package org.prelle.telnet;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.prelle.telnet.option.TransmitBinary;
-
 /**
  *
  */
 public class TelnetOptionRegistry {
 
-	private static Map<Integer, TelnetOptionHandler> knownOptions = new HashMap<>();
+	private static Map<Integer, TelnetSubnegotiationHandler> knownOptions = new HashMap<>();
 
 	//-------------------------------------------------------------------
 	static {
-		register(new TelnetOptionHandler(0, "TRANSMIT_BINARY"));
-		register(new TransmitBinary());
+		for (TelnetOption entry : TelnetOption.values())
+		register(entry.getCode(), entry.getOptionHandler());
 	}
 
 	//-------------------------------------------------------------------
-	public static void register(TelnetOptionHandler handler) {
-		knownOptions.put(handler.getCode(), handler);
+	public static void register(int code, TelnetSubnegotiationHandler handler) {
+		knownOptions.put(code, handler);
+	}
+
+	//-------------------------------------------------------------------
+	public static TelnetSubnegotiationHandler get(int code) {
+		return knownOptions.get(code);
 	}
 
 }

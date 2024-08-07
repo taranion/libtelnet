@@ -19,16 +19,6 @@ public class MUDTerminalTypeStandard extends TerminalType {
 
 	static enum RequestState { DEFAULT, CLIENT_NAME, TERMINAL_TYPE, MUD_TERMINAL_TYPE, UNKNOWN}
 
-	//-----------------------------------------------------------------
-	public MUDTerminalTypeStandard() {
-		super();
-	}
-
-	//-----------------------------------------------------------------
-	public MUDTerminalTypeStandard(String clientName, String termType, int mtts) {
-		super(clientName, termType, "MTTS "+mtts);
-	}
-
 	//-------------------------------------------------------------------
 	/**
 	 * Called when all information has been received
@@ -41,7 +31,7 @@ public class MUDTerminalTypeStandard extends TerminalType {
 			data.setTerminalType(received.get(1));
 		if (received.size()>2)
 			data.setMudTerminalType(received.get(2));
-		nvt.fireOptionDataChanged(this, data);
+//		nvt.fireOptionDataChanged(this, data);
 	}
 
 }

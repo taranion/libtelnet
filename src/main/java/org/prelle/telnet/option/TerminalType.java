@@ -9,10 +9,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.prelle.telnet.Role;
-import org.prelle.telnet.TelnetOptionHandler;
+import org.prelle.telnet.CommunicationRole;
+import org.prelle.telnet.TelnetOption;
 import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetSocket;
+import org.prelle.telnet.TelnetSubnegotiationHandler;
 
 /**
  * RFC 1091
@@ -20,7 +21,28 @@ import org.prelle.telnet.TelnetSocket;
  * @author prelle
  *
  */
-public class TerminalType extends TelnetOptionHandler {
+public class TerminalType extends TelnetSubnegotiationHandler {
+
+	public static class TerminalTypeData {
+		protected List<String> options = new ArrayList<>();
+		public TerminalTypeData() {
+			options = new ArrayList<>();
+		}
+		public TerminalTypeData(String... values) {
+			options = List.of(values);
+		}
+
+		public void addOption(String value) {
+			options.add(value);
+		}
+		public boolean hasOption(String value) {
+			return options.contains(value);
+		}
+	}
+
+	public static interface TerminalTypeListener {
+		public void telnetTerminalTypesLearned(TerminalTypeData data);
+	}
 
 	private final static int IS   = 0;
 	private final static int SEND = 1;
@@ -29,15 +51,27 @@ public class TerminalType extends TelnetOptionHandler {
 
 	private Integer selected;
 
-	private List<String> received = new ArrayList<>();
+	//-----------------------------------------------------------------
+	public TerminalType(String ...options) {
+		this.answers = options;
+	}
 
-	//-------------------------------------------------------------------
+	//-----------------------------------------------------------------
 	/**
-	 * @param compatibility All terminals this instance is compatible to
+	 * Called after the use of a option has been confirmed
+	 * @return TRUE if a subnegotiation is needed
 	 */
-	public TerminalType(String...compatibility) {
-		super(24,"TTYPE");
-		answers = compatibility;
+	public void initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {
+		try {
+			if (role==CommunicationRole.SERVER) {
+				logger.log(Level.DEBUG, "Ask remote party to send terminal types");
+				List<String> received = new ArrayList<>();
+				origin.setOptionData(TelnetOption.TERMINAL_TYPE.getCode(), received);
+				requestNext(out);
+			}
+		} catch (IOException e) {
+			logger.log(Level.ERROR, "Failed requesting terminal type",e);
+		}
 	}
 
 	//-------------------------------------------------------------------
@@ -45,26 +79,22 @@ public class TerminalType extends TelnetOptionHandler {
 	 * @see org.prelle.telnet.TelnetOptionHandler#handleSubnegotiation(org.prelle.telnet.Role, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
 	@Override
-	public void handleSubnegotiation(Role role, int[] values, TelnetSocket origin, TelnetOutputStream out) {
+	public void handleSubnegotiation(int code, int[] values, TelnetSocket origin, TelnetOutputStream out) {
 		int operation = values[0];
 		if (operation==SEND) {
-			logger.log(Level.DEBUG, "Remote party requests terminal type information and we are {0}", role);
-			if (role==Role.PROVIDER) {
-				try {
-					sendNextFromList(out);
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			} else {
-				logger.log(Level.ERROR, "The client requested a terminal type info from us, but we are a server");
+			logger.log(Level.INFO, "Remote party requests terminal type information");
+			try {
+				sendNextFromList(out);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		} else {
-			logger.log(Level.DEBUG, "Remote party provides terminal type information and we are {0}", role);
+//			logger.log(Level.DEBUG, "Remote party provides terminal type information");
 			byte[] data = new byte[values.length-1];
 			for (int i=1; i<values.length; i++) data[i-1]=(byte) values[i];
-			String value = new String(data, origin.getCharset());
-			if (role==Role.REQUESTER) {
+			List<String> received = origin.getOptionData(TelnetOption.TERMINAL_TYPE.getCode());
+			String value = new String(data, StandardCharsets.US_ASCII);
 				logger.log(Level.INFO, "TERMINAL_TYPE: Received {0}", value);
 				if (!received.contains(value) && !"UNKNOWN".equals(value)) {
 					received.add(value);
@@ -78,17 +108,20 @@ public class TerminalType extends TelnetOptionHandler {
 					logger.log(Level.INFO, "Received {0}", received);
 					processResult(origin, received);
 				}
-			} else {
-				logger.log(Level.ERROR, "The client requested a terminal type info from us, but we are a server");
-			}
 		}
+
+	}
+
+	//-------------------------------------------------------------------
+	protected void processResult(TelnetSocket nvt, List<String> received) {
+		// TODO Auto-generated method stub
 
 	}
 
 	//-----------------------------------------------------------------
 	private void sendNextFromList(TelnetOutputStream out) throws IOException {
 		if (answers==null || answers.length==0) {
-			out.sendSubNegotiation(code, IS, "UNKNOWN".getBytes(StandardCharsets.ISO_8859_1));
+			out.sendSubNegotiation(TelnetOption.TERMINAL_TYPE.getCode(), IS, "UNKNOWN".getBytes(StandardCharsets.ISO_8859_1));
 			return;
 		}
 
@@ -102,7 +135,7 @@ public class TerminalType extends TelnetOptionHandler {
 			selected=null;
 		}
 		logger.log(Level.INFO,"Send terminal type ''{0}''", toSend);
-		out.sendSubNegotiation(code, IS, toSend.getBytes(StandardCharsets.ISO_8859_1));
+		out.sendSubNegotiation(TelnetOption.TERMINAL_TYPE.getCode(), IS, toSend.getBytes(StandardCharsets.ISO_8859_1));
 	}
 
 	//-----------------------------------------------------------------
@@ -110,38 +143,12 @@ public class TerminalType extends TelnetOptionHandler {
 		byte[] send = new byte[6];
 		send[0] = (byte)IAC;
 		send[1] = (byte)SB;
-		send[2] = (byte)code;
+		send[2] = (byte)TelnetOption.TERMINAL_TYPE.getCode();
 		send[3] = (byte)SEND;
 		send[4] = (byte)IAC;
 		send[5] = (byte)SE;
 		out.writeCommand(send);
 		out.flush();
-	}
-
-	//-------------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.TelnetOptionHandler#initializeAs(org.prelle.telnet.Role)
-	 */
-	@Override
-	public boolean initializeAs(Role role, TelnetSocket nvt, TelnetOutputStream out) {
-		if (role==Role.PROVIDER) return false;
-		logger.log(Level.DEBUG, "Ask remote party to send terminal types");
-		try {
-			requestNext(out);
-			return true;
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		return false;
-	}
-
-	//-------------------------------------------------------------------
-	/**
-	 * Called when all information has been received
-	 */
-	protected void processResult(TelnetSocket nvt, List<String> data) {
-		nvt.fireOptionDataChanged(this, received);
 	}
 
 }

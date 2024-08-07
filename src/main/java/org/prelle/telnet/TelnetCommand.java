@@ -8,7 +8,7 @@ import org.prelle.telnet.TelnetConstants.ControlCode;
 public class TelnetCommand {
 
 	private ControlCode code;
-	private int data;
+	private Integer data;
 
 	//-------------------------------------------------------------------
 	public TelnetCommand(ControlCode code) {
@@ -34,7 +34,7 @@ public class TelnetCommand {
 
 	//-------------------------------------------------------------------
 	public ControlCode getCode() { return code; }
-	public int getData() { return data; }
+	public Integer getData() { return data; }
 
 
 }

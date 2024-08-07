@@ -14,7 +14,7 @@
     <Logger name="jdk" level="warn"/>
     <Logger name="javafx" level="info"/>
     <Logger name="telnet" level="DEBUG"/>
-    <Logger name="telnet.lvl1" level="DEBUG"/>
+    <Logger name="telnet.lvl1" level="TRACE"/>
     <Logger name="telnet.option" level="DEBUG"/>
  	</Loggers>
 </Configuration>

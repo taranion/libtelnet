@@ -1,0 +1,449 @@
+<!--#include virtual="header.shtml"-->
+<html><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8"><script type="text/javascript" src="zmp-Dateien/bundle-playback.js" charset="utf-8"></script>
+<script type="text/javascript" src="zmp-Dateien/wombat.js" charset="utf-8"></script>
+<script>window.RufflePlayer=window.RufflePlayer||{};window.RufflePlayer.config={"autoplay":"on","unmuteOverlay":"hidden"};</script>
+<script type="text/javascript" src="zmp-Dateien/ruffle.js"></script>
+<script type="text/javascript">
+    __wm.init("https://web.archive.org/web");
+  __wm.wombat("http://zmp.sourcemud.org:80/spec.shtml","20110424064019","https://web.archive.org/","web","https://web-static.archive.org/_static/",
+	      "1303627219");
+</script>
+<link rel="stylesheet" type="text/css" href="zmp-Dateien/banner-styles.css">
+<link rel="stylesheet" type="text/css" href="zmp-Dateien/iconochive.css">
+<!-- End Wayback Rewrite JS Include -->
+</head><body><p>Sean Middleditch &lt;<a target="_new" href="https://web.archive.org/web/20110424064019/mailto:sean@sourcemud.org">sean@sourcemud.org</a>&gt;</p>
+<p>Copyright (C) 2003,2004,2005,2006,2009	Sean Middleditch</p>
+<p>draft-2009-03-18</p>
+
+<h2>Table of Contents</h2>
+
+<ul>
+	<li><a href="#preamble">Preamble</a></li>
+	<li><a href="#spec">ZMP Specification</a></li>
+	<li><a href="#core">Core Commands</a></li>
+	<li><a href="#packages">Packages</a></li>
+	<li><a href="#history">Document History</a></li>
+	<li><a href="#license">License and Copying</a></li>
+</ul>
+
+<!-- PREAMBLE -->
+<a name="preamble"></a><h2>Preamble</h2>
+
+<p>This document is a technical specification defining an extension to <acronym title="Network Virtual Terminal Protocol">TELNET</acronym>, defined in <a href="https://web.archive.org/web/20110424064019/http://www.faqs.org/rfcs/rfc854.html">RFC854</a>.</p>
+
+<p>Advanced <acronym title="Multi User Dungeon">MUD</acronym> features 
+are in need of a protocol for sending messages between the client and 
+server which are not part of the player viewed content.	Several current 
+protocols exist for this purpose, but each have flaws.	A new solution is
+ proposed to solve these problems.</p>
+
+<p>The solution, <acronym title="Zenith MUD Protocol">ZMP</acronym>, 
+makes use of the existing TELNET capabilities to their fullest extent, 
+simplifying implementation and ensuring maximum flexibility.</p>
+
+<p>Please feel free to contact the author(s) of this document, and the <a href="#spec">ZMP specification</a> with comments or suggestions.	Keep the unconstructive flames and unrelated questions to yourself, please.</p>
+
+<p>In the specification, several formatting styles are used.  <em>must</em> and <em>must not</em> indicate required behavior for compliance.  <em>should</em> and <em>should not</em> indicate suggested but non-required behavior for compliance.  Words formatted as <span class="telnet">IAC</span> represent bytes with a well-defined value a specified in <a href="https://web.archive.org/web/20110424064019/http://www.faqs.org/rfcs/rfc854.html">RFC854</a>.  Text formatted as <span class="string">user data</span> represents a series of US-ASCII encoded bytes, excluding the quotation marks.</p>
+
+<!-- SPECIFICATION -->
+<a name="spec"></a><h2>ZMP Specification</h2>
+
+<p>ZMP is an extension building on <a href="https://web.archive.org/web/20110424064019/http://www.faqs.org/rfcs/rfc854.html">RFC854</a>.
+	The actual messages are sent using the TELNET subnegotiation feature.	
+This helps to meet the requirement for simplicity; the TELNET parsing 
+and handling code should already be in most every server and client.	
+Additionally, the safety requirement is handled here-in, as the IAC 
+escaping should already be handled.	As we're using the existing TELNET 
+layer, which serves as the client/server connection, ZMP also satisfies 
+the resource requirement.</p>
+
+<p>The ZMP numeric TELNET code in decimal is <em>93</em>.  In hexadecimal it is 0x5D.</p>
+
+<p>ZMP activation is handled using telnet negotiation.	The server <em>must</em> begin negotiation, by sending <span class="telnet">IAC WILL ZMP</span>.	If a client supports ZMP, it <em>must</em> respond with <span class="telnet">IAC DO ZMP</span>; otherwise, the client <em>should</em> send <span class="telnet">IAC DONT ZMP</span>.</p>
+
+<p>Once ZMP is successfully negotiated between the server and client, 
+bidirectional ZMP support is enabled for both client and server.	Once 
+enabled, ZMP may not be disabled.  The client <em>must not</em> begin ZMP negotiation; it may only respond to a server negotiation request.</p>
+
+<p>A ZMP session corresponds to a telnet connection.	Once ZMP is 
+enabled, the ZMP session has begun, and persists until the telnet 
+connection is closed.</p> 
+
+<p>A command is comprised of a command name and a list of parameters.	
+Arguments are free-form; they have no type associated, and no structure 
+associated.	They are similar to the argv[] array found in the main() 
+function in C/C++ programming.</p>
+
+<p>Commands <em>must</em> be sent using a telnet subnegotiation with the ZMP telnet code.  Implementations <em>must</em> be prepared to accept at least 16KiB (16384 bytes) of data per subnegotiation.  Implementations <em>should not</em> attempt to send more than 16KiB of data per subnegotiation.</p>
+
+<p>The data portion of the subnegotiation carries the command and parameters.	The command <em>must</em> be sent first.	The command <em>must</em> be followed by a NUL byte.	(A byte of value 0.)</p>
+
+<p>ZMP command names <em>must</em> be comprised of only <acronym title="American Standard Code for Information Interchange">ASCII</acronym> alpha-numeric characters (letters and numbers), dots (.), and dashes(-).	No other characters may be used.	Commands <em>must not</em> begin or end with a dot (.).</p>
+
+<p>Zero or more parameters <em>may</em> follow.	An parameter <em>must not</em> contain a NUL byte, but may be comprised of any other byte values.	Also note that as per the telnet standard, any IAC bytes <em>must</em> be escaped using the double IAC sequence.	Each parameter <em>must</em> be followed by a single NUL byte.	In most cases, parameters will be simple ASCII (or UTF-8) strings.  Implementations <em>must</em> be prepared to accept an arbitrary number of parameters.</p>
+
+<p>An example command sequence may look like: <span class="telnet">IAC SB ZMP</span> <span class="string">my-command</span> <span class="telnet">NUL</span> <span class="string">parameter 1</span> <span class="telnet">NUL</span> <span class="string">second parameter</span> <span class="telnet">NUL IAC SE</span>.</p>
+
+<p>Commands may be sent from the server to the client, or the client to the server.</p>
+
+<p>Commands <em>must</em> be sent in-order with other commands and the 
+regular MUD data stream.	For example, if the normal MUD data stream is 
+placed in a buffer, ZMP commands must also be placed in the same buffer.
+	If the sending end sends MUD data, a ZMP command, and then more MUD 
+data, the receiving end must receive the data and ZMP command in that 
+same order.	This is required to allow ZMP to function in a markup style 
+of operation.</p>
+
+<p>In order to increase interoperability between the multitude of MUD servers and clients available, software implementing ZMP <em>should</em> make use of <a href="#packages">command packages</a>, especially the <a href="#core">core package</a>.</p>
+
+<!-- CORE -->
+<a name="core"></a><h2>Core Commands</h2>
+
+<p>There are several basic commands that most software using ZMP will want or need.</p>
+
+<p>Software does not need to support any or all of these commands in 
+order to use ZMP, or to be compliant with the ZMP specification.	
+However, it is generally a very good idea to implement these.	If nothing
+ else, they will serve well to help test an implementation, and also 
+function as learnng exercise on how to write custom <a href="#packages">packages</a> and commands.</p>
+
+<h3>zmp.ping</h3>
+
+<p>The <span class="pname">zmp.ping</span> command is a simple testing command.	This command uses no parameters.	When the <span class="pname">zmp.ping</span> command is received, the <span class="pname">zmp.time</span> command <em>must</em> be sent in response.</p>
+
+<h3>zmp.time</h3>
+
+<p>This command sends a single parameter: the date and time.	The date and time used <em>must</em> be in UTC.	The format <em>must</em>
+ be YYYY-MM-SS HH:MM:SS.	Example: 2003-07-02 12:20:34.	(That's July 2nd 
+of 2003, at 20 minutes and 34 seconds past hour 16, or 4pm.)</p>
+
+<h3>zmp.ident</h3>
+
+<p>The <span class="pname">zmp.ident</span> command communicates the name and version of the software in use.</p>
+
+<p>This command uses three parameters: (1) the name of the software 
+(i.e., "MUD Client"), (2) the version of the software (i.e., "2.5 
+Beta"), and (3) a short and concise description of the software (i.e. "A
+ graphical MUD client for Whiz OS.").</p> 
+
+<p>The <span class="pname">zmp.ident</span> command <em>should</em> be sent by both the client and the server once the ZMP session begins.	The command <em>must not</em> be sent more than once per ZMP session.	In particular, reception of the <span class="pname">zmp.ident</span> does not require any response command.
+
+</p><p>The <span class="pname">zmp.ident</span> command data is intended
+ for branding and debugging purposes.	Do not rely on the ident data to 
+determine features supported by the softare.	Instead, use the <span class="pname">zmp.check</span> command to check for required commands.</p>
+
+<h3>zmp.check</h3>
+
+<p>This command is used to check for support for a particular <a href="#packages">package</a> or command on the other end.	For example, if a server wishes to see if a connected client supports the <span class="pname">org.sourcemud</span> package, it would send a <span class="pname">zmp.check</span> command with the single parameter, "org.sourcemud.".	For a package name, there <em>must</em> be a . (dot) appended.	For commands, there <em>must not</em> be dot appended; simply use the command name.</p>
+
+<p>When the <span class="pname">zmp.check</span> command is received, one of <span class="pname">zmp.support</span> or <span class="pname">zmp.no-support</span> <em>must</em> be sent back.	If the asked for command or package is indeed supported, send an <span class="pname">zmp.support</span> command with the package/command name as the sole parameter.	Otherwise, send an <span class="pname">zmp.no-support</span> command in return, with the package/command name in question as the sole parameter.</p>
+
+<p>If the parameter of the <span class="pname">zmp.check</span> command ends with dot, the request is then for a package.	The affirmative response must be sent if <em>any</em>
+ command in the package or a sub-package is available.	If a specific 
+command is required, the command should be explicitly queried, not jus 
+tits package.</p>
+
+<p>The available commands and packages <em>must not</em> change after the ZMP session has begun.	In particular, if a <span class="pname">zmp.check</span>
+ command queries the presence of a command or package, and an 
+affirmative response is sent in reply, the command or package may not be
+ removed from the session.</p>
+
+<p>The <span class="pname">zmp.check</span> command <em>should</em> only be sent once per ZMP session per parameter.	That is, if the support of the <span class="pname">org.sourcemud</span> package is queried once, it will not appear or disappear later in the ZMP session, so it should not be queried for again.</p>
+
+<h3>zmp.support</h3>
+
+<p>This command is used only as a response to the <span class="pname">zmp.check</span> command.</p>
+
+<h3>zmp.no-support</h3>
+
+<p>This command is used only as a response to the <span class="pname">zmp.check</span> command.</p>
+
+<h3>zmp.input</h3>
+
+<p>The <span class="pname">zmp.input</span> command is to be sent from 
+the client to the server only.	The payload of this command is a single 
+parameter, which is to be interpreted by the server as a user command, 
+just as if the client had sent a normal line of text to the server.</p>
+
+<p>The advantage of this command is that it allows embedded newline 
+characters, which may be useful when sending blocks pre-formatted text.</p>
+
+<!-- PACKAGES -->
+<a name="packages"></a><h2>Packages</h2>
+
+<p>The <a href="#spec">ZMP specification</a> will help to build software
+ that is capable of sending and receiving commands.	However, this is of 
+little use if the software does not understand the messages sent to it; a
+ custom protocol may as well be used in that case.</p>
+
+<p>Some existing protocols define the set of commands they support in 
+the specification itself.	While this guarantees that compliant software 
+will be able to communicate meaningful messages, it can reduce the 
+flexibility of the software.	Both MXP and MCP allow custom messages to 
+be defined.	ZMP also allows this to be done.</p>
+
+<p>The package system for ZMP is similar to the idea of namespaces found
+ in popular programming languages, such as C++ and Java.	Every command 
+sent over ZMP should belong to a package.	A package is simply a name, 
+and a specification of the commands that are available in the package.</p>
+
+<p>When a command is sent, it should be in the form <span class="pname">package.command</span>.	For example, if sending a command named foo, in the package named bar, use the command name <span class="pname">bar.foo</span>.	Packages may be broken down further; for example, a package may be named <span class="pname">org.sourcemud</span>.</p>
+
+<p>Custom packages <em>should</em> be named based on a domain controlled by the author.	For example, custom <a href="https://web.archive.org/web/20110424064019/http://sourcemud.org/">Source MUD</a> commands should be in the <span class="pname">org.sourcemud</span>
+ package, because the domain for Source MUD is sourcemud.org.	Note that 
+the domain components are reversed.	This is very similar to the 
+recommended way of naming Java namespaces.</p>
+
+<p>Software <em>should not</em> add custom commands to packages published by other parties.	I.e., if there is a package <span class="pname">popular.mud</span> defined by a third party, software <em>should not</em> add a new command to <span class="pname">popular.mud</span>.	Custom commands should be defined in <span class="pname">your.domain</span>.</p>
+
+<p>If there is no unique domain associated with the software, simply use
+ a meaningful name related to the software, with x- prepended to that 
+name.	For example, if software called MUD Server requires a custom 
+package, and MUD Server has no domain, the package name <span class="pname">x-mud-server</span> should be used.	Any packages published for use by third parties <em>should</em>
+ be in a domain-identified package.	The x- package names should only be 
+used internally by a project, such as between a server/client pair 
+specifically written for each other.</p>
+
+<p>The ZMP authors are eager to help the community define some standard 
+packages.	With more available standard packages, there can be more 
+functionality across disparate MUD servers and clients.	Standard 
+packages are expected to be added for common MUD needs and codebases.</p>
+
+<!-- HISTORY -->
+<a name="history"></a><h2>Document History</h2>
+
+<h3>draft-2009-03-18</h3>
+
+<ul>
+  <li>Expand preamble with slightly more desciptive text.</li>
+	<li>Clarify ZMP code 93 is decimal, note that it is 0x5D in hexadecimal.</li>
+	<li>Improve clarity of the example ZMP command wire transmission.</li>
+	<li>Clarify that the server always negotiates and doing so enables two-way transmission.</li>
+</ul>
+
+<h3>draft-2009-03-14</h3>
+
+<ul>
+	<li>Replace the terminology 'argument' with 'parameter'.</li>
+	<li>Replace the terminology 'sub-request' with 'subnegotiation'.</li>
+	<li>Replace references to AweMUD and awemud.net with Source MUD and sourcemud.org.</li>
+	<li>Note that implementations must be prepared to accept an arbitrary number of parameters.</li>
+	<li>Note that implementations must be prepared to accept at least 16KiB of data in a TELNET sub-negotiation for ZMP.</li>
+</ul>
+
+<h3>draft-2006-10-07</h3>
+
+<ul>
+	<li>Split the non-core packages out of the core specification.</li>
+</ul>
+
+<h3>draft-2005-09-22</h3>
+
+<ul>
+	<li>Added definition of a ZMP session.</li>
+	<li>Clarified use and behavior of the zmp.ident command.</li>
+	<li>Removed use of "you" and "your" pronoun.</li>
+	<li>Clarified significance and behavior of zmp.check and its responses.</li>
+</ul>
+
+<h3>draft-2005-01-28</h3>
+
+<ul>
+	<li>Added sound package.</li>
+</ul>
+
+<h3>draft-2005-01-16</h3>
+
+<ul>
+	<li>Fixed typo in license description so the implementation clarification says what it should.</li>
+	<li>Fixed typo of time.</li>
+</ul>
+
+<h3>draft-2005-01-10</h3>
+
+<ul>
+	<li>Added a Creative Commons license to this document.</li>
+	<li>Corrected misspelling of NUL.</li>
+	<li>Added a color code definition section the color package, following 
+the same rules used in CSS1, and updated the color package to reference 
+the color code specification.</li>
+	<li>Allow color.background to set any background color using a valid color code.</li>
+	<li>Allow server to send color.define with an identifier of zero in order to change the default text color.</li>
+</ul>
+
+<h3>draft-2004-07-06</h3>
+
+<ul>
+	<li>Update color.define spec for empty color codes.</li>
+</ul>
+
+<h3>draft-2004-07-03</h3>
+
+<ul>
+	<li>Added initial color optional package spec.</li>
+</ul>
+
+<h3>draft-2003-04-06</h3>
+
+<ul>
+	<li>Added the zmp.input command.</li>
+</ul>
+
+<h3>draft-2003-10-07</h3>
+
+<ul>
+	<li>Removed use of the OOB term, its meaning is a bit different than I meant it.</li>
+	<li>Reworded specification to be clearer.</li>
+</ul>
+
+<h3>draft-2003-08-09</h3>
+
+<ul>
+	<li>Specified ZMP requests must be in-order with regular data-stream.</li>
+</ul>
+
+<h3>draft-2003-07-08</h3>
+
+<ul>
+	<li>Moved the usage notes, implementation notes, telnet primer, and current technology notes to a separate Notes document.</li>
+	<li>Heavily modified the preamble.</li>
+	<li>Reformatted and modified the actual specification section.</li>
+</ul>
+
+<h3>draft-2003-07-03</h3>
+
+<ul>
+	<li>HTML prettification.</li>
+	<li>Updated the current protocols section.</li>
+	<li>Fixed code sample bugs.</li>
+	<li>Added example zmp.check implementation.</li>
+	<li>Moved command handlers part of implementation notes to end of the section.</li>
+</ul>
+
+<h3>draft-2003-07-02</h3>
+
+<ul>
+	<li>Fixed typo in send_zmp_command example code.</li>
+	<li>Renamed all the example commands to be in zmp_* form.</li>
+	<li>Added example implementation notes for managing and invoking commands.</li>
+	<li>Moved implementation notes to end of document.</li>
+	<li>Changed zmp.time command again, RFC822 is too hard to parse; using YYYY-MM-DD HH:MM:SS in UTC format instead.</li>
+	<li>Added example zmp.ping implementation.</li>
+</ul>
+
+<h3>draft-2003-07-01b</h3>
+
+<ul>
+	<li>After enough complaints, renamed SMP.	Now ZMP: Zenith MUD Protocol.</li>
+</ul>
+
+<h3>draft-2003-07-01</h3>
+
+<ul>
+	<li>Moved core commands to the smp package.	It's just more correct that way.</li>
+	<li>Fixed formatting bug in telnet sub-request section.</li>
+	<li>The smp.time command was redefined to return the time in RFC 822 format.</li>
+	<li>Added the usage notes section.</li>
+</ul>
+
+<h3>draft-2003-06-21</h3>
+
+<ul>
+	<li>Added MUD protocol ACMP notes to current technologies section.</li>
+</ul>
+
+<h3>draft-2003-06-15</h3>
+
+<ul>
+	<li>Got rid of smp.core package, those commands are now packageless (easier).</li>
+	<li>Other minor cleanups.</li>
+</ul>
+
+<h3>draft-2003-06-14</h3>
+
+<ul>
+	<li>Spelling fixes from aspell.</li>
+	<li>Cleaned up sample code.	Fixed some bugs.</li>
+	<li>Added packages section.</li>
+	<li>First pass at an smp.core package specification.</li>
+	<li>Made history section look a little nicer.</li>
+	<li>Expanded preamble.</li>
+</ul>
+
+<h3>draft-2003-06-13</h3>
+
+<ul>
+	<li>Fix a bug in the send_wrapper() code.</li>
+</ul>
+
+<h3>draft-2003-06-12b</h3>
+
+<ul>
+	<li>Grammar/spelling/formatting fixes.</li>
+	<li>Code cleanups and improvements for implementation notes.</li>
+	<li>Improved HTML/CSS code.</li>
+</ul>
+
+<h3>draft-2003-06-12</h3>
+
+<ul>
+	<li>Initial writing.</li>
+</ul>
+
+<a name="license"></a>
+<h2>License and Copying</h2>
+
+<p>This document is the copyrighted work of Sean Middleditch</p>
+
+<p>Sean Middleditch offers limited rights to recipients of this document
+ to distribute unmodified copies of the document in electronic form, 
+print form, or any other medium.	Implementations of the protocol 
+described in this document are wholly owned by their creators, and the 
+implementations are <i>not</i> derivative works of this document and they <i>not</i> subject to the terms of this license.</p>
+
+<!-- Creative Commons License -->
+<p>
+This work is licensed under a <a rel="license" href="https://web.archive.org/web/20110424064019/http://creativecommons.org/licenses/by-nd/2.0/">Creative Commons License</a>.
+</p>
+
+<p>
+<a rel="license" href="https://web.archive.org/web/20110424064019/http://creativecommons.org/licenses/by-nd/2.0/"><img alt="Creative Commons License" border="0" src="zmp-Dateien/somerights20.gif"></a>
+</p>
+<!-- /Creative Commons License -->
+
+<!--
+<rdf:RDF xmlns="http://web.resource.org/cc/" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+	<Work rdf:about="">
+		<dc:type rdf:resource="http://purl.org/dc/dcmitype/Text" />
+		<license rdf:resource="http://creativecommons.org/licenses/by-nd/2.0/" />
+	</Work>
+	<License rdf:about="http://creativecommons.org/licenses/by-nd/2.0/">
+		<permits rdf:resource="http://web.resource.org/cc/Reproduction" />
+		<permits rdf:resource="http://web.resource.org/cc/Distribution" />
+		<requires rdf:resource="http://web.resource.org/cc/Notice" />
+		<requires rdf:resource="http://web.resource.org/cc/Attribution" />
+	</License>
+</rdf:RDF>
+-->
+<!--#include virtual="footer.shtml"-->
+<!--
+     FILE ARCHIVED ON 06:40:19 Apr 24, 2011 AND RETRIEVED FROM THE
+     INTERNET ARCHIVE ON 08:27:26 Aug 02, 2024.
+     JAVASCRIPT APPENDED BY WAYBACK MACHINE, COPYRIGHT INTERNET ARCHIVE.
+
+     ALL OTHER CONTENT MAY ALSO BE PROTECTED BY COPYRIGHT (17 U.S.C.
+     SECTION 108(a)(3)).
+-->
+<!--
+playback timings (ms):
+  captures_list: 0.506
+  exclusion.robots: 0.036
+  exclusion.robots.policy: 0.026
+  esindex: 0.009
+  cdx.remote: 10.421
+  LoadShardBlock: 206.766 (3)
+  PetaboxLoader3.datanode: 210.438 (4)
+  PetaboxLoader3.resolve: 81.787 (2)
+  load_resource: 121.835
+--></body></html>

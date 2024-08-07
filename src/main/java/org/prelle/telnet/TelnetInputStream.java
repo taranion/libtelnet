@@ -19,7 +19,7 @@ import org.prelle.telnet.TelnetConstants.ControlCode;
  */
 public class TelnetInputStream extends FilterInputStream {
 
-	private final static Logger logger = System.getLogger("telnet.lvl1.in");
+	Logger logger = System.getLogger("telnet.lvl1.in");
 
 
 
@@ -106,6 +106,7 @@ public class TelnetInputStream extends FilterInputStream {
 					logger.log(Level.WARNING, "Connection reset");
 					return -1;
 				}
+				logger.log(Level.DEBUG, "recv: {0} {1}", code, cmdVal);
 				listener.processCommand(new TelnetCommand(code, cmdVal));
 				break;
 			case SB:
@@ -116,14 +117,16 @@ public class TelnetInputStream extends FilterInputStream {
 					commandMode = false;;
 					return -1;
 				}
-				logger.log(Level.DEBUG, "Subnegotiation begins for {0}", subNegotiationFor);
+				TelnetOption option = TelnetOption.valueOf(subNegotiationFor);
+				logger.log(Level.DEBUG, "Subnegotiation begins for {0}/{1}", subNegotiationFor, option);
 				dataIsSubnegotiation = true;
 				commandMode = false;;
 				subNegotiationBuffer.clear();
 				break;
 			case SE:
 				// Subnegotiation end
-				logger.log(Level.DEBUG, "Subnegotiation ends for {0}: {1}",subNegotiationFor,subNegotiationBuffer);
+				option = TelnetOption.valueOf(subNegotiationFor);
+				logger.log(Level.DEBUG, "Subnegotiation ends for {0}/{1}: {2}",subNegotiationFor, option,subNegotiationBuffer);
 				int[] values = new int[subNegotiationBuffer.size()];
 				int i=0;
 				for (Integer v : subNegotiationBuffer) values[i++]=v;

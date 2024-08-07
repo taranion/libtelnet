@@ -9,10 +9,12 @@ import java.lang.System.Logger.Level;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.prelle.telnet.Role;
-import org.prelle.telnet.TelnetOptionHandler;
+import org.prelle.telnet.CommunicationRole;
+import org.prelle.telnet.TelnetOption;
+import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetSocket;
+import org.prelle.telnet.TelnetSubnegotiationHandler;
 
 /**
  * RFC 857
@@ -20,9 +22,15 @@ import org.prelle.telnet.TelnetSocket;
  * @author prelle
  *
  */
-public class TelnetEnvironmentOption extends TelnetOptionHandler {
+public class TelnetEnvironmentOption extends TelnetSubnegotiationHandler {
 
 	protected final static Logger logger = System.getLogger("telnet.option.environ");
+
+	public static interface EnvironmentListener extends TelnetOptionListener {
+
+		public void telnetLearnedEnvironmentVariables(Map<String,String> variables);
+
+	}
 
 	public final static int CODE = 39;
 
@@ -35,146 +43,27 @@ public class TelnetEnvironmentOption extends TelnetOptionHandler {
 	private final static int	ESC     = 2;
 	private final static int	USERVAR = 3;
 
-	private Map<String,String> userVars;
-
-	//-------------------------------------------------------------------
-	public TelnetEnvironmentOption() {
-		super(CODE, "ENVIRON");
-		userVars = new HashMap<>();
-	}
-
-	//-------------------------------------------------------------------
-	public TelnetEnvironmentOption(Map<String,String> userVars) {
-		super(CODE, "ENVIRON");
-		this.userVars = userVars;
-	}
-
 	//-----------------------------------------------------------------
-	public boolean requiresSubnegotiation() {
-		return true;
-	}
-
-//	//-----------------------------------------------------------------
-//	/**
-//	 * @see org.prelle.telnet.TelnetOptionHandler#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
-//	 */
-//	@Override
-//	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in) throws IOException {
-//		logger.log(Level.DEBUG,"performSubNegotiation for "+getName());
-//		in.setHigherLevelControl(true);
-//
-//		Map<String,String> variables = new HashMap<>();
-//		StringBuffer keyBuf = new StringBuffer();
-//		StringBuffer valBuf = new StringBuffer();
-//		int mode = -1;
-//		while (true) {
-//			int dat = in.read();
-//			if (dat==IAC) {
-//				// End of list
-//				if (keyBuf.length()>0) {
-//					logger.log(Level.INFO, "Variable {0}={1}", keyBuf, valBuf);
-//					variables.put(keyBuf.toString(), valBuf.toString());
-//				}
-//				break;
-//			}
-//
-//			switch (dat) {
-//			case VAR:
-//			case USERVAR:
-//				mode = dat;
-//				if (keyBuf.length()>0) {
-//					logger.log(Level.INFO, "Variable {0}={1}", keyBuf, valBuf);
-//					variables.put(keyBuf.toString(), valBuf.toString());
-//				}
-//				keyBuf = new StringBuffer();
-//				break;
-//			case VALUE:
-//				mode = dat;
-//				valBuf = new StringBuffer();
-//				break;
-//			case ESC:
-//				logger.log(Level.WARNING, "Not supported {0}", dat);
-//				break;
-//			default:
-//				if (mode==VAR || mode==USERVAR) {
-//					keyBuf.append( (char)dat );
-//					break;
-//				} else if (mode==VALUE) {
-//					valBuf.append( (char)dat );
-//				}
-//			}
-//
-//			logger.log(Level.TRACE, "RCV {0} = {1}", dat, (char)dat);
-//		}
-//		in.read(); // SE
-//		in.setHigherLevelControl(false);
-//		logger.log(Level.DEBUG,"Telnet Environment done: {0}", variables);
-//
-//		nvt.fireOptionDataChanged(this, new TelnetEnvironmentData(variables));
-//	}
-
-	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetOptionHandler#initializeAs(org.prelle.telnet.Role)
+	 * @see org.prelle.telnet.TelnetOptionHandler#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
 	 */
 	@Override
-	public boolean initializeAs(Role role, TelnetSocket nvt, TelnetOutputStream out) {
-		if (role==Role.REQUESTER) {;
-			logger.log(Level.DEBUG, "Ask remote party to send environment");
-			try {
-				byte[] send = new byte[8];
-				send[0] = (byte)IAC;
-				send[1] = (byte)SB;
-				send[2] = (byte)CODE;
-				send[3] = (byte)SEND;
-				send[4] = (byte)VAR;
-				send[5] = (byte)USERVAR;
-				send[6] = (byte)IAC;
-				send[7] = (byte)SE;
-				out.writeCommand(send);
-				out.flush();
-				return true;
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		} else {
-			logger.log(Level.WARNING, "Acting as PROVIDER not implemented");
-		}
-		return false;
-	}
-
-	//-------------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.TelnetOptionHandler#handleSubnegotiation(org.prelle.telnet.Role, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
-	 */
-	@Override
-	public void handleSubnegotiation(Role role, int[] values, TelnetSocket origin, TelnetOutputStream out) {
+	public void handleSubnegotiation(int code, int[] values, TelnetSocket origin, TelnetOutputStream out) {
+		logger.log(Level.DEBUG,"performSubNegotiation for ENVIRON");
 		int operation = values[0];
-		if (operation==SEND) {
-			logger.log(Level.DEBUG, "Remote party requests environment information and we are {0}", role);
-			if (role==Role.PROVIDER) {
-//				sendNextFromList(out);
-			} else {
-				logger.log(Level.ERROR, "The client requested an environment info from us, but we are a server");
-			}
-		} else {
-			logger.log(Level.DEBUG, "Remote party provides environment information and we are {0}", role);
-			processAnswer(values, 1, origin);
+
+		if (operation!=IS) {
+			logger.log(Level.WARNING, "Other operations than IS not supported yet");
+			return;
 		}
 
-	}
-
-	//-------------------------------------------------------------------
-	private void processAnswer(int[] data, int offset, TelnetSocket nvt) {
-//		logger.log(Level.TRACE, "ENVIRON: {0}", Arrays.toString(data));
-		Map<String,String> variables = new HashMap<>();
 		StringBuffer keyBuf = new StringBuffer();
 		StringBuffer valBuf = new StringBuffer();
+		Map<String,String> variables = origin.getOptionData(CODE);
 		int mode = -1;
-
-		for (int i=offset; i<data.length; i++) {
-			int dat = data[i];
+		int i=1;
+		while (i<values.length) {
+			int dat = values[i++];
 			if (dat==IAC) {
 				// End of list
 				if (keyBuf.length()>0) {
@@ -186,10 +75,17 @@ public class TelnetEnvironmentOption extends TelnetOptionHandler {
 
 			switch (dat) {
 			case VAR:
+				mode = dat;
+				if (keyBuf.length()>0) {
+					logger.log(Level.INFO, "System Variable {0}={1}", keyBuf, valBuf);
+					variables.put(keyBuf.toString(), valBuf.toString());
+				}
+				keyBuf = new StringBuffer();
+				break;
 			case USERVAR:
 				mode = dat;
 				if (keyBuf.length()>0) {
-					logger.log(Level.INFO, "MNES: Variable {0}={1}", keyBuf, valBuf);
+					logger.log(Level.INFO, "User Variable {0}={1}", keyBuf, valBuf);
 					variables.put(keyBuf.toString(), valBuf.toString());
 				}
 				keyBuf = new StringBuffer();
@@ -212,9 +108,55 @@ public class TelnetEnvironmentOption extends TelnetOptionHandler {
 
 			logger.log(Level.TRACE, "RCV {0} = {1}", dat, (char)dat);
 		}
+		logger.log(Level.DEBUG,"Telnet Environment done: {0}", variables);
+	}
 
-		TelnetEnvironmentData event = new TelnetEnvironmentData(variables);
-		nvt.fireOptionDataChanged(this, event);
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetOptionHandler#initializeAs(org.prelle.telnet.Role)
+	 */
+	@Override
+	public void initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {
+		if (role==CommunicationRole.SERVER) {
+			logger.log(Level.DEBUG, "Ask remote party to send environment");
+			try {
+				origin.setOptionData(CODE, new HashMap<String,String>());
+				byte[] send = new byte[8];
+				send[0] = (byte)IAC;
+				send[1] = (byte)SB;
+				send[2] = (byte)CODE;
+				send[3] = (byte)SEND;
+				send[4] = (byte)VAR;
+				send[5] = (byte)USERVAR;
+				send[6] = (byte)IAC;
+				send[7] = (byte)SE;
+				out.writeCommand(send);
+				send = new byte[7];
+				send[0] = (byte)IAC;
+				send[1] = (byte)SB;
+				send[2] = (byte)CODE;
+				send[3] = (byte)SEND;
+				send[4] = (byte)VAR;
+				send[5] = (byte)IAC;
+				send[6] = (byte)SE;
+				out.writeCommand(send);
+				send = new byte[7];
+				send[0] = (byte)IAC;
+				send[1] = (byte)SB;
+				send[2] = (byte)CODE;
+				send[3] = (byte)SEND;
+				send[4] = (byte)USERVAR;
+				send[5] = (byte)IAC;
+				send[6] = (byte)SE;
+				out.writeCommand(send);
+				out.flush();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		} else {
+			logger.log(Level.WARNING, "Acting as PROVIDER not implemented");
+		}
 	}
 
 }

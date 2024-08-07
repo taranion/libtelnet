@@ -4,11 +4,15 @@
 package org.prelle.telnet.mud;
 
 import java.io.IOException;
+import java.lang.System.Logger.Level;
 
-import org.prelle.telnet.Role;
-import org.prelle.telnet.TelnetOptionHandler;
+import org.prelle.telnet.CommunicationRole;
+import org.prelle.telnet.TelnetOption;
+import org.prelle.telnet.TelnetOptionListener;
+import org.prelle.telnet.TelnetOptionRegistry;
 import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetSocket;
+import org.prelle.telnet.TelnetSubnegotiationHandler;
 
 /**
  * @see https://tintin.mudhalla.net/protocols/gmcp/
@@ -18,7 +22,7 @@ import org.prelle.telnet.TelnetSocket;
  * @author prelle
  *
  */
-public class GenericMUDCommunicationProtocol extends TelnetOptionHandler {
+public class GenericMUDCommunicationProtocol extends TelnetSubnegotiationHandler {
 
 	public final static int CODE = 201;
 
@@ -54,26 +58,40 @@ public class GenericMUDCommunicationProtocol extends TelnetOptionHandler {
 		}
 	}
 
-	//-----------------------------------------------------------------
-	public GenericMUDCommunicationProtocol() {
-		super(CODE, "GMCP");
-	}
-
-	//-------------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.TelnetOptionHandler#handleSubnegotiation(org.prelle.telnet.Role, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
-	 */
-	@Override
-	public void handleSubnegotiation(Role role, int[] values, TelnetSocket nvt, TelnetOutputStream out) {
-		RawGMCPMessage msg = new RawGMCPMessage(values);
-//		logger.log(Level.DEBUG,"As {0} we received2 : {1}", role, msg.getNamespace());
-		nvt.fireOptionDataChanged(this, msg);
+	public static interface GMCPReceiver extends TelnetOptionListener {
+		public void telnetReceiveGMCP(RawGMCPMessage message);
 	}
 
 	//-------------------------------------------------------------------
 	public static void send(TelnetOutputStream out, String packName, String command) throws IOException {
 		String full = (command!=null)?(packName+" "+command):packName;
-		sendSubNegotiationString(out, 201, full);
+		out.sendSubNegotiation(CODE, full);
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#initializeAs(org.prelle.telnet.TelnetOption, org.prelle.telnet.CommunicationRole, org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
+	 */
+	@Override
+	public void initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {
+		logger.log(Level.WARNING, "Forgot to implement initialization for {0} / {1} as {2}",option.name(), getClass().getName(), role);
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
+	 */
+	@Override
+	public void handleSubnegotiation(int code, int[] values, TelnetSocket origin, TelnetOutputStream out) {
+		RawGMCPMessage msg = new RawGMCPMessage(values);
+		logger.log(Level.INFO,"RCV {0}", msg.getNamespace());
+		GMCPReceiver listener = origin.getOptionListener(CODE);
+		if (listener!=null) {
+			listener.telnetReceiveGMCP(msg);
+		} else
+			logger.log(Level.WARNING, "No listener for GMCP - use session.getSocket().setOptionListener(TelnetOption.GMCP, ...)");
+
+		//	nvt.fireOptionDataChanged(this, msg);
 	}
 
 }

@@ -11,14 +11,13 @@ import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.net.Socket;
 
-import org.prelle.telnet.option.SuppressGoAhead;
-import org.prelle.telnet.option.TelnetEcho;
+import org.prelle.telnet.TelnetOption;
 
 /**
  * @author prelle
  *
  */
-public class PassiveUsage implements Runnable, TelnetOptionListener {
+public class PassiveUsage implements Runnable, TelnetSocketListener, TelnetConstants {
 
     private final static Logger logger = System.getLogger("app");
 
@@ -37,8 +36,9 @@ public class PassiveUsage implements Runnable, TelnetOptionListener {
 
 	public PassiveUsage() throws IOException {
 		serverSocket = new TelnetServerSocket(4000)
-				.support(new SuppressGoAhead(), Role.PROVIDER)
-				.support(new TelnetEcho(), Role.PROVIDER)
+				.support(TelnetOption.LINEMODE.getCode(), ControlCode.WILL)
+//				.support(new SuppressGoAhead(), Role.PROVIDER)
+//				.support(new TelnetEcho(), Role.PROVIDER)
 //				.passivelySupport(TelnetOptions.ECHO)
 //				.passivelySupport(TelnetOptions.EOR)
 //				.passivelySupport(TelnetOptions.MSP)
@@ -58,7 +58,7 @@ public class PassiveUsage implements Runnable, TelnetOptionListener {
 			try {
 				Socket vanillaSocket = serverSocket.accept();
 				TelnetSocket socket = (TelnetSocket)vanillaSocket;
-				socket.addOptionListener(this);
+				socket.addSocketListener(this);
 
 				OutputStream out = socket.getOutputStream();
 				logger.log(Level.DEBUG,"Incoming connection via "+socket.getClass()+" and output via "+out);
@@ -95,24 +95,16 @@ public class PassiveUsage implements Runnable, TelnetOptionListener {
 		}
 	}
 
-	//-----------------------------------------------------------------
-	/* (non-Javadoc)
-	 * @see org.prelle.telnet.TelnetOptionListener#telnetOptionDataChanged(org.prelle.telnet.NetworkVirtualConsole, org.prelle.telnet.option.TelnetOption, java.lang.Object)
-	 */
-	@Override
-	public void telnetOptionDataChanged(TelnetSocket nvt,
-			TelnetOptionHandler option, Object data) {
-		logger.log(Level.INFO,"Telnet Option Data Changed: "+option.getClass().getSimpleName()+" = "+data);
-
-	}
-
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetOptionListener#telnetOptionStatusChange(org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOptionHandler, boolean)
+	 * @see org.prelle.telnet.TelnetSocketListener#telnetOptionStatusChange(org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetSubnegotiationHandler, boolean)
 	 */
 	@Override
-	public void telnetOptionStatusChange(TelnetSocket nvt, TelnetOptionHandler option, boolean active) {
-		logger.log(Level.INFO, "Feature {0} is {1}", option.getName(), active?"enabled":"disabled");
+	public void telnetOptionStatusChange(TelnetSocket nvt, TelnetOption option, boolean active) {
+		logger.log(Level.INFO, "Feature {0} is {1}", option.name(), active?"enabled":"disabled");
 	}
 
+	public void telnetCommandReceived(TelnetSocket nvt, TelnetCommand command) {
+		logger.log(Level.INFO, "RCV "+command);
+	}
 }

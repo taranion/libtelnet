@@ -8,6 +8,7 @@ import java.io.OutputStream;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 import org.prelle.telnet.TelnetConstants.ControlCode;
 
@@ -17,7 +18,7 @@ import org.prelle.telnet.TelnetConstants.ControlCode;
  */
 public class TelnetOutputStream extends OutputStream {
 
-	private final static Logger logger = System.getLogger("telnet.lvl1.out");
+	Logger logger = System.getLogger("telnet.lvl1.out");
 
 	private OutputStream realOut;
 	private boolean  binaryMode = true;
@@ -93,7 +94,7 @@ public class TelnetOutputStream extends OutputStream {
 		data[0] = (byte)ControlCode.IAC.code();
 		data[1] = (byte)ControlCode.DO.code();
 		data[2] = (byte)optionCode;
-		logger.log(Level.DEBUG,"IAC DO {0}",optionCode);
+		logger.log(Level.DEBUG,"send: IAC DO {0}",optionCode);
 		realOut.write(data);
 		realOut.flush();
 	}
@@ -104,7 +105,7 @@ public class TelnetOutputStream extends OutputStream {
 		data[0] = (byte)ControlCode.IAC.code();
 		data[1] = (byte)ControlCode.WILL.code();
 		data[2] = (byte)optionCode;
-		logger.log(Level.DEBUG,"IAC WILL {0}",optionCode);
+		logger.log(Level.DEBUG,"send: IAC WILL {0}",optionCode);
 		realOut.write(data);
 		realOut.flush();
 	}
@@ -115,7 +116,7 @@ public class TelnetOutputStream extends OutputStream {
 		data[0] = (byte)ControlCode.IAC.code();
 		data[1] = (byte)ControlCode.DONT.code();
 		data[2] = (byte)optionCode;
-		logger.log(Level.DEBUG,"IAC DONT {0}",optionCode);
+		logger.log(Level.DEBUG,"send: IAC DONT {0}",optionCode);
 		realOut.write(data);
 		realOut.flush();
 	}
@@ -126,14 +127,14 @@ public class TelnetOutputStream extends OutputStream {
 		data[0] = (byte)ControlCode.IAC.code();
 		data[1] = (byte)ControlCode.WONT.code();
 		data[2] = (byte)optionCode;
-		logger.log(Level.DEBUG,"IAC WONT {0}",optionCode);
+		logger.log(Level.DEBUG,"send: IAC WONT {0}",optionCode);
 		realOut.write(data);
 		realOut.flush();
 	}
 
 	//-----------------------------------------------------------------
 	public void sendSubNegotiation(int code, int command, byte[] value) throws IOException {
-		logger.log(Level.DEBUG,"sub-negotiation for {0}, command {1}, value={2}", code,command);
+		logger.log(Level.DEBUG,"sub-negotiation for {0}, command {1}, value={2}", code,command, value);
 		byte[] data = new byte[6+value.length];
 		data[0] = (byte)ControlCode.IAC.code();
 		data[1] = (byte)ControlCode.SB.code();
@@ -142,13 +143,30 @@ public class TelnetOutputStream extends OutputStream {
 		System.arraycopy(value, 0, data, 4, value.length);
 		data[data.length-2] = (byte)ControlCode.IAC.code();
 		data[data.length-1] = (byte)ControlCode.SE.code();
+		logger.log(Level.WARNING,"sub-negotiation for {0}, value={1}", code,Arrays.toString(data));
+		realOut.write(data);
+		realOut.flush();
+	}
+
+	//-----------------------------------------------------------------
+	public void sendSubNegotiation(int code, byte[] value) throws IOException {
+		logger.log(Level.DEBUG,"sub-negotiation for {0}, value={1}", code,Arrays.toString(value));
+		byte[] data = new byte[5+value.length];
+		data[0] = (byte)ControlCode.IAC.code();
+		data[1] = (byte)ControlCode.SB.code();
+		data[2] = (byte)code;
+		System.arraycopy(value, 0, data, 3, value.length);
+		data[data.length-2] = (byte)ControlCode.IAC.code();
+		data[data.length-1] = (byte)ControlCode.SE.code();
+		logger.log(Level.WARNING,"sub-negotiation for {0}, value={1}", code,Arrays.toString(data));
+
 		realOut.write(data);
 		realOut.flush();
 	}
 
 	//-----------------------------------------------------------------
 	public void sendSubNegotiation(int code, String line) throws IOException {
-		logger.log(Level.DEBUG,"sub-negotiation for {0}", code);
+		logger.log(Level.INFO,"sub-negotiation for {0}: {1}", code, line);
 		byte[] value = line.getBytes(StandardCharsets.UTF_8);
 		byte[] data = new byte[5+value.length];
 		data[0] = (byte)ControlCode.IAC.code();
