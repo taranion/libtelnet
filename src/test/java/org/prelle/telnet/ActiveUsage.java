@@ -10,6 +10,7 @@ import java.lang.System.Logger.Level;
 import java.util.List;
 
 import org.prelle.telnet.TelnetConstants.ControlCode;
+import org.prelle.telnet.TelnetSocket.State;
 import org.prelle.telnet.option.LineMode.LineModeConfig;
 import org.prelle.telnet.option.LineMode.LineModeListener;
 import org.prelle.telnet.option.LineMode.ModeBit;
@@ -79,6 +80,12 @@ public class ActiveUsage implements TelnetSocketListener, LineModeListener {
 	@Override
 	public void sendFlushOn(List<Integer> flushCodes) {
 		System.err.println("We should flush on "+flushCodes);
+	}
+
+	@Override
+	public void telnetSocketChanged(TelnetSocket nvt, State oldState, State newState) {
+		// TODO Auto-generated method stub
+
 	}
 
 }

@@ -9,6 +9,7 @@ import java.lang.System.Logger.Level;
 
 import org.prelle.telnet.CommunicationRole;
 import org.prelle.telnet.TelnetOption;
+import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetSocket;
 import org.prelle.telnet.TelnetSubnegotiationHandler;
@@ -24,7 +25,7 @@ public class TelnetWindowSize extends TelnetSubnegotiationHandler {
 
 	protected final static Logger logger = System.getLogger("telnet.option.naws");
 
-	public static interface TelnetNAWSListener {
+	public static interface TelnetNAWSListener extends TelnetOptionListener {
 		public void telnetWindowSizeChanged(int width, int height);
 	}
 
@@ -33,7 +34,7 @@ public class TelnetWindowSize extends TelnetSubnegotiationHandler {
 	 * Called after the use of a option has been confirmed
 	 * @return TRUE if a subnegotiation is needed
 	 */
-	public void initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {
+	public boolean initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {
 		if (role==CommunicationRole.CLIENT) {
 			int[] size = origin.getOptionData(CODE);
 			if (size!=null && size.length==2) {
@@ -45,6 +46,7 @@ public class TelnetWindowSize extends TelnetSubnegotiationHandler {
 				}
 			}
 		}
+		return false;
 	}
 
 //	//-------------------------------------------------------------------
@@ -55,18 +57,25 @@ public class TelnetWindowSize extends TelnetSubnegotiationHandler {
 //	public boolean initializeAs(Role role, TelnetSocket nvt, TelnetOutputStream out) {
 //		return false;
 //	}
-//
-//	//-------------------------------------------------------------------
-//	/**
-//	 * @see org.prelle.telnet.TelnetOptionHandler#handleSubnegotiation(org.prelle.telnet.Role, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
-//	 */
-//	@Override
-//	public void handleSubnegotiation(Role role, int[] values, TelnetSocket nvt, TelnetOutputStream out) {
-//		int x = values[0]*256 + values[1];
-//		int y = values[2]*256 + values[3];
-//		logger.log(Level.DEBUG,"Terminal size = "+ x+"*"+y);
-//		nvt.fireOptionDataChanged(this, new TelnetWindowSizeData(x, y));
-//	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetOptionHandler#handleSubnegotiation(org.prelle.telnet.Role, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
+	 */
+	@Override
+	public void handleSubnegotiation(int code, int[] values, TelnetSocket nvt, TelnetOutputStream out) {
+		int x = values[0]*256 + values[1];
+		int y = values[2]*256 + values[3];
+		logger.log(Level.DEBUG,"Terminal size = "+ x+"*"+y);
+		nvt.subnegotiationEndedFor(code, new int[] {x,y});
+
+		TelnetNAWSListener listener = nvt.getOptionListener(code);
+		if (listener!=null) {
+			listener.telnetWindowSizeChanged(x, y);
+		} else {
+			logger.log(Level.TRACE, "No TelnetNAWSListener");
+		}
+	}
 
 	//-------------------------------------------------------------------
 	public static void sendUpdate(TelnetSocket origin, int w, int h) throws IOException {
@@ -77,15 +86,6 @@ public class TelnetWindowSize extends TelnetSubnegotiationHandler {
 		command[2] = (byte) (h/256);
 		command[3] = (byte) (h%256);
 		origin.out().sendSubNegotiation(CODE, command);
-	}
-
-	//-------------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
-	 */
-	@Override
-	public void handleSubnegotiation(int code, int[] values, TelnetSocket origin, TelnetOutputStream out) {
-		logger.log(Level.WARNING, "TODO: Subnegotiate for NAWS");
 	}
 
 }

@@ -9,6 +9,7 @@ import java.io.OutputStream;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.net.Socket;
+import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -24,17 +25,32 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+
+import org.prelle.telnet.TelnetSocket.State;
 
 /**
  * @author prelle
  *
  */
 public class TelnetSocket extends Socket implements TelnetConstants {
+
+	public static enum State {
+		CREATED,
+		OPTION_NEGOTIATION,
+		OPTION_SUBNEGOTIATION,
+		READY,
+		DISCONNECTED
+	}
 
 	private final static Logger logger = System.getLogger("telnet.lvl3");
 
@@ -48,27 +64,17 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	private TelnetInputStream in;
 	private TelnetOutputStream out;
 	private CommunicationRole role;
+	private State state = State.CREATED;
 
 	private List<TelnetSocketListener> socketListener = new ArrayList<>();
-	private Map<Integer, ControlCode> negotiate = new LinkedHashMap<>();
-	private Map<Integer, Object> configData = new LinkedHashMap<>();
+	Map<Integer, ControlCode> negotiate = new LinkedHashMap<>();
 	private Map<Integer, TelnetOptionListener> optionListener = new HashMap<>();
+	private TelnetOptionCapabilities optionCaps;
 
 	private List<Integer> active = new ArrayList<>();
-	private Map<Integer, ControlCode> lastStateSent = new HashMap<>();
+	Map<Integer, ControlCode> lastStateSent = new HashMap<>();
 
 
-	private List<Integer> capExchangeAwaitResponses = new ArrayList<>();
-	private TimerTask capExchangeWaitForOptions;
-	private static Timer timer = new Timer("SocketOptionTimer");
-	private static Instant exchangeStart;
-	private Map<TelnetOption, TelnetConfigOption> capabilities;
-
-	/**
-	 * Is set to TRUE, when LINEMODE option is supported
-	 */
-	private boolean canEnterCharacterMode;
-	private boolean canDisableEcho;
 
 
 	//-----------------------------------------------------------------
@@ -79,10 +85,10 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	//-----------------------------------------------------------------
 	public TelnetSocket() {
 		role = CommunicationRole.SERVER;
-		capabilities   = new HashMap<>();
-		capabilities.put(TelnetOption.ECHO    , new TelnetConfigOption());
-		capabilities.put(TelnetOption.EOR     , new TelnetConfigOption());
-		capabilities.put(TelnetOption.LINEMODE, new TelnetConfigOption());
+		optionCaps = new TelnetOptionCapabilities();
+		optionCaps.capabilities.put(TelnetOption.ECHO    , new TelnetConfigOption());
+		optionCaps.capabilities.put(TelnetOption.EOR     , new TelnetConfigOption());
+		optionCaps.capabilities.put(TelnetOption.LINEMODE, new TelnetConfigOption());
 	}
 
 	//-----------------------------------------------------------------
@@ -96,20 +102,20 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 		out().logger = System.getLogger("telnet.lvl1.out."+host);
 		in().logger = System.getLogger("telnet.lvl1.in."+host);
 //		initialize();
-		capabilities   = new HashMap<>();
-		capabilities.put(TelnetOption.ECHO    , new TelnetConfigOption());
-		capabilities.put(TelnetOption.EOR     , new TelnetConfigOption());
-		capabilities.put(TelnetOption.LINEMODE, new TelnetConfigOption());
+		optionCaps = new TelnetOptionCapabilities();
+		optionCaps.capabilities.put(TelnetOption.ECHO    , new TelnetConfigOption());
+		optionCaps.capabilities.put(TelnetOption.EOR     , new TelnetConfigOption());
+		optionCaps.capabilities.put(TelnetOption.LINEMODE, new TelnetConfigOption());
 	}
 
 	//-------------------------------------------------------------------
 	public TelnetConfigOption getConfigOption(TelnetOption key) {
-		return capabilities.get(key);
+		return optionCaps.getConfigOption(key);
 	}
 
 	//-------------------------------------------------------------------
 	public Set<Entry<TelnetOption, TelnetConfigOption>> getCapabilities() {
-		return capabilities.entrySet();
+		return optionCaps.getCapabilities();
 	}
 
 	//-----------------------------------------------------------------
@@ -154,7 +160,7 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 
 	//-------------------------------------------------------------------
 	public TelnetSocket support(int code, ControlCode willOrDo, Object configData) {
-		this.configData.put(code, configData);
+		optionCaps.setOptionData(code, configData);
 		return support(code, willOrDo);
 	}
 
@@ -163,6 +169,19 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 		if (!socketListener.contains(optList))
 			socketListener.add(optList);
 		return this;
+	}
+
+	//-----------------------------------------------------------------
+	void setState(State newState) {
+		State oldState = state;
+		this.state = newState;
+		for (TelnetSocketListener callback : socketListener) {
+			try {
+				callback.telnetSocketChanged(this, oldState, newState);
+			} catch (Throwable e) {
+				logger.log(Level.ERROR, "Failed processing socket state change",e);
+			}
+		}
 	}
 
 	//-----------------------------------------------------------------
@@ -186,7 +205,7 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	 * Retrieve data related to a specific config option on this connection
 	 */
 	public <E> E getOptionData(int code) {
-		return (E) configData.get(code);
+		return optionCaps.getOptionData(code);
 	}
 
 	//-----------------------------------------------------------------
@@ -194,45 +213,40 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	 * Store data related to a specific config option on this connection
 	 */
 	public void setOptionData(int code, Object value) {
-		configData.put(code, value);
+		optionCaps.setOptionData(code, value);
 	}
 
 	//-----------------------------------------------------------------
-	/**
-	 * All WILL and DOs have been exchanged
-	 */
-	private void fireOptionPhaseDone() {
-		logger.log(Level.INFO, "All telnet options are known");
-		capExchangeAwaitResponses.clear();
-		// Measure how long Telnet option exchange took
-		Duration dur = Duration.between(exchangeStart, Instant.now());
-		logger.log(Level.WARNING, "Option exchange required {0} milliseconds", dur.toMillis());
-
-		for (TelnetSocketListener list : socketListener)
-			try {
-//				System.err.println("STOP: "+Instant.now()+"  in TelnetSocket.fireOptionPhaseDone");
-				list.telnetSupportedOptionsKnown(this);
-			} catch (Exception e) {
-				logger.log(Level.ERROR,"Error calling "+list.getClass()+".telnetSupportedOptionsKnown: "+e,e);
-			}
-	}
-
-	//-----------------------------------------------------------------
-	public void fireFeatureActive(TelnetOption option, boolean state) {
+	void fireFeatureActive(TelnetOption option, boolean state) {
 		logger.log(Level.DEBUG, "fireFeatureActive({0},{1})", option,state);
-		for (TelnetSocketListener list : socketListener)
+
+		logger.log(Level.INFO, "Option {0} has been {1}", option.name(), state?"ENABLED":"REJECTED");
+		if (this.state==State.OPTION_NEGOTIATION) {
+			TelnetConfigOption opt = optionCaps.getConfigOption(option);
+			if (opt==null) {
+				opt = new TelnetConfigOption();
+				optionCaps.capabilities.put(option, opt);
+			}
+			opt.setConfigurable(state);
+			opt.setActive(state);
+		}
+
+		if (state && !active.contains( (Integer)option.getCode() ))
+			active.add( option.getCode());
+		synchronized (optionCaps.capExchangeAwaitResponses) {
+			if (optionCaps.capExchangeAwaitResponses.contains( (Integer)option.getCode())) {
+				optionCaps.capExchangeAwaitResponses.remove((Integer)option.getCode());
+				if (optionCaps.capExchangeAwaitResponses.isEmpty()) {
+					optionCaps.capExchangeAwaitResponses.notify();
+				}
+			}
+		}
+
+		for (TelnetSocketListener list : socketListener) {
 			try {
 				list.telnetOptionStatusChange(this, option, state);
 			} catch (Exception e) {
 				logger.log(Level.ERROR,"Error calling "+list.getClass()+".telnetOptionStatusChange: "+e,e);
-			}
-
-		if (state && !active.contains( (Integer)option.getCode() ))
-			active.add( option.getCode());
-		if (capExchangeAwaitResponses.contains( (Integer)option.getCode())) {
-			capExchangeAwaitResponses.remove((Integer)option.getCode());
-			if (capExchangeAwaitResponses.isEmpty()) {
-				logger.log(Level.INFO, "DONE-------------------------------------");
 			}
 		}
 	}
@@ -297,13 +311,14 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 					if (!active.contains(optionCode))
 						active.add(optionCode);
 					if (lastState==ControlCode.WILL) {
-						logger.log(Level.DEBUG, "Don't respond to DO {0} , state would not change", option.name());
+						logger.log(Level.TRACE, "Don't respond to DO {0} , state would not change", option.name());
 					} else {
 						out.sendWill(optionCode);
 						logger.log(Level.WARNING, "Remote party sends DO {0} and we agreed with WILL {0}", option.name());
 					}
-					if (handler!=null)
-						handler.initializeAs(option, role, this, out);
+//					if (handler!=null) {
+//						handler.initializeAs(option, role, this, out);
+//					}
 					fireFeatureActive(option, true);
 					return;
 				}
@@ -321,8 +336,8 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 						out.sendDo(optionCode);
 						logger.log(Level.WARNING, "Remote party offers WILL {0} and we agreed with DO {0}", option.name());
 					}
-					if (handler!=null)
-						handler.initializeAs(option, role, this, out);
+//					if (handler!=null)
+//						handler.initializeAs(option, role, this, out);
 					fireFeatureActive(option, true);
 					return;
 				}
@@ -338,6 +353,8 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 				fireFeatureActive(option, false);
 				return;
 			}
+		} else {
+			logger.log(Level.WARNING, "Remote party offered unsupported option {0}={1}", optionCode, option);
 		}
 
 		// If there is an option listener for that Telnet option, ask what to do
@@ -395,7 +412,7 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 
 	//-------------------------------------------------------------------
 	public void processSubnegotiation(int code, int[] values) {
-		logger.log(Level.DEBUG, "Subnegotiation for {0}: {1}", code, Arrays.toString((values)));
+		logger.log(Level.TRACE, "RCV Subnegotiation for {0}: {1}", code, Arrays.toString((values)));
 
 		TelnetSubnegotiationHandler handler = TelnetOptionRegistry.get(code);
 		if (handler==null) {
@@ -407,56 +424,172 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	}
 
 	//-------------------------------------------------------------------
-	public void initialize() throws IOException {
+	public CompletableFuture<TelnetOptionCapabilities> initialize() throws IOException {
 		getOutputStream();
 		getInputStream();
 
+		setState(State.OPTION_NEGOTIATION);
+		CompletableFuture<TelnetOptionCapabilities> negotiation = CompletableFuture
+				.runAsync(new NegotiateOptionsTask(this))
+				.thenRunAsync(new SubnegotiationTask(this))
+				.thenCompose(new Function<Void,CompletableFuture<TelnetOptionCapabilities>>() {
+					public CompletableFuture<TelnetOptionCapabilities> apply(Void arg0) {
+						return CompletableFuture.completedFuture(optionCaps);
+					}
+				})
+				;
+		System.err.println("Return from TelnetSocket.initialize");
+		return negotiation;
+	}
 
-		capExchangeWaitForOptions = new TimerTask() {
-			public void run() {
-				logger.log(Level.DEBUG, "End capability exchange");
-				fireOptionPhaseDone();
-			}
-		};
-		timer = new Timer(true);
-		timer.schedule(capExchangeWaitForOptions, 500);
-		exchangeStart = Instant.now();
 
-		TelnetSocket.getExecutorService().submit( () -> {
-			logger.log(Level.DEBUG, "Start capability exchange");
-			try {
-				out.write("Detecting capabilities\r\n".getBytes(StandardCharsets.US_ASCII));
-				for (Entry<Integer, ControlCode> entry : negotiate.entrySet()) {
-					lastStateSent.put(entry.getKey(), entry.getValue());
-					capExchangeAwaitResponses.add( entry.getKey() );
-					if (entry.getValue()==ControlCode.DO) {
-						out.sendDo(entry.getKey());
-					} else if (entry.getValue()==ControlCode.WILL)
-						out.sendWill(entry.getKey());
-					else if (entry.getValue()==ControlCode.WONT)
-						out.sendWont(entry.getKey());
-					else
-						logger.log(Level.WARNING, "Ignore operation "+entry.getValue()+" for "+entry.getKey());
+	//-------------------------------------------------------------------
+	/**
+	 * Called by TelnetSubnegotiationHandler implementor classes
+	 */
+	public void subnegotiationEndedFor(int optionCode, Object data) {
+		setOptionData(optionCode, data);
+		logger.log(Level.INFO, "Negotiation for option {0} returned {1}", optionCode, data);
+		logger.log(Level.DEBUG, "expected are "+optionCaps.capSubNegAwaitResponses);
+		logger.log(Level.DEBUG, "status is "+state);
+
+		synchronized (optionCaps.capSubNegAwaitResponses) {
+			if (optionCaps.capSubNegAwaitResponses.contains( (Integer)optionCode)) {
+				optionCaps.capSubNegAwaitResponses.remove((Integer)optionCode);
+				if (optionCaps.capSubNegAwaitResponses.isEmpty()) {
+					logger.log(Level.DEBUG, "DONE SUBNEG------------------------------");
+					optionCaps.capSubNegAwaitResponses.notify();
 				}
-			} catch (IOException e) {
-				logger.log(Level.ERROR, "Error in Telnet capability exchange",e);
 			}
-		});
+		}
+	}
 
-//		logger.log(Level.DEBUG, "Start capability exchange");
-//		super.getOutputStream().write("Detecting capabilities\r\n".getBytes(StandardCharsets.US_ASCII));
-//		for (Entry<Integer, ControlCode> entry : negotiate.entrySet()) {
-//			lastStateSent.put(entry.getKey(), entry.getValue());
-//			capExchangeAwaitResponses.add( entry.getKey() );
-//			if (entry.getValue()==ControlCode.DO) {
-//				out.sendDo(entry.getKey());
-//			} else if (entry.getValue()==ControlCode.WILL)
-//				out.sendWill(entry.getKey());
-//			else if (entry.getValue()==ControlCode.WONT)
-//				out.sendWont(entry.getKey());
-//			else
-//				logger.log(Level.WARNING, "Ignore operation "+entry.getValue()+" for "+entry.getKey());
-//		}
+	//-------------------------------------------------------------------
+	public TelnetOptionCapabilities getNegotiationResult() {
+		return optionCaps;
+	}
+
+	//-------------------------------------------------------------------
+	CommunicationRole getCommunicationRole() {
+		return role;
+	}
+
+	//-------------------------------------------------------------------
+	public List<Integer> getActiveOptions() {
+		return active;
+	}
+
+}
+
+class NegotiateOptionsTask implements Runnable, TelnetConstants {
+
+	private final static Logger logger = System.getLogger("telnet.lvl3");
+
+	private TelnetSocket socket;
+	private TelnetOutputStream out;
+	private TelnetOptionCapabilities capabilities;
+
+	//-------------------------------------------------------------------
+	public NegotiateOptionsTask(TelnetSocket socket) throws IOException {
+		this.socket = socket;
+		this.out    = socket.out();
+		capabilities= socket.getNegotiationResult();
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @see java.lang.Runnable#run()
+	 */
+	@Override
+	public void run() {
+		logger.log(Level.DEBUG, "ENTER: Detect supported TELNET options");
+		try {
+			out.write("Detecting capabilities\r\n".getBytes(StandardCharsets.US_ASCII));
+			capabilities.capExchangeAwaitResponses.clear();
+			for (Entry<Integer, ControlCode> entry : socket.negotiate.entrySet()) {
+				socket.lastStateSent.put(entry.getKey(), entry.getValue());
+				capabilities.capExchangeAwaitResponses.add( entry.getKey() );
+				if (entry.getValue()==ControlCode.DO) {
+					out.sendDo(entry.getKey());
+				} else if (entry.getValue()==ControlCode.WILL)
+					out.sendWill(entry.getKey());
+				else if (entry.getValue()==ControlCode.WONT)
+					out.sendWont(entry.getKey());
+				else
+					logger.log(Level.WARNING, "Ignore operation "+entry.getValue()+" for "+entry.getKey());
+			}
+			socket.setState(State.OPTION_NEGOTIATION);
+
+			logger.log(Level.INFO, "Initiated option negotiation for all options - waiting for results");
+			Instant before = Instant.now();
+			synchronized (capabilities.capExchangeAwaitResponses) {
+				capabilities.capExchangeAwaitResponses.wait(500);
+			}
+			Duration dura = Duration.between(before, Instant.now());
+			logger.log(Level.DEBUG, "TELNET option negotiation required {0} ms\n", dura.toMillis());
+		} catch (Exception e) {
+			logger.log(Level.ERROR, "Error in Telnet capability exchange",e);
+		} finally {
+			logger.log(Level.DEBUG, "LEAVE: Detect supported TELNET options\n");
+		}
+	}
+}
+
+class SubnegotiationTask implements Runnable, TelnetConstants {
+
+	private final static Logger logger = System.getLogger("telnet.lvl3");
+
+	private TelnetSocket socket;
+	private TelnetOutputStream out;
+	private TelnetOptionCapabilities capabilities;
+
+	//-------------------------------------------------------------------
+	public SubnegotiationTask(TelnetSocket socket) throws IOException {
+		this.socket = socket;
+		this.out    = socket.out();
+		capabilities= socket.getNegotiationResult();
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @see java.lang.Runnable#run()
+	 */
+	@Override
+	public void run() {
+		logger.log(Level.DEBUG, "ENTER: TELNET subnegotiation");
+		try {
+			out.write("Negotiate\r\n".getBytes(StandardCharsets.US_ASCII));
+			capabilities.capExchangeAwaitResponses.clear();
+			logger.log(Level.DEBUG, "Subnegotiation starts for active options = {0}", socket.getActiveOptions());
+			for (Integer optionCode : socket.getActiveOptions()) {
+				TelnetOption option = TelnetOption.valueOf(optionCode);
+				TelnetSubnegotiationHandler handler = TelnetOptionRegistry.get(optionCode);
+				if (handler!=null) {
+					TelnetSubnegotiationHandler.logger.log(Level.INFO, "send subnegotiation for {0}", option.name());
+					boolean expectResult = handler.initializeAs(option, socket.getCommunicationRole(), socket, out);
+					if (expectResult) {
+						capabilities.capSubNegAwaitResponses.add(optionCode);
+					}
+				} else
+					logger.log(Level.TRACE, "no subnegotiation for {0}", option.name());
+			}
+			socket.setState(State.OPTION_SUBNEGOTIATION);
+			logger.log(Level.DEBUG, "wait for all subnegs\n");
+			Instant before = Instant.now();
+			synchronized (capabilities.capSubNegAwaitResponses) {
+				capabilities.capSubNegAwaitResponses.wait(500);
+			}
+			Duration dura = Duration.between(before, Instant.now());
+			logger.log(Level.DEBUG, "TELNET subnegotiation required {0} ms\n", dura.toMillis());
+			socket.setState(TelnetSocket.State.READY);
+		} catch (SocketException e) {
+			logger.log(Level.ERROR, "Error in Telnet capability exchange",e);
+			socket.setState(State.DISCONNECTED);
+		} catch (Exception e) {
+			logger.log(Level.ERROR, "Error in Telnet capability exchange",e);
+		} finally {
+			logger.log(Level.DEBUG, "LEAVE: TELNET subnegotiation\n");
+		}
 	}
 
 }

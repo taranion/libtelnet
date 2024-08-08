@@ -77,7 +77,7 @@ public class TelnetEnvironmentOption extends TelnetSubnegotiationHandler {
 			case VAR:
 				mode = dat;
 				if (keyBuf.length()>0) {
-					logger.log(Level.INFO, "System Variable {0}={1}", keyBuf, valBuf);
+					logger.log(Level.DEBUG, "System Variable {0}={1}", keyBuf, valBuf);
 					variables.put(keyBuf.toString(), valBuf.toString());
 				}
 				keyBuf = new StringBuffer();
@@ -85,7 +85,7 @@ public class TelnetEnvironmentOption extends TelnetSubnegotiationHandler {
 			case USERVAR:
 				mode = dat;
 				if (keyBuf.length()>0) {
-					logger.log(Level.INFO, "User Variable {0}={1}", keyBuf, valBuf);
+					logger.log(Level.DEBUG, "User Variable {0}={1}", keyBuf, valBuf);
 					variables.put(keyBuf.toString(), valBuf.toString());
 				}
 				keyBuf = new StringBuffer();
@@ -109,6 +109,14 @@ public class TelnetEnvironmentOption extends TelnetSubnegotiationHandler {
 			logger.log(Level.TRACE, "RCV {0} = {1}", dat, (char)dat);
 		}
 		logger.log(Level.DEBUG,"Telnet Environment done: {0}", variables);
+		origin.subnegotiationEndedFor(code,variables);
+
+		EnvironmentListener listener = origin.getOptionListener(code);
+		if (listener!=null) {
+			listener.telnetLearnedEnvironmentVariables(variables);
+		} else {
+			logger.log(Level.TRACE, "No EnvironmentListener");
+		}
 	}
 
 	//-------------------------------------------------------------------
@@ -116,7 +124,7 @@ public class TelnetEnvironmentOption extends TelnetSubnegotiationHandler {
 	 * @see org.prelle.telnet.TelnetOptionHandler#initializeAs(org.prelle.telnet.Role)
 	 */
 	@Override
-	public void initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {
+	public boolean initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {
 		if (role==CommunicationRole.SERVER) {
 			logger.log(Level.DEBUG, "Ask remote party to send environment");
 			try {
@@ -154,9 +162,11 @@ public class TelnetEnvironmentOption extends TelnetSubnegotiationHandler {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			return true;
 		} else {
 			logger.log(Level.WARNING, "Acting as PROVIDER not implemented");
 		}
+		return false;
 	}
 
 }

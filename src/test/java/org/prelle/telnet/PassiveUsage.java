@@ -12,6 +12,7 @@ import java.lang.System.Logger.Level;
 import java.net.Socket;
 
 import org.prelle.telnet.TelnetOption;
+import org.prelle.telnet.TelnetSocket.State;
 
 /**
  * @author prelle
@@ -106,5 +107,11 @@ public class PassiveUsage implements Runnable, TelnetSocketListener, TelnetConst
 
 	public void telnetCommandReceived(TelnetSocket nvt, TelnetCommand command) {
 		logger.log(Level.INFO, "RCV "+command);
+	}
+
+	@Override
+	public void telnetSocketChanged(TelnetSocket nvt, State oldState, State newState) {
+		// TODO Auto-generated method stub
+
 	}
 }

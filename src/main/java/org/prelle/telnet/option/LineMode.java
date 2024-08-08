@@ -184,7 +184,10 @@ public class LineMode extends TelnetSubnegotiationHandler {
 		public List<Integer> getCodes() { return this.codes; }
 	}
 
-    public LineMode() {
+	private CommunicationRole role;
+
+	//-----------------------------------------------------------------
+   public LineMode() {
 //    	super(TelnetOption.LINEMODE.getCode(), "LINEMODE");
     }
 
@@ -194,15 +197,18 @@ public class LineMode extends TelnetSubnegotiationHandler {
 	 * @return TRUE if a subnegotiation is needed
 	 */
     @Override
-	public void initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {
+	public boolean initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {
+    	this.role = role;
 		try {
 			if (role==CommunicationRole.SERVER) {
 				logger.log(Level.INFO, "Start by setting EDIT");
 				setFlags(out, List.of(ModeBit.TRAPSIG));
+				return true;
 			}
 		} catch (IOException e) {
 			logger.log(Level.ERROR, "Failed requesting terminal type",e);
 		}
+		return false;
 	}
 
 //	//-----------------------------------------------------------------
@@ -257,7 +263,7 @@ public class LineMode extends TelnetSubnegotiationHandler {
 	 */
     @Override
 	public void handleSubnegotiation(int code, int[] values, TelnetSocket origin, TelnetOutputStream out) {
-		logger.log(Level.DEBUG, "LineMode sub {0}",Arrays.toString(values));
+		logger.log(Level.DEBUG, "LineMode sub {0} as {1}",Arrays.toString(values), role);
 		Operation op = null;
 		if (values[0]>=TelnetConstants.WILL) {
 			ControlCode c0 = ControlCode.getCodeFor(values[0]);
@@ -275,6 +281,10 @@ public class LineMode extends TelnetSubnegotiationHandler {
 			int mask = values[1];
 			List<ModeBit> modes = ModeBit.toModeList(mask);
 			logger.log(Level.INFO, "IAC SB LINEMODE MODE "+modes);
+			if (role==CommunicationRole.SERVER) {
+				logger.log(Level.DEBUG, "Ignore, because we are server - noone tells us what to do");
+				return;
+			}
 			LineModeListener lmList = origin.getOptionListener(TelnetOption.LINEMODE.getCode());
 			if (lmList!=null) {
 				List<ModeBit> confirmed = lmList.linemodeFlagsSuggested(modes);

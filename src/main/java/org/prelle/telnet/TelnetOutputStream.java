@@ -158,7 +158,6 @@ public class TelnetOutputStream extends OutputStream {
 		System.arraycopy(value, 0, data, 3, value.length);
 		data[data.length-2] = (byte)ControlCode.IAC.code();
 		data[data.length-1] = (byte)ControlCode.SE.code();
-		logger.log(Level.WARNING,"sub-negotiation for {0}, value={1}", code,Arrays.toString(data));
 
 		realOut.write(data);
 		realOut.flush();

@@ -62,6 +62,9 @@ public class MUDTerminalTypeData extends TerminalTypeData {
 	public MUDTerminalTypeData(String... values) {
 		options = List.of(values);
 	}
+	public MUDTerminalTypeData(List<String> values) {
+		options = values;
+	}
 
 	//-----------------------------------------------------------------
 	public String toString() {

@@ -11,9 +11,11 @@ import java.util.List;
 
 import org.prelle.telnet.CommunicationRole;
 import org.prelle.telnet.TelnetOption;
+import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetSocket;
 import org.prelle.telnet.TelnetSubnegotiationHandler;
+import org.prelle.telnet.mud.MUDTerminalTypeData;
 
 /**
  * RFC 1091
@@ -31,6 +33,9 @@ public class TerminalType extends TelnetSubnegotiationHandler {
 		public TerminalTypeData(String... values) {
 			options = List.of(values);
 		}
+		public TerminalTypeData(List<String> values) {
+			options = values;
+		}
 
 		public void addOption(String value) {
 			options.add(value);
@@ -38,9 +43,12 @@ public class TerminalType extends TelnetSubnegotiationHandler {
 		public boolean hasOption(String value) {
 			return options.contains(value);
 		}
+		public String getFirstOption() {
+			return options.isEmpty()?null:options.get(0);
+		}
 	}
 
-	public static interface TerminalTypeListener {
+	public static interface TerminalTypeListener extends TelnetOptionListener {
 		public void telnetTerminalTypesLearned(TerminalTypeData data);
 	}
 
@@ -56,22 +64,23 @@ public class TerminalType extends TelnetSubnegotiationHandler {
 		this.answers = options;
 	}
 
-	//-----------------------------------------------------------------
+	//-------------------------------------------------------------------
 	/**
-	 * Called after the use of a option has been confirmed
-	 * @return TRUE if a subnegotiation is needed
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#initializeAs(org.prelle.telnet.TelnetOption, org.prelle.telnet.CommunicationRole, org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
-	public void initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {
+	public boolean initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {
 		try {
 			if (role==CommunicationRole.SERVER) {
 				logger.log(Level.DEBUG, "Ask remote party to send terminal types");
 				List<String> received = new ArrayList<>();
 				origin.setOptionData(TelnetOption.TERMINAL_TYPE.getCode(), received);
 				requestNext(out);
+				return true;
 			}
 		} catch (IOException e) {
 			logger.log(Level.ERROR, "Failed requesting terminal type",e);
 		}
+		return false;
 	}
 
 	//-------------------------------------------------------------------
@@ -106,15 +115,20 @@ public class TerminalType extends TelnetSubnegotiationHandler {
 					}
 				} else {
 					logger.log(Level.INFO, "Received {0}", received);
-					processResult(origin, received);
+					origin.subnegotiationEndedFor(code,received);
+
+					TerminalTypeListener listener = origin.getOptionListener(code);
+					if (listener!=null) {
+						if (received.size()==3) {
+							listener.telnetTerminalTypesLearned(new MUDTerminalTypeData(received));
+						} else {
+							listener.telnetTerminalTypesLearned(new TerminalTypeData(received));
+						}
+					} else {
+						logger.log(Level.TRACE, "No TerminalTypeListener");
+					}
 				}
 		}
-
-	}
-
-	//-------------------------------------------------------------------
-	protected void processResult(TelnetSocket nvt, List<String> received) {
-		// TODO Auto-generated method stub
 
 	}
 
