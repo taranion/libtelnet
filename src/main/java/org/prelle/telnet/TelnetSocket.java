@@ -449,16 +449,18 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	 */
 	public void subnegotiationEndedFor(int optionCode, Object data) {
 		setOptionData(optionCode, data);
-		logger.log(Level.INFO, "Negotiation for option {0} returned {1}", optionCode, data);
+		logger.log(Level.INFO, "Negotiation for option {0} received {1}", optionCode, data);
 		logger.log(Level.DEBUG, "expected are "+optionCaps.capSubNegAwaitResponses);
 		logger.log(Level.DEBUG, "status is "+state);
 
-		synchronized (optionCaps.capSubNegAwaitResponses) {
-			if (optionCaps.capSubNegAwaitResponses.contains( (Integer)optionCode)) {
-				optionCaps.capSubNegAwaitResponses.remove((Integer)optionCode);
-				if (optionCaps.capSubNegAwaitResponses.isEmpty()) {
-					logger.log(Level.DEBUG, "DONE SUBNEG------------------------------");
-					optionCaps.capSubNegAwaitResponses.notify();
+		if (state==State.OPTION_SUBNEGOTIATION) {
+			synchronized (optionCaps.capSubNegAwaitResponses) {
+				if (optionCaps.capSubNegAwaitResponses.contains( (Integer)optionCode)) {
+					optionCaps.capSubNegAwaitResponses.remove((Integer)optionCode);
+					if (optionCaps.capSubNegAwaitResponses.isEmpty()) {
+						logger.log(Level.WARNING, "DONE SUBNEG------------------------------");
+						optionCaps.capSubNegAwaitResponses.notify();
+					}
 				}
 			}
 		}
@@ -502,7 +504,7 @@ class NegotiateOptionsTask implements Runnable, TelnetConstants {
 	 */
 	@Override
 	public void run() {
-		logger.log(Level.DEBUG, "ENTER: Detect supported TELNET options");
+		logger.log(Level.WARNING, "ENTER: Detect supported TELNET options");
 		try {
 			out.write("Detecting capabilities\r\n".getBytes(StandardCharsets.US_ASCII));
 			capabilities.capExchangeAwaitResponses.clear();
@@ -530,7 +532,7 @@ class NegotiateOptionsTask implements Runnable, TelnetConstants {
 		} catch (Exception e) {
 			logger.log(Level.ERROR, "Error in Telnet capability exchange",e);
 		} finally {
-			logger.log(Level.DEBUG, "LEAVE: Detect supported TELNET options\n");
+			logger.log(Level.WARNING, "LEAVE: Detect supported TELNET options\n");
 		}
 	}
 }
@@ -556,7 +558,7 @@ class SubnegotiationTask implements Runnable, TelnetConstants {
 	 */
 	@Override
 	public void run() {
-		logger.log(Level.DEBUG, "ENTER: TELNET subnegotiation");
+		logger.log(Level.WARNING, "ENTER: TELNET subnegotiation");
 		try {
 			out.write("Negotiate\r\n".getBytes(StandardCharsets.US_ASCII));
 			capabilities.capExchangeAwaitResponses.clear();
@@ -574,21 +576,22 @@ class SubnegotiationTask implements Runnable, TelnetConstants {
 					logger.log(Level.TRACE, "no subnegotiation for {0}", option.name());
 			}
 			socket.setState(State.OPTION_SUBNEGOTIATION);
-			logger.log(Level.DEBUG, "wait for all subnegs\n");
+			logger.log(Level.WARNING, "wait for all subnegs\n");
 			Instant before = Instant.now();
 			synchronized (capabilities.capSubNegAwaitResponses) {
 				capabilities.capSubNegAwaitResponses.wait(500);
 			}
 			Duration dura = Duration.between(before, Instant.now());
-			logger.log(Level.DEBUG, "TELNET subnegotiation required {0} ms\n", dura.toMillis());
+			logger.log(Level.WARNING, "TELNET subnegotiation required {0} ms\n", dura.toMillis());
 			socket.setState(TelnetSocket.State.READY);
+			logger.log(Level.WARNING, "After setting state to READY");
 		} catch (SocketException e) {
 			logger.log(Level.ERROR, "Error in Telnet capability exchange",e);
 			socket.setState(State.DISCONNECTED);
 		} catch (Exception e) {
 			logger.log(Level.ERROR, "Error in Telnet capability exchange",e);
 		} finally {
-			logger.log(Level.DEBUG, "LEAVE: TELNET subnegotiation\n");
+			logger.log(Level.WARNING, "LEAVE: TELNET subnegotiation\n");
 		}
 	}
 

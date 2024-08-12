@@ -64,6 +64,7 @@ public class TelnetServerSocket extends ServerSocket {
 		TelnetSocket ret = new TelnetSocket();
 		logger.log(Level.DEBUG,"Waiting for new connections");
 		implAccept(ret);
+//		ret.setTcpNoDelay(true);
 		for (Entry<Integer, ControlCode> entry : negotiate.entrySet()) {
 			ret.support(entry.getKey(), entry.getValue());
 		}

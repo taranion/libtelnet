@@ -150,7 +150,7 @@ public class TelnetOutputStream extends OutputStream {
 
 	//-----------------------------------------------------------------
 	public void sendSubNegotiation(int code, byte[] value) throws IOException {
-		logger.log(Level.DEBUG,"sub-negotiation for {0}, value={1}", code,Arrays.toString(value));
+		logger.log(Level.INFO,"SND sub-negotiation for {0}, value={1}", code,Arrays.toString(value));
 		byte[] data = new byte[5+value.length];
 		data[0] = (byte)ControlCode.IAC.code();
 		data[1] = (byte)ControlCode.SB.code();
@@ -165,7 +165,7 @@ public class TelnetOutputStream extends OutputStream {
 
 	//-----------------------------------------------------------------
 	public void sendSubNegotiation(int code, String line) throws IOException {
-		logger.log(Level.INFO,"sub-negotiation for {0}: {1}", code, line);
+		logger.log(Level.INFO,"SND sub-negotiation for {0}: {1}", code, line);
 		byte[] value = line.getBytes(StandardCharsets.UTF_8);
 		byte[] data = new byte[5+value.length];
 		data[0] = (byte)ControlCode.IAC.code();
