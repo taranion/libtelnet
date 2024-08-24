@@ -118,6 +118,7 @@ public class TerminalType extends TelnetSubnegotiationHandler {
 					origin.subnegotiationEndedFor(code,received);
 
 					TerminalTypeListener listener = origin.getOptionListener(code);
+					logger.log(Level.INFO, "Listener {0}", listener);
 					if (listener!=null) {
 						if (received.size()==3) {
 							listener.telnetTerminalTypesLearned(new MUDTerminalTypeData(received));

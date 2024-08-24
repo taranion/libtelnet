@@ -94,7 +94,7 @@ public class TelnetOutputStream extends OutputStream {
 		data[0] = (byte)ControlCode.IAC.code();
 		data[1] = (byte)ControlCode.DO.code();
 		data[2] = (byte)optionCode;
-		logger.log(Level.DEBUG,"send: IAC DO {0}",optionCode);
+		logger.log(Level.INFO,"send: IAC DO {0}={1}",optionCode, TelnetOption.valueOf(optionCode));
 		realOut.write(data);
 		realOut.flush();
 	}
@@ -105,7 +105,7 @@ public class TelnetOutputStream extends OutputStream {
 		data[0] = (byte)ControlCode.IAC.code();
 		data[1] = (byte)ControlCode.WILL.code();
 		data[2] = (byte)optionCode;
-		logger.log(Level.DEBUG,"send: IAC WILL {0}",optionCode);
+		logger.log(Level.INFO,"send: IAC WILL {0}={1}",optionCode, TelnetOption.valueOf(optionCode));
 		realOut.write(data);
 		realOut.flush();
 	}
@@ -116,7 +116,7 @@ public class TelnetOutputStream extends OutputStream {
 		data[0] = (byte)ControlCode.IAC.code();
 		data[1] = (byte)ControlCode.DONT.code();
 		data[2] = (byte)optionCode;
-		logger.log(Level.DEBUG,"send: IAC DONT {0}",optionCode);
+		logger.log(Level.INFO,"send: IAC DONT {0}={1}",optionCode, TelnetOption.valueOf(optionCode));
 		realOut.write(data);
 		realOut.flush();
 	}
@@ -127,7 +127,7 @@ public class TelnetOutputStream extends OutputStream {
 		data[0] = (byte)ControlCode.IAC.code();
 		data[1] = (byte)ControlCode.WONT.code();
 		data[2] = (byte)optionCode;
-		logger.log(Level.DEBUG,"send: IAC WONT {0}",optionCode);
+		logger.log(Level.INFO,"send: IAC WONT {0}={1}",optionCode, TelnetOption.valueOf(optionCode));
 		realOut.write(data);
 		realOut.flush();
 	}

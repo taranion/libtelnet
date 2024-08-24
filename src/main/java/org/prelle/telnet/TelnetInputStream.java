@@ -106,7 +106,7 @@ public class TelnetInputStream extends FilterInputStream {
 					logger.log(Level.WARNING, "Connection reset");
 					return -1;
 				}
-				logger.log(Level.DEBUG, "recv: {0} {1}", code, cmdVal);
+				logger.log(Level.INFO, "recv: {0} {1}", code, cmdVal);
 				listener.processCommand(new TelnetCommand(code, cmdVal));
 				break;
 			case SB:
@@ -136,6 +136,7 @@ public class TelnetInputStream extends FilterInputStream {
 				break;
 			default:
 				commandMode = false;;
+				logger.log(Level.WARNING, "call listener "+listener);
 				listener.processCommand(new TelnetCommand(code));
 			}
 		}

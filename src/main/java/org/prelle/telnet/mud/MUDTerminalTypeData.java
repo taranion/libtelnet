@@ -61,9 +61,17 @@ public class MUDTerminalTypeData extends TerminalTypeData {
 	}
 	public MUDTerminalTypeData(String... values) {
 		options = List.of(values);
+		for (String tmp : values) {
+			if (tmp.startsWith("MTTS "))
+				mudTerminalType=tmp;
+		}
 	}
 	public MUDTerminalTypeData(List<String> values) {
 		options = values;
+		for (String tmp : values) {
+			if (tmp.startsWith("MTTS "))
+				mudTerminalType=tmp;
+		}
 	}
 
 	//-----------------------------------------------------------------

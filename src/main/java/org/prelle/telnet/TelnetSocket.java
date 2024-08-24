@@ -416,7 +416,7 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 
 		TelnetSubnegotiationHandler handler = TelnetOptionRegistry.get(code);
 		if (handler==null) {
-			logger.log(Level.WARNING, "Received subnegotiation for {0}/{1}, but cannot find a TelnetOptionHandler", code, TelnetOption.valueOf(code));
+			logger.log(Level.WARNING, "Received {2} bytes subnegotiation for {0}/{1}, but cannot find a TelnetOptionHandler", code, TelnetOption.valueOf(code), values.length);
 			return;
 		}
 
@@ -438,7 +438,6 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 					}
 				})
 				;
-		System.err.println("Return from TelnetSocket.initialize");
 		return negotiation;
 	}
 
@@ -449,7 +448,7 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	 */
 	public void subnegotiationEndedFor(int optionCode, Object data) {
 		setOptionData(optionCode, data);
-		logger.log(Level.INFO, "Negotiation for option {0} received {1}", optionCode, data);
+		logger.log(Level.INFO, "Negotiation for option {0}/{2} received {1}", optionCode, data, TelnetOption.valueOf(optionCode));
 		logger.log(Level.DEBUG, "expected are "+optionCaps.capSubNegAwaitResponses);
 		logger.log(Level.DEBUG, "status is "+state);
 
@@ -506,7 +505,7 @@ class NegotiateOptionsTask implements Runnable, TelnetConstants {
 	public void run() {
 		logger.log(Level.WARNING, "ENTER: Detect supported TELNET options");
 		try {
-			out.write("Detecting capabilities\r\n".getBytes(StandardCharsets.US_ASCII));
+			out.write("Detecting Telnet capabilities\r\n".getBytes(StandardCharsets.US_ASCII));
 			capabilities.capExchangeAwaitResponses.clear();
 			for (Entry<Integer, ControlCode> entry : socket.negotiate.entrySet()) {
 				socket.lastStateSent.put(entry.getKey(), entry.getValue());
@@ -560,7 +559,7 @@ class SubnegotiationTask implements Runnable, TelnetConstants {
 	public void run() {
 		logger.log(Level.WARNING, "ENTER: TELNET subnegotiation");
 		try {
-			out.write("Negotiate\r\n".getBytes(StandardCharsets.US_ASCII));
+			out.write("Telnet Negotiate\r\n".getBytes(StandardCharsets.US_ASCII));
 			capabilities.capExchangeAwaitResponses.clear();
 			logger.log(Level.DEBUG, "Subnegotiation starts for active options = {0}", socket.getActiveOptions());
 			for (Integer optionCode : socket.getActiveOptions()) {

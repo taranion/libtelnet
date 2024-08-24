@@ -14,6 +14,8 @@ import org.prelle.telnet.TelnetSocket.State;
 import org.prelle.telnet.option.LineMode.LineModeConfig;
 import org.prelle.telnet.option.LineMode.LineModeListener;
 import org.prelle.telnet.option.LineMode.ModeBit;
+import org.prelle.telnet.option.TelnetWindowSize;
+import org.prelle.telnet.option.TerminalType;
 
 /**
  * @author prelle
@@ -39,15 +41,15 @@ public class ActiveUsage implements TelnetSocketListener, LineModeListener {
 //		TelnetSocket socket = new TelnetSocket("mg.mud.de", 4711)
 //		TelnetSocket socket = new TelnetSocket("lost.wishes.net", 5555)
 //		TelnetSocket socket = new TelnetSocket("backrooms.net", 4000)
-		TelnetSocket socket = new TelnetSocket("bat.org", 23)
+//		TelnetSocket socket = new TelnetSocket("bat.org", 23)
+		TelnetSocket socket = new TelnetSocket("timesmud.com", 8500)
 				.support(TelnetOption.LINEMODE.getCode(), ControlCode.WILL, new LineModeConfig())
 				.support(TelnetOption.NAWS.getCode(), ControlCode.WILL)
 				.support(TelnetOption.GMCP.getCode(), ControlCode.WILL)
 //				.support(new TelnetOptionHandler(0,"TRANSMIT_BINARY"), Role.REQUESTER)
 //				.support(new TelnetOptionHandler(1,"ECHO"), Role.REQUESTER)
 //				.support(new SuppressGoAhead(), Role.REQUESTER)
-//				.support(new TelnetWindowSize(), Role.REJECT_OUTRIGHT)
-//				.support(new TerminalType("ActiveUsage","XTERM","MTTS 0"), Role.PROVIDER)
+				.support(TelnetOption.MSP.getCode(), ControlCode.WILL)
 //				.support(new MUDSoundProtocol(), Role.PROVIDER_SILENT)
 //				.support(new MUDServerDataProtocol(), Role.REQUESTER)
 //				.support(new MUDServerStatusProtocol(), Role.REQUESTER)
