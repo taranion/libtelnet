@@ -1,0 +1,7 @@
+Alle TelnetOptions werden in der Registry angemeldet.
+Eine Applikationkann das überschreiben - z.B. TERMTYPE durch MTTS
+
+Für jede Option wird ein Boolean-Status hinterlegt, ob sie aktiv ist oder nicht - initial inaktiv.
+   Wird ausgehandelt.
+   Aushandlung ist ein asynchroner Prozess - der Wunsch wird abgesendet - ggf. erfolgt irgendwann
+   eine positive Antwort. Dann wird via Hook an Applikation ein Statuswechsel signalisiert.
