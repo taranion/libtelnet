@@ -22,6 +22,7 @@ public class TelnetOutputStream extends OutputStream {
 
 	private OutputStream realOut;
 	private boolean  binaryMode = true;
+	private boolean injectCRBeforeLF = true;
 
 	//-----------------------------------------------------------------
 	/**
@@ -58,25 +59,25 @@ public class TelnetOutputStream extends OutputStream {
 		logger.log(Level.TRACE,"write "+(new String(data)));
 		// Scan how many byte 255 are there
 		int count = 0;
+		boolean lastWasCR = false;
 		for (byte b : data) {
 			if (b==-1) count++;
+			if (injectCRBeforeLF && b=='\n' && !lastWasCR) count++;
+			lastWasCR = b=='\r';
 		}
-//		if (data.length<10) {
-//			try {
-//				throw new RuntimeException("Trace");
-//			} catch (Exception e) {
-//				logger.log(Level.WARNING, "Did you mean to use writeCommand?",e);
-//			}
-//		}
 		if (count>0) {
 			logger.log(Level.WARNING, "TODO: Encode 0xff");
 			byte[] corrected = new byte[data.length+count];
 			int pos=0;
+			lastWasCR = false;
 			for (byte b : data) {
 				if (b==-1) {
 					corrected[pos++]=(byte)0xff;
+				} else if (b=='\n' && !lastWasCR) {
+					corrected[pos++]=(byte)'\r';
 				}
 				corrected[pos++]=b;
+				lastWasCR = b=='\r';
 			}
 			data = corrected;
 		}
@@ -176,6 +177,14 @@ public class TelnetOutputStream extends OutputStream {
 		data[data.length-1] = (byte)ControlCode.SE.code();
 		realOut.write(data);
 		realOut.flush();
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @param injectCRBeforeLF the injectCRBeforeLF to set
+	 */
+	public void setInjectCRBeforeLF(boolean injectCRBeforeLF) {
+		this.injectCRBeforeLF = injectCRBeforeLF;
 	}
 
 }
