@@ -103,6 +103,10 @@ public class TerminalType extends TelnetSubnegotiationHandler {
 			byte[] data = new byte[values.length-1];
 			for (int i=1; i<values.length; i++) data[i-1]=(byte) values[i];
 			List<String> received = origin.getOptionData(TelnetOption.TERMINAL_TYPE.getCode());
+			if (received==null) {
+				received = new ArrayList<>();
+				origin.setOptionData(TelnetOption.TERMINAL_TYPE.getCode(), received);
+			}
 			String value = new String(data, StandardCharsets.US_ASCII);
 				logger.log(Level.INFO, "TERMINAL_TYPE: Received {0}", value);
 				if (!received.contains(value) && !"UNKNOWN".equals(value)) {

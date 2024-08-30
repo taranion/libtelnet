@@ -220,8 +220,8 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	void fireFeatureActive(TelnetOption option, boolean state) {
 		logger.log(Level.DEBUG, "fireFeatureActive({0},{1})", option,state);
 
-		logger.log(Level.INFO, "Option {0} has been {1}", option.name(), state?"ENABLED":"REJECTED");
 		if (this.state==State.OPTION_NEGOTIATION) {
+			logger.log(Level.INFO, "Option {0} has been {1}", option.name(), state?"ENABLED":"REJECTED");
 			TelnetConfigOption opt = optionCaps.getConfigOption(option);
 			if (opt==null) {
 				opt = new TelnetConfigOption();
@@ -585,7 +585,7 @@ class SubnegotiationTask implements Runnable, TelnetConstants {
 			socket.setState(TelnetSocket.State.READY);
 			logger.log(Level.WARNING, "After setting state to READY");
 		} catch (SocketException e) {
-			logger.log(Level.ERROR, "Error in Telnet capability exchange",e);
+			logger.log(Level.ERROR, "Error in Telnet capability exchange: "+e);
 			socket.setState(State.DISCONNECTED);
 		} catch (Exception e) {
 			logger.log(Level.ERROR, "Error in Telnet capability exchange",e);
