@@ -46,6 +46,9 @@ public class TerminalType extends TelnetSubnegotiationHandler {
 		public String getFirstOption() {
 			return options.isEmpty()?null:options.get(0);
 		}
+		public List<String> getAll() {
+			return options;
+		}
 	}
 
 	public static interface TerminalTypeListener extends TelnetOptionListener {
