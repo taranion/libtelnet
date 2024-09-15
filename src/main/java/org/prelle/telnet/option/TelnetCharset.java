@@ -3,8 +3,12 @@
  */
 package org.prelle.telnet.option;
 
+import java.io.IOException;
 import java.lang.System.Logger.Level;
+import java.util.HashMap;
 
+import org.prelle.telnet.CommunicationRole;
+import org.prelle.telnet.TelnetOption;
 import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetSocket;
 import org.prelle.telnet.TelnetSubnegotiationHandler;
@@ -31,6 +35,19 @@ public class TelnetCharset extends TelnetSubnegotiationHandler {
 	@Override
 	public void handleSubnegotiation(int code, int[] values, TelnetSocket origin, TelnetOutputStream out) {
 		logger.log(Level.WARNING, "TODO: Subnegotiate for CHARSET");
+	}
+
+	//-----------------------------------------------------------------
+	/**
+	 * Called after the use of a option has been confirmed
+	 * @return TRUE when answers to a subnegotiation are expected
+	 */
+	public boolean initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {
+		if (role==CommunicationRole.SERVER) {
+		} else {
+			logger.log(Level.WARNING, "Acting as PROVIDER not implemented");
+		}
+		return false;
 	}
 
 }

@@ -6,6 +6,7 @@ package org.prelle.telnet.option;
 import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -52,11 +53,16 @@ public class TelnetEnvironmentOption extends TelnetSubnegotiationHandler {
 		logger.log(Level.DEBUG,"performSubNegotiation for ENVIRON");
 		int operation = values[0];
 
-		if (operation!=IS) {
-			logger.log(Level.WARNING, "Other operations than IS not supported yet");
-			return;
+		switch (operation) {
+		case IS: handleIS(code,values,origin,out); break;
+		case INFO: handleINFO(code,values,origin,out); break;
+		default:
+			logger.log(Level.WARNING, "Other operations than IS not supported yet "+operation+"\n"+Arrays.toString(values) );
 		}
+	}
 
+	//-------------------------------------------------------------------
+	private void handleIS(int code, int[] values, TelnetSocket origin, TelnetOutputStream out) {
 		StringBuffer keyBuf = new StringBuffer();
 		StringBuffer valBuf = new StringBuffer();
 		Map<String,String> variables = origin.getOptionData(CODE);
@@ -111,11 +117,90 @@ public class TelnetEnvironmentOption extends TelnetSubnegotiationHandler {
 		logger.log(Level.DEBUG,"Telnet Environment done: {0}", variables);
 		origin.subnegotiationEndedFor(code,variables);
 
-		EnvironmentListener listener = origin.getOptionListener(code);
-		if (listener!=null) {
-			listener.telnetLearnedEnvironmentVariables(variables);
-		} else {
-			logger.log(Level.TRACE, "No EnvironmentListener");
+		try {
+			EnvironmentListener listener = origin.getOptionListener(code);
+			if (listener!=null) {
+				listener.telnetLearnedEnvironmentVariables(variables);
+			} else {
+				logger.log(Level.TRACE, "No EnvironmentListener");
+			}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	//-------------------------------------------------------------------
+	private void handleINFO(int code, int[] values, TelnetSocket origin, TelnetOutputStream out) {
+		logger.log(Level.DEBUG, "handleINFO "+Arrays.toString(values));
+		StringBuffer keyBuf = new StringBuffer();
+		StringBuffer valBuf = new StringBuffer();
+		Map<String,String> variables = origin.getOptionData(CODE);
+		int mode = -1;
+		int i=1;
+		while (i<values.length) {
+			int dat = values[i++];
+			if (dat==IAC) {
+				// End of list
+				if (keyBuf.length()>0) {
+					logger.log(Level.INFO, "Variable {0}={1}", keyBuf, valBuf);
+					variables.put(keyBuf.toString(), valBuf.toString());
+				}
+				break;
+			}
+
+			switch (dat) {
+			case VAR:
+				mode = dat;
+				if (keyBuf.length()>0) {
+					logger.log(Level.DEBUG, "System Variable {0}={1}", keyBuf, valBuf);
+					variables.put(keyBuf.toString(), valBuf.toString());
+				}
+				keyBuf = new StringBuffer();
+				break;
+			case USERVAR:
+				mode = dat;
+				if (keyBuf.length()>0) {
+					logger.log(Level.DEBUG, "User Variable {0}={1}", keyBuf, valBuf);
+					variables.put(keyBuf.toString(), valBuf.toString());
+				}
+				keyBuf = new StringBuffer();
+				break;
+			case VALUE:
+				mode = dat;
+				valBuf = new StringBuffer();
+				break;
+			case ESC:
+				logger.log(Level.WARNING, "Not supported {0}", dat);
+				break;
+			default:
+				if (mode==VAR || mode==USERVAR) {
+					keyBuf.append( (char)dat );
+					break;
+				} else if (mode==VALUE) {
+					valBuf.append( (char)dat );
+				}
+			}
+
+			logger.log(Level.TRACE, "RCV {0} = {1}", dat, (char)dat);
+		}
+		if (keyBuf.length()>0) {
+			logger.log(Level.DEBUG, "System Variable {0}={1}", keyBuf, valBuf);
+			variables.put(keyBuf.toString(), valBuf.toString());
+		}
+		logger.log(Level.WARNING,"Telnet Environment done: {0}", variables);
+		origin.subnegotiationEndedFor(code,variables);
+
+		try {
+			EnvironmentListener listener = origin.getOptionListener(code);
+			if (listener!=null) {
+				listener.telnetLearnedEnvironmentVariables(variables);
+			} else {
+				logger.log(Level.TRACE, "No EnvironmentListener");
+			}
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 
