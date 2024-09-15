@@ -4,6 +4,7 @@
 package org.prelle.telnet.mud;
 
 import java.io.IOException;
+import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 
 import org.prelle.telnet.CommunicationRole;
@@ -23,6 +24,8 @@ import org.prelle.telnet.TelnetSubnegotiationHandler;
  *
  */
 public class GenericMUDCommunicationProtocol extends TelnetSubnegotiationHandler {
+
+	protected final static Logger logger = System.getLogger("gmcp.raw");
 
 	public final static int CODE = 201;
 
@@ -75,8 +78,9 @@ public class GenericMUDCommunicationProtocol extends TelnetSubnegotiationHandler
 	@Override
 	public void handleSubnegotiation(int code, int[] values, TelnetSocket origin, TelnetOutputStream out) {
 		RawGMCPMessage msg = new RawGMCPMessage(values);
+		TelnetOptionListener listenerR = origin.getOptionListener(CODE);
 		logger.log(Level.INFO,"RCV {0}", msg.getNamespace());
-		GMCPReceiver listener = origin.getOptionListener(CODE);
+		GMCPReceiver listener = (GMCPReceiver)listenerR;
 		if (listener!=null) {
 			listener.telnetReceiveGMCP(msg);
 		} else
