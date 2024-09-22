@@ -81,6 +81,14 @@ public class ActiveUsage implements TelnetSocketListener, LineModeListener {
 		return suggested;
 	}
 
+	//-------------------------------------------------------------------
+	@Override
+	public void linemodeFlagsAcknowledged(List<ModeBit> acknowledged) {
+		acknowledged.remove(ModeBit.MODE_ACK);
+		logger.log(Level.INFO, "linemodeFlagsAcknowledged {0} ",acknowledged);
+		
+	}
+
 	@Override
 	public void sendFlushOn(List<Integer> flushCodes) {
 		System.err.println("We should flush on "+flushCodes);

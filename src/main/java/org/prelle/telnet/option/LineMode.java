@@ -46,6 +46,7 @@ public class LineMode extends TelnetSubnegotiationHandler {
 		 * @return Return with confirmed flags
 		 */
 		public List<ModeBit> linemodeFlagsSuggested(List<ModeBit> suggested);
+		public void linemodeFlagsAcknowledged(List<ModeBit> acknowledged);
 		public void sendFlushOn(List<Integer> flushCodes);
 	}
 
@@ -280,15 +281,19 @@ public class LineMode extends TelnetSubnegotiationHandler {
 		case MODE:
 			int mask = values[1];
 			List<ModeBit> modes = ModeBit.toModeList(mask);
-			logger.log(Level.INFO, "IAC SB LINEMODE MODE "+modes);
-			if (role==CommunicationRole.SERVER) {
-				logger.log(Level.DEBUG, "Ignore, because we are server - noone tells us what to do");
+			logger.log(Level.DEBUG, "IAC SB LINEMODE MODE "+modes);
+			if (role==CommunicationRole.SERVER && !modes.contains(ModeBit.MODE_ACK)) {
+				logger.log(Level.WARNING, "Ignore, because we are server - noone tells us what to do");
 				return;
 			}
 			LineModeListener lmList = origin.getOptionListener(TelnetOption.LINEMODE.getCode());
 			if (lmList!=null) {
-				List<ModeBit> confirmed = lmList.linemodeFlagsSuggested(modes);
-				confirmMode(out,confirmed);
+				if (modes.contains(ModeBit.MODE_ACK)) {
+					lmList.linemodeFlagsAcknowledged(modes);					
+				} else {
+					List<ModeBit> confirmed = lmList.linemodeFlagsSuggested(modes);
+					confirmMode(out,confirmed);
+				}
 			} else
 				logger.log(Level.WARNING, "No LineModeListener configured");
 			break;

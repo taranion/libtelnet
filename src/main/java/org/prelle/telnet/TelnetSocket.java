@@ -324,6 +324,11 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 //					}
 					fireFeatureActive(option, true);
 					return;
+				} else if (config==ControlCode.DO) {
+					logger.log(Level.WARNING, "Remote party sends DO {0} and we already sent DO {0}- answering with WILL", option.name());
+					out.sendWill(optionCode);
+					fireFeatureActive(option, true);
+					return;
 				}
 				break;
 			case WILL:
@@ -371,7 +376,7 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 		if (option==null) {
 			logger.log(Level.WARNING, "Remote party requests {0} for unknown option {1} and we reject it", command.getCode(), command.getData());
 		} else {
-			logger.log(Level.WARNING, "Remote party requests {0} for option {1} and we reject it", command.getCode(), option.name());
+			logger.log(Level.WARNING, "Remote party requests {0} for option {1} and we reject it = {2}", command.getCode(), option.name(), config);
 		}
 
 		reject(command);
