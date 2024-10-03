@@ -17,7 +17,7 @@ public class TelnetConfigOption {
 	public Boolean isConfigurable() { return configurable; }
 
 	public void setActive(boolean value) { state = value; }
-	public Boolean isActive() { return state; }
+	public Boolean isActive() { return (state!=null)?state:false; }
 
 	public String toString() {
 		StringBuffer buf = new StringBuffer();
