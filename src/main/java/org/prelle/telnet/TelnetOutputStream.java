@@ -134,6 +134,16 @@ public class TelnetOutputStream extends OutputStream {
 	}
 
 	//-----------------------------------------------------------------
+	public void sendIAC(int optionCode) throws IOException {
+		byte[] data = new byte[2];
+		data[0] = (byte)ControlCode.IAC.code();
+		data[1] = (byte)optionCode;
+		logger.log(Level.INFO,"send: IAC {0}={1}",optionCode, ControlCode.getCodeFor(optionCode));
+		realOut.write(data);
+		realOut.flush();
+	}
+
+	//-----------------------------------------------------------------
 	public void sendSubNegotiation(int code, int command, byte[] value) throws IOException {
 		logger.log(Level.DEBUG,"sub-negotiation for {0}, command {1}, value={2}", code,command, value);
 		byte[] data = new byte[6+value.length];

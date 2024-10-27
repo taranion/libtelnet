@@ -65,9 +65,12 @@ public class TelnetCharset extends TelnetSubnegotiationHandler {
 				charset = StandardCharsets.ISO_8859_1;
 			else if ("ISO 8859-1".equals(csName))
 				charset = StandardCharsets.ISO_8859_1;
+			else if ("UTF-8".equals(csName) || "UTF8".equals(csName))
+				charset = StandardCharsets.UTF_8;
 			else
 				charset = Charset.forName(csName);
 			
+			origin.setOptionData(CODE, charset);
 			try {
 				CharsetListener listener = origin.getOptionListener(code);
 				if (listener!=null) {
