@@ -1,0 +1,18 @@
+image: maven:3.9.9-eclipse-temurin-23
+
+pipelines:
+  default:
+    - step:
+        name: Compile and test
+        script: # Modify the commands below to build your repository.
+          - mvn -s settings.xml package
+
+  tags:
+    '*':
+    - step:
+        name: Deploy
+        script:
+           - openssl aes-256-cbc -pass pass:$OPENSSL_PWD -in private-key.gpg.enc -out private-key.gpg -d
+           - gpg --import --no-tty --batch --yes private-key.gpg
+           - mvn -B -s settings.xml deploy -DskipTests=true
+                   
