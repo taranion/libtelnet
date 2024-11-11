@@ -4,6 +4,7 @@ import org.prelle.telnet.mud.GenericMUDCommunicationProtocol;
 import org.prelle.telnet.mud.MUDTerminalTypeStandard;
 import org.prelle.telnet.mud.MUDTilemapProtocol;
 import org.prelle.telnet.option.LineMode;
+import org.prelle.telnet.option.MXPOption;
 import org.prelle.telnet.option.StatusOption;
 import org.prelle.telnet.option.TelnetCharset;
 import org.prelle.telnet.option.TelnetEnvironmentOption;
@@ -36,7 +37,7 @@ public enum TelnetOption {
 	COMPRESS   ( 85, null),
 	COMPRESS2  ( 86, null),
 	MSP        ( 90, null),
-	MXP        ( 91, null),
+	MXP        ( 91, new MXPOption()),
 	ZMP        ( 93, null),
 	MTP        (100, new MUDTilemapProtocol()),
 	MUSHCLIENT (102, null),

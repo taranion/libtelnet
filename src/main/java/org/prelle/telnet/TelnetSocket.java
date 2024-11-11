@@ -568,7 +568,7 @@ class SubnegotiationTask implements Runnable, TelnetConstants {
 		try {
 			out.write("Telnet Negotiate\r\n".getBytes(StandardCharsets.US_ASCII));
 			capabilities.capExchangeAwaitResponses.clear();
-			logger.log(Level.DEBUG, "Subnegotiation starts for active options = {0}", socket.getActiveOptions());
+			logger.log(Level.WARNING, "Subnegotiation starts for active options = {0}", socket.getActiveOptions());
 			for (Integer optionCode : socket.getActiveOptions()) {
 				TelnetOption option = TelnetOption.valueOf(optionCode);
 				TelnetSubnegotiationHandler handler = TelnetOptionRegistry.get(optionCode);
