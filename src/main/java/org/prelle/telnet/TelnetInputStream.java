@@ -115,12 +115,14 @@ public class TelnetInputStream extends FilterInputStream {
 				if (subNegotiationFor==-1) {
 					logger.log(Level.WARNING, "Connection reset");
 					commandMode = false;;
+					logger.log(Level.TRACE, "Leaving command mode");
 					return -1;
 				}
 				TelnetOption option = TelnetOption.valueOf(subNegotiationFor);
 				logger.log(Level.DEBUG, "Subnegotiation begins for {0}/{1}", subNegotiationFor, option);
 				dataIsSubnegotiation = true;
 				commandMode = false;;
+				logger.log(Level.TRACE, "Leaving command mode");
 				subNegotiationBuffer.clear();
 				break;
 			case SE:
@@ -136,6 +138,7 @@ public class TelnetInputStream extends FilterInputStream {
 				break;
 			default:
 				commandMode = false;;
+				logger.log(Level.TRACE, "Leaving command mode");
 				logger.log(Level.WARNING, "call listener "+listener);
 				listener.processCommand(new TelnetCommand(code));
 			}
@@ -163,6 +166,7 @@ public class TelnetInputStream extends FilterInputStream {
 			}
 
 			if (data==255) {
+				logger.log(Level.TRACE, "Entering command mode");
 				commandMode = true;
 				return read();
 			}

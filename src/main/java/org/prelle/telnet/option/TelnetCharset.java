@@ -8,8 +8,11 @@ import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
+import java.util.StringTokenizer;
 
 import org.prelle.telnet.CommunicationRole;
 import org.prelle.telnet.TelnetOption;
@@ -17,7 +20,6 @@ import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetSocket;
 import org.prelle.telnet.TelnetSubnegotiationHandler;
-import org.prelle.telnet.option.TelnetEnvironmentOption.EnvironmentListener;
 
 /**
  * https://datatracker.ietf.org/doc/html/rfc2066
@@ -82,6 +84,49 @@ public class TelnetCharset extends TelnetSubnegotiationHandler {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+		} else if (operation==REQUEST) {
+			byte[] data = new byte[values.length-1];
+			for (int i=0; i<data.length; i++) {
+				data[i] = (byte)values[i+1];
+			}
+			String namesRaw = new String(data);
+			List<String> csNames = new ArrayList<>();
+			for (StringTokenizer tok=new StringTokenizer(namesRaw); tok.hasMoreTokens(); ) {
+				csNames.add(tok.nextToken());
+			}
+			logger.log(Level.WARNING, "Remote party requested "+csNames);
+			List<Charset> requested = new ArrayList<>();
+			csNames.forEach(csName -> {
+				try {
+					Charset charset = null;
+					if ("ISO 8859-15".equals(csName))
+						charset = StandardCharsets.ISO_8859_1;
+					else if ("ISO 8859-1".equals(csName))
+						charset = StandardCharsets.ISO_8859_1;
+					else if ("UTF-8".equals(csName) || "UTF8".equals(csName))
+						charset = StandardCharsets.UTF_8;
+					else
+						charset = Charset.forName(csName);
+					requested.add(charset);
+				} catch (Exception e) {
+				}
+			});
+			logger.log(Level.WARNING, "TODO: What do I do? "+requested);
+			Charset consoleCharset = origin.getOptionData(CODE);
+			if (requested.contains(consoleCharset)) {
+				byte[] append = consoleCharset.toString().getBytes(StandardCharsets.US_ASCII);
+//				byte[] toSend = new byte[1+append.length];
+//				toSend[0] = ACCEPTED;
+//				System.arraycopy(append, 0, toSend, 0, append.length);
+				logger.log(Level.WARNING, "Accept "+consoleCharset);
+				try {
+					out.sendSubNegotiation(CODE, ACCEPTED, append);
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			
 		} else if (operation==REJECTED) {
 			logger.log(Level.WARNING, "The remote party rejected our charset suggestions");
 			System.err.println("TelnetCharset: Remote party rejected charsets");

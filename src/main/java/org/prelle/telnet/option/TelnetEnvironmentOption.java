@@ -91,7 +91,7 @@ public class TelnetEnvironmentOption extends TelnetSubnegotiationHandler {
 			case USERVAR:
 				mode = dat;
 				if (keyBuf.length()>0) {
-					logger.log(Level.DEBUG, "User Variable {0}={1}", keyBuf, valBuf);
+					logger.log(Level.TRACE, "User Variable {0} = {1}", keyBuf, valBuf);
 					variables.put(keyBuf.toString(), valBuf.toString());
 				}
 				keyBuf = new StringBuffer();
