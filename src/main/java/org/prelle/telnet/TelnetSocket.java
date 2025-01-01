@@ -220,7 +220,7 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 
 	//-----------------------------------------------------------------
 	void fireFeatureActive(TelnetOption option, boolean state) {
-		logger.log(Level.DEBUG, "fireFeatureActive({0},{1})", option,state);
+		logger.log(Level.DEBUG, "fireFeatureActive({0},{1}, in {2})", option,state, this.state);
 
 		if (this.state==State.OPTION_NEGOTIATION) {
 			logger.log(Level.INFO, "Option {0} has been {1}", option.name(), state?"ENABLED":"REJECTED");
@@ -233,8 +233,9 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 			opt.setActive(state);
 		}
 
-		if (state && !active.contains( (Integer)option.getCode() ))
+		if (state && !active.contains( (Integer)option.getCode() )) {
 			active.add( option.getCode());
+		}
 		synchronized (optionCaps.capExchangeAwaitResponses) {
 			if (optionCaps.capExchangeAwaitResponses.contains( (Integer)option.getCode())) {
 				optionCaps.capExchangeAwaitResponses.remove((Integer)option.getCode());
