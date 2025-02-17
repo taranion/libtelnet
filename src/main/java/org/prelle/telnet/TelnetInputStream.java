@@ -32,6 +32,7 @@ public class TelnetInputStream extends FilterInputStream {
     because Newline is represented with just a LF character. */
 	boolean         stickyCRLF = false;
 	boolean         seenCR = false;
+	boolean         sendGoAheadAsANSISepator = false;
 
 	public boolean  binaryMode = true;
 
@@ -136,10 +137,19 @@ public class TelnetInputStream extends FilterInputStream {
 				subNegotiationBuffer.clear();
 				dataIsSubnegotiation = false;
 				break;
+			case GA:
+				// Go ahead found
+				if (sendGoAheadAsANSISepator) {
+					commandMode = false;;
+					logger.log(Level.DEBUG, "GA found - convert To ANSI RS (0x1E)");
+					logger.log(Level.DEBUG, "call listener "+listener);
+					listener.processCommand(new TelnetCommand(code));
+					return 0x1E; // Record separator
+				} 
 			default:
 				commandMode = false;;
 				logger.log(Level.TRACE, "Leaving command mode");
-				logger.log(Level.WARNING, "call listener "+listener);
+				logger.log(Level.DEBUG, "call listener "+listener);
 				listener.processCommand(new TelnetCommand(code));
 			}
 		}
@@ -447,6 +457,14 @@ public class TelnetInputStream extends FilterInputStream {
 	 */
 	public void setCharacterMode(boolean characterMode) {
 		this.characterMode = characterMode;
+	}
+
+	public boolean isSendGoAheadAsANSISepator() {
+		return sendGoAheadAsANSISepator;
+	}
+
+	public void setSendGoAheadAsANSISepator(boolean sendGoAheadAsANSISepator) {
+		this.sendGoAheadAsANSISepator = sendGoAheadAsANSISepator;
 	}
 
 }

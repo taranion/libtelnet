@@ -8,6 +8,7 @@ import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.prelle.telnet.CommunicationRole;
@@ -66,7 +67,7 @@ public class MXPOption extends TelnetSubnegotiationHandler {
 	//-------------------------------------------------------------------
 	@Override
 	public void handleSubnegotiation(int code, int[] values, TelnetSocket origin, TelnetOutputStream out) {
-		System.err.println("MXPOption.handleSubnegotiation");
+		logger.log(Level.WARNING, "MXPOption.handleSubnegotiation: "+Arrays.toString(values));
 	}
 
 	public void processMXP(String input) {

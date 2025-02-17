@@ -22,18 +22,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import org.prelle.telnet.TelnetSocket.State;
@@ -286,7 +277,7 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 		case WILL: case WONT:
 			break;
 		default:
-			logger.log(Level.WARNING, "fire "+command);
+			logger.log(Level.DEBUG, "fire "+command);
 			fireTelnetCommand(command);
 			return;
 		}

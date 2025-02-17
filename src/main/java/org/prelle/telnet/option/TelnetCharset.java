@@ -52,7 +52,7 @@ public class TelnetCharset extends TelnetSubnegotiationHandler {
 	 */
 	@Override
 	public void handleSubnegotiation(int code, int[] values, TelnetSocket origin, TelnetOutputStream out) {
-		logger.log(Level.WARNING, "TODO: Subnegotiate for CHARSET: "+Arrays.toString(values));
+		logger.log(Level.DEBUG, "Subnegotiate for CHARSET: "+Arrays.toString(values));
 		int operation = values[0];
 		
 		if (operation==ACCEPTED) {
@@ -61,7 +61,6 @@ public class TelnetCharset extends TelnetSubnegotiationHandler {
 				data[i] = (byte)values[i+1];
 			}
 			String csName = new String(data);
-			System.err.println("TelnetCharset: Remote party agreed to use "+csName);
 			Charset charset = null;
 			if ("ISO 8859-15".equals(csName))
 				charset = StandardCharsets.ISO_8859_1;
