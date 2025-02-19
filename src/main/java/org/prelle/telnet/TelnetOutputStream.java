@@ -30,6 +30,15 @@ public class TelnetOutputStream extends OutputStream {
 	public TelnetOutputStream(OutputStream out) {
 		realOut = out;
 	}
+	
+    //-------------------------------------------------------------------
+    /**
+     * @throws IOException
+     */
+//    @Override
+//    public void flush() throws IOException {
+//    	sendIAC(ControlCode.EOR.code());
+//    }
 
 	//-----------------------------------------------------------------
 	public void setBinaryMode(boolean enabled) {
