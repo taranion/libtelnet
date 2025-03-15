@@ -65,6 +65,16 @@ public class GenericMUDCommunicationProtocol extends TelnetSubnegotiationHandler
 		public void telnetReceiveGMCP(RawGMCPMessage message);
 	}
 
+	//-----------------------------------------------------------------
+	/**
+	 * Called after the use of a option has been confirmed
+	 * @return TRUE when answers to a subnegotiation are expected
+	 */
+	public boolean initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {
+		logger.log(Level.INFO, "No need for initialization for {0} / as {2}",option.name(), getClass().getName(), role);
+		return false;
+	}
+
 	//-------------------------------------------------------------------
 	public static void send(TelnetOutputStream out, String packName, String command) throws IOException {
 		String full = (command!=null)?(packName+" "+command):packName;
