@@ -4,6 +4,7 @@ pipelines:
   default:
     - step:
         name: Compile and test
+        deployment: Test
         script: # Modify the commands below to build your repository.
           - mvn -s settings.xml package
 
@@ -11,6 +12,7 @@ pipelines:
     '*':
     - step:
         name: Deploy
+        deployment: Production
         script:
            - openssl aes-256-cbc -pass pass:$OPENSSL_PWD -in private-key.gpg.enc -out private-key.gpg -d
            - gpg --import --no-tty --batch --yes private-key.gpg
