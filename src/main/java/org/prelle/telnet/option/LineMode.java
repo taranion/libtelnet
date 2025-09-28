@@ -202,7 +202,7 @@ public class LineMode extends TelnetSubnegotiationHandler {
     	this.role = role;
 		try {
 			if (role==CommunicationRole.SERVER) {
-				logger.log(Level.INFO, "Start by setting EDIT");
+				logger.log(Level.INFO, "Start character-a-time mode by clearing EDIT flag");
 				setFlags(out, List.of(ModeBit.TRAPSIG));
 				return true;
 			}

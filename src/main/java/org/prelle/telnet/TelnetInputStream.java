@@ -93,6 +93,8 @@ public class TelnetInputStream extends FilterInputStream {
 			ControlCode code = ControlCode.getCodeFor(commandRaw);
 			if (code==null) {
 				logger.log(Level.WARNING, "No Controlcode for "+commandRaw);
+				commandMode=false;
+				return commandRaw;
 			}
 			switch (code) {
 			case IAC : return 255;

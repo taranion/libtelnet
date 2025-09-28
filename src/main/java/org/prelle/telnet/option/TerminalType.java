@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.lang.System.Logger.Level;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.prelle.telnet.CommunicationRole;
@@ -94,7 +95,7 @@ public class TerminalType extends TelnetSubnegotiationHandler {
 	public void handleSubnegotiation(int code, int[] values, TelnetSocket origin, TelnetOutputStream out) {
 		int operation = values[0];
 		if (operation==SEND) {
-			logger.log(Level.INFO, "Remote party requests terminal type information");
+			logger.log(Level.INFO, "Remote party requests terminal type information: "+Arrays.toString(answers));
 			try {
 				sendNextFromList(out);
 			} catch (IOException e) {
@@ -143,7 +144,7 @@ public class TerminalType extends TelnetSubnegotiationHandler {
 	//-----------------------------------------------------------------
 	private void sendNextFromList(TelnetOutputStream out) throws IOException {
 		if (answers==null || answers.length==0) {
-			out.sendSubNegotiation(TelnetOption.TERMINAL_TYPE.getCode(), IS, "UNKNOWN".getBytes(StandardCharsets.ISO_8859_1));
+			out.sendSubNegotiation(TelnetOption.TERMINAL_TYPE.getCode(), IS, "xterm".getBytes(StandardCharsets.ISO_8859_1));
 			return;
 		}
 

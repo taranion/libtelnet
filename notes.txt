@@ -5,3 +5,16 @@ Für jede Option wird ein Boolean-Status hinterlegt, ob sie aktiv ist oder nicht
    Wird ausgehandelt.
    Aushandlung ist ein asynchroner Prozess - der Wunsch wird abgesendet - ggf. erfolgt irgendwann
    eine positive Antwort. Dann wird via Hook an Applikation ein Statuswechsel signalisiert.
+
+   
+   
+RawTelnetInputStream
+- im Constructor Callback
+- Callback wird aufgerufen mit folgenden Instruktionen
+  - Option Negotoation (DO,DONT,WILL,WONT)
+  - Subnegotiation
+  - TelnetCommand (GA,IP, ...)
+- read() liefert nur Daten
+
+
+cMUD: SUPPORTS +a +b +bold +br +c +color +dd +dest +dl +dt +em +expire +font +frame +gauge +h +h1 +h2 +h3 +h4 +h5 +h6 +high +hr +i +image +img +italic +li +music +nobr +ol +p +pass +password +pre +relocate +report +reported +s +sbr +send +small +sound +stat +strike +strikeout +strong +style +support +tt +u +ul +underline +user +username +v +var +version +xch_mudtext +xch_page +xch_pane>

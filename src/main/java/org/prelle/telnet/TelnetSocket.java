@@ -177,7 +177,7 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 
 	//-----------------------------------------------------------------
 	public TelnetSocket setOptionListener(int code, TelnetOptionListener callback) {
-		logger.log(Level.WARNING, "Send events for option {0} to {1}", code, callback);
+		logger.log(Level.DEBUG, "Send events for option {0} to {1}", code, callback);
 		if (callback==null)
 			throw new NullPointerException();
 		optionListener.put(code, callback);

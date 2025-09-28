@@ -154,6 +154,7 @@ public class TelnetCharset extends TelnetSubnegotiationHandler {
 				System.arraycopy(charsetData, 0, send, 5, charsetData.length);
 				send[5+charsetData.length] = (byte)IAC;
 				send[6+charsetData.length] = (byte)SE;
+				logger.log(Level.DEBUG, "SND {0}", Arrays.toString(send));
 				out.writeCommand(send);
 				out.flush();
 			} catch (IOException e) {
