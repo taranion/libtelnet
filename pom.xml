@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.prelle</groupId>
   <artifactId>telnet</artifactId>
-  <version>0.1.3-SNAPSHOT</version>
+  <version>0.1.3</version>
   <name>TelnetLibrary</name>
   <url>https://bitbucket.org/taranion/telnetlibrary/</url>
   <description>Telnet protocol implementation in Java</description>
