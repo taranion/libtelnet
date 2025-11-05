@@ -36,6 +36,8 @@ public enum TelnetOption {
 	MSSP       ( 70, null),
 	COMPRESS   ( 85, null),
 	COMPRESS2  ( 86, null),
+	MCCP3      ( 87, null),
+	MCCPX      ( 88, null),
 	MSP        ( 90, null),
 	MXP        ( 91, new MXPOption()),
 	ZMP        ( 93, null),
