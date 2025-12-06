@@ -52,8 +52,8 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	//private static BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<Runnable>();
 	private static ExecutorService executor= Executors.newFixedThreadPool(1);
 
-	private TelnetInputStream in;
-	private TelnetOutputStream out;
+	protected TelnetInputStream in;
+	protected TelnetOutputStream out;
 	private CommunicationRole role;
 	private State state = State.CREATED;
 

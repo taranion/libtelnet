@@ -75,7 +75,7 @@ public class TelnetOutputStream extends OutputStream {
 			lastWasCR = b=='\r';
 		}
 		if (count>0) {
-			logger.log(Level.WARNING, "TODO: Encode 0xff");
+//			logger.log(Level.WARNING, "TODO: Encode 0xff");
 			byte[] corrected = new byte[data.length+count];
 			int pos=0;
 			lastWasCR = false;

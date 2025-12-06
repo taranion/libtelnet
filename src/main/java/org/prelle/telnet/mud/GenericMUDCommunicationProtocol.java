@@ -78,6 +78,7 @@ public class GenericMUDCommunicationProtocol extends TelnetSubnegotiationHandler
 	//-------------------------------------------------------------------
 	public static void send(TelnetOutputStream out, String packName, String command) throws IOException {
 		String full = (command!=null)?(packName+" "+command):packName;
+		logger.log(Level.WARNING, "GMCP: "+full);
 		out.sendSubNegotiation(CODE, full);
 	}
 
@@ -89,7 +90,7 @@ public class GenericMUDCommunicationProtocol extends TelnetSubnegotiationHandler
 	public void handleSubnegotiation(int code, int[] values, TelnetSocket origin, TelnetOutputStream out) {
 		RawGMCPMessage msg = new RawGMCPMessage(values);
 		TelnetOptionListener listenerR = origin.getOptionListener(CODE);
-		logger.log(Level.INFO,"RCV {0}", msg.getNamespace());
+		logger.log(Level.INFO,"RCV {0} with {1}", msg.getNamespace(), msg.msg);
 		GMCPReceiver listener = (GMCPReceiver)listenerR;
 		if (listener!=null) {
 			listener.telnetReceiveGMCP(msg);
