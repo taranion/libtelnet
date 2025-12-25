@@ -66,6 +66,10 @@ public class TelnetEnvironmentOption extends TelnetSubnegotiationHandler {
 		StringBuffer keyBuf = new StringBuffer();
 		StringBuffer valBuf = new StringBuffer();
 		Map<String,String> variables = origin.getOptionData(CODE);
+		if (variables==null) {
+			variables = new HashMap<String,String>();
+			origin.setOptionData(CODE, variables);
+		}
 		int mode = -1;
 		int i=1;
 		while (i<values.length) {
@@ -83,7 +87,7 @@ public class TelnetEnvironmentOption extends TelnetSubnegotiationHandler {
 			case VAR:
 				mode = dat;
 				if (keyBuf.length()>0) {
-					logger.log(Level.DEBUG, "System Variable {0}={1}", keyBuf, valBuf);
+					logger.log(Level.INFO, "System Variable {0}={1}", keyBuf, valBuf);
 					variables.put(keyBuf.toString(), valBuf.toString());
 				}
 				keyBuf = new StringBuffer();
@@ -91,7 +95,7 @@ public class TelnetEnvironmentOption extends TelnetSubnegotiationHandler {
 			case USERVAR:
 				mode = dat;
 				if (keyBuf.length()>0) {
-					logger.log(Level.TRACE, "User Variable {0} = {1}", keyBuf, valBuf);
+					logger.log(Level.INFO, "User Variable {0} = {1}", keyBuf, valBuf);
 					variables.put(keyBuf.toString(), valBuf.toString());
 				}
 				keyBuf = new StringBuffer();

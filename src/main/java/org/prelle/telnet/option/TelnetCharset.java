@@ -60,7 +60,7 @@ public class TelnetCharset extends TelnetSubnegotiationHandler {
 			for (int i=0; i<data.length; i++) {
 				data[i] = (byte)values[i+1];
 			}
-			String csName = new String(data);
+			String csName = new String(data).trim();
 			Charset charset = null;
 			if ("ISO 8859-15".equals(csName))
 				charset = StandardCharsets.ISO_8859_1;

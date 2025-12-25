@@ -60,7 +60,7 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	private List<TelnetSocketListener> socketListener = new ArrayList<>();
 	Map<Integer, ControlCode> negotiate = new LinkedHashMap<>();
 	private Map<Integer, TelnetOptionListener> optionListener = new HashMap<>();
-	private TelnetOptionCapabilities optionCaps;
+	private TelnetOptionCapabilities optionCaps = new TelnetOptionCapabilities();;
 
 	private List<Integer> active = new ArrayList<>();
 	Map<Integer, ControlCode> lastStateSent = new HashMap<>();
@@ -76,7 +76,6 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	//-----------------------------------------------------------------
 	public TelnetSocket() {
 		role = CommunicationRole.SERVER;
-		optionCaps = new TelnetOptionCapabilities();
 		optionCaps.capabilities.put(TelnetOption.ECHO    , new TelnetConfigOption());
 		optionCaps.capabilities.put(TelnetOption.EOR     , new TelnetConfigOption());
 		optionCaps.capabilities.put(TelnetOption.LINEMODE, new TelnetConfigOption());
@@ -93,7 +92,6 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 		out().logger = System.getLogger("telnet.lvl1.out."+host);
 		in().logger = System.getLogger("telnet.lvl1.in."+host);
 //		initialize();
-		optionCaps = new TelnetOptionCapabilities();
 		optionCaps.capabilities.put(TelnetOption.ECHO    , new TelnetConfigOption());
 		optionCaps.capabilities.put(TelnetOption.EOR     , new TelnetConfigOption());
 		optionCaps.capabilities.put(TelnetOption.LINEMODE, new TelnetConfigOption());
