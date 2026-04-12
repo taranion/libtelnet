@@ -147,7 +147,7 @@ public class TelnetOutputStream extends OutputStream {
 		byte[] data = new byte[2];
 		data[0] = (byte)ControlCode.IAC.code();
 		data[1] = (byte)optionCode;
-		logger.log(Level.INFO,"send: IAC {0}={1}",optionCode, ControlCode.getCodeFor(optionCode));
+//		logger.log(Level.INFO,"send: IAC {0}={1}",optionCode, ControlCode.getCodeFor(optionCode));
 		realOut.write(data);
 		realOut.flush();
 	}
