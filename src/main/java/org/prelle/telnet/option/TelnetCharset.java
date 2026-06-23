@@ -89,7 +89,7 @@ public class TelnetCharset extends TelnetSubnegotiationHandler {
 				data[i] = (byte)values[i+1];
 			}
 			String namesRaw = new String(data);
-			logger.log(Level.WARNING, "Remote party requested raw: "+namesRaw);
+			logger.log(Level.INFO, "Remote party requested raw: "+namesRaw);
 			// The first character is assumed to be the separator. It may be absent though, in which case we use some default
 			char first = namesRaw.charAt(0);
 			String sep = Character.isAlphabetic(first)?" ,;":String.valueOf(first);
@@ -98,7 +98,6 @@ public class TelnetCharset extends TelnetSubnegotiationHandler {
 			for (StringTokenizer tok=new StringTokenizer(namesRaw,sep); tok.hasMoreTokens(); ) {
 				csNames.add(tok.nextToken());
 			}
-			logger.log(Level.WARNING, "Remote party requested "+csNames);
 			List<Charset> requested = new ArrayList<>();
 			csNames.forEach(csName -> {
 				try {
@@ -113,10 +112,9 @@ public class TelnetCharset extends TelnetSubnegotiationHandler {
 						charset = Charset.forName(csName);
 					requested.add(charset);
 				} catch (Exception e) {
+					logger.log(Level.WARNING, "Unknown charset "+csName);
 				}
 			});
-			logger.log(Level.WARNING, "TODO: What do I do? "+requested);
-			System.exit(1);
 			Charset consoleCharset = origin.getOptionData(CODE);
 			if (requested.contains(consoleCharset)) {
 				byte[] append = consoleCharset.toString().getBytes(StandardCharsets.US_ASCII);
@@ -150,7 +148,7 @@ public class TelnetCharset extends TelnetSubnegotiationHandler {
 			logger.log(Level.DEBUG, "Ask remote party to send environment");
 			try {
 				origin.setOptionData(CODE, new HashMap<String,String>());
-				byte[] charsetData = "UTF-8 CP437 ASCII".getBytes(StandardCharsets.US_ASCII);
+				byte[] charsetData = " UTF-8 CP437 ASCII".getBytes(StandardCharsets.US_ASCII);
 				byte[] send = new byte[charsetData.length+7];
 				send[0] = (byte)IAC;
 				send[1] = (byte)SB;
