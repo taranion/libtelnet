@@ -89,8 +89,13 @@ public class TelnetCharset extends TelnetSubnegotiationHandler {
 				data[i] = (byte)values[i+1];
 			}
 			String namesRaw = new String(data);
+			logger.log(Level.WARNING, "Remote party requested raw: "+namesRaw);
+			// The first character is assumed to be the separator. It may be absent though, in which case we use some default
+			char first = namesRaw.charAt(0);
+			String sep = Character.isAlphabetic(first)?" ,;":String.valueOf(first);
+			// Now tokenize
 			List<String> csNames = new ArrayList<>();
-			for (StringTokenizer tok=new StringTokenizer(namesRaw); tok.hasMoreTokens(); ) {
+			for (StringTokenizer tok=new StringTokenizer(namesRaw,sep); tok.hasMoreTokens(); ) {
 				csNames.add(tok.nextToken());
 			}
 			logger.log(Level.WARNING, "Remote party requested "+csNames);
@@ -111,6 +116,7 @@ public class TelnetCharset extends TelnetSubnegotiationHandler {
 				}
 			});
 			logger.log(Level.WARNING, "TODO: What do I do? "+requested);
+			System.exit(1);
 			Charset consoleCharset = origin.getOptionData(CODE);
 			if (requested.contains(consoleCharset)) {
 				byte[] append = consoleCharset.toString().getBytes(StandardCharsets.US_ASCII);
