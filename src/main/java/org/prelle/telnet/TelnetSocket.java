@@ -486,12 +486,19 @@ class NegotiateOptionsTask implements Runnable, TelnetConstants {
 	private TelnetSocket socket;
 	private TelnetOutputStream out;
 	private TelnetOptionCapabilities capabilities;
+	
+	private boolean taskFailed = false;
 
 	//-------------------------------------------------------------------
 	public NegotiateOptionsTask(TelnetSocket socket) throws IOException {
 		this.socket = socket;
 		this.out    = socket.out();
 		capabilities= socket.getNegotiationResult();
+	}
+
+	//-------------------------------------------------------------------
+	public boolean isTaskFailed() {
+		return taskFailed;
 	}
 
 	//-------------------------------------------------------------------
@@ -525,8 +532,13 @@ class NegotiateOptionsTask implements Runnable, TelnetConstants {
 			}
 			Duration dura = Duration.between(before, Instant.now());
 			logger.log(Level.DEBUG, "TELNET option negotiation required {0} ms\n", dura.toMillis());
+		} catch (SocketException e) {
+			logger.log(Level.ERROR, "Connection to client lost: "+e);
+			socket.setState(State.DISCONNECTED);
+			taskFailed = true;
 		} catch (Exception e) {
 			logger.log(Level.ERROR, "Error in Telnet capability exchange",e);
+			taskFailed = true;
 		} finally {
 			logger.log(Level.WARNING, "LEAVE: Detect supported TELNET options\n");
 		}
