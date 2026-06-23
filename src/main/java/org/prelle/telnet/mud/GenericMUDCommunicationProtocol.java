@@ -90,15 +90,14 @@ public class GenericMUDCommunicationProtocol extends TelnetSubnegotiationHandler
 	public void handleSubnegotiation(int code, int[] values, TelnetSocket origin, TelnetOutputStream out) {
 		RawGMCPMessage msg = new RawGMCPMessage(values);
 		TelnetOptionListener listenerR = origin.getOptionListener(CODE);
-		logger.log(Level.INFO,"RCV {0} with {1}", msg.getNamespace(), msg.msg);
+		if (!msg.getNamespace().toLowerCase().contains("core.ping"))
+			logger.log(Level.INFO,"RCV {0} with {1}", msg.getNamespace(), msg.msg);
 //		System.err.println("GenericMUDCommunicationProtocol: RCV: "+msg);
 		GMCPReceiver listener = (GMCPReceiver)listenerR;
 		if (listener!=null) {
 			listener.telnetReceiveGMCP(msg);
 		} else
 			logger.log(Level.WARNING, "No listener for GMCP - use session.getSocket().setOptionListener(TelnetOption.GMCP, ...)");
-
-		//	nvt.fireOptionDataChanged(this, msg);
 	}
 
 }
