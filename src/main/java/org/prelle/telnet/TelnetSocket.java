@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -155,6 +156,7 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 
 	//-----------------------------------------------------------------
 	public TelnetSocket addSocketListener(TelnetSocketListener optList) {
+		Objects.requireNonNull(optList, "Socket listener must not be null");
 		if (!socketListener.contains(optList))
 			socketListener.add(optList);
 		return this;

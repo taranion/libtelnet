@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.prelle.telnet.CommunicationRole;
+import org.prelle.telnet.TelnetInputStreamNG;
 import org.prelle.telnet.TelnetOption;
 import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetOutputStream;
@@ -70,6 +71,15 @@ public class TerminalType extends TelnetSubnegotiationHandler {
 
 	//-------------------------------------------------------------------
 	/**
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getOptionCode()
+	 */
+	@Override
+	public int getOptionCode() {
+		return 24;
+	}
+
+	//-------------------------------------------------------------------
+	/**
 	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#initializeAs(org.prelle.telnet.TelnetOption, org.prelle.telnet.CommunicationRole, org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
 	public boolean initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {
@@ -85,6 +95,55 @@ public class TerminalType extends TelnetSubnegotiationHandler {
 			logger.log(Level.ERROR, "Failed requesting terminal type",e);
 		}
 		return false;
+	}
+
+	//-----------------------------------------------------------------
+	public void handleSubnegotiation(int code, int[] values, TelnetInputStreamNG origin, TelnetOutputStream out) {
+		int operation = values[0];
+		if (operation==SEND) {
+			logger.log(Level.INFO, "Remote party requests terminal type information: "+Arrays.toString(answers));
+			try {
+				sendNextFromList(out);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		} else {
+//			logger.log(Level.DEBUG, "Remote party provides terminal type information");
+			byte[] data = new byte[values.length-1];
+			for (int i=1; i<values.length; i++) data[i-1]=(byte) values[i];
+			List<String> received = origin.getProtocol().getOptionData(getOptionCode());
+			if (received==null) {
+				received = new ArrayList<>();
+				origin.getProtocol().setOptionData(getOptionCode(), received);
+			}
+			String value = new String(data, StandardCharsets.US_ASCII);
+				logger.log(Level.INFO, "TERMINAL_TYPE: Received {0}", value);
+				if (!received.contains(value) && !"UNKNOWN".equals(value)) {
+					received.add(value);
+					try {
+						requestNext(out);
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				} else {
+					logger.log(Level.INFO, "Received {0}", received);
+					origin.getProtocol().subnegotiationEndedFor(code,received);
+
+					TerminalTypeListener listener = origin.getProtocol().getOptionListener(code);
+					logger.log(Level.INFO, "Listener {0}", listener);
+					if (listener!=null) {
+						if (received.size()==3) {
+							listener.telnetTerminalTypesLearned(new MUDTerminalTypeData(received));
+						} else {
+							listener.telnetTerminalTypesLearned(new TerminalTypeData(received));
+						}
+					} else {
+						logger.log(Level.TRACE, "No TerminalTypeListener");
+					}
+				}
+		}
 	}
 
 	//-------------------------------------------------------------------

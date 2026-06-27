@@ -47,6 +47,15 @@ public class MXPOption extends TelnetSubnegotiationHandler {
 
 	//-------------------------------------------------------------------
 	/**
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getOptionCode()
+	 */
+	@Override
+	public int getOptionCode() {
+		return 91;
+	}
+
+	//-------------------------------------------------------------------
+	/**
 	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#initializeAs(org.prelle.telnet.TelnetOption, org.prelle.telnet.CommunicationRole, org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
 	public boolean initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {

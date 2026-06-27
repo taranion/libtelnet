@@ -2,7 +2,6 @@ package org.prelle.telnet;
 
 import org.prelle.telnet.mud.GenericMUDCommunicationProtocol;
 import org.prelle.telnet.mud.MUDTerminalTypeStandard;
-import org.prelle.telnet.mud.MUDTilemapProtocol;
 import org.prelle.telnet.option.LineMode;
 import org.prelle.telnet.option.MXPOption;
 import org.prelle.telnet.option.StatusOption;
@@ -29,7 +28,7 @@ public enum TelnetOption {
 	TERMINAL_SPEED(32, null),
 	LINEMODE   (34, new LineMode()),
 	NEW_ENVIRON(39, new TelnetEnvironmentOption()),
-	CHARSET    (42, new TelnetCharset()),
+	CHARSET    (42, new TelnetCharset(null)),
 	STARTTLS   (46, null),
 
 	MSDP       ( 69, null),
@@ -41,7 +40,6 @@ public enum TelnetOption {
 	MSP        ( 90, null),
 	MXP        ( 91, new MXPOption()),
 	ZMP        ( 93, null),
-	MTP        (100, new MUDTilemapProtocol()),
 	MUSHCLIENT (102, null),
 	ATCP       (200, null),
 	GMCP       (201, new GenericMUDCommunicationProtocol()),

@@ -20,6 +20,15 @@ public class StatusOption extends TelnetSubnegotiationHandler {
 
 	//-------------------------------------------------------------------
 	/**
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getOptionCode()
+	 */
+	@Override
+	public int getOptionCode() {
+		return 5;
+	}
+
+	//-------------------------------------------------------------------
+	/**
 	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
 	@Override

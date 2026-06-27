@@ -44,6 +44,15 @@ public class TelnetEnvironmentOption extends TelnetSubnegotiationHandler {
 	private final static int	ESC     = 2;
 	private final static int	USERVAR = 3;
 
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getOptionCode()
+	 */
+	@Override
+	public int getOptionCode() {
+		return CODE;
+	}
+
 	//-----------------------------------------------------------------
 	/**
 	 * @see org.prelle.telnet.TelnetOptionHandler#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)

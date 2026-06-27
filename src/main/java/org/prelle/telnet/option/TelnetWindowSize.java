@@ -29,6 +29,15 @@ public class TelnetWindowSize extends TelnetSubnegotiationHandler {
 		public void telnetWindowSizeChanged(int width, int height);
 	}
 
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getOptionCode()
+	 */
+	@Override
+	public int getOptionCode() {
+		return CODE;
+	}
+
 	//-----------------------------------------------------------------
 	/**
 	 * Called after the use of a option has been confirmed

@@ -45,6 +45,15 @@ public class AardwolfMushclientProtocol extends TelnetSubnegotiationHandler {
 
 	//-------------------------------------------------------------------
 	/**
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getOptionCode()
+	 */
+	@Override
+	public int getOptionCode() {
+		return CODE;
+	}
+
+	//-------------------------------------------------------------------
+	/**
 	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
 	@Override

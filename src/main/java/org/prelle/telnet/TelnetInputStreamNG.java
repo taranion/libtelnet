@@ -17,11 +17,10 @@ import org.prelle.telnet.TelnetConstants.ControlCode;
  * @author prelle
  *
  */
-public class TelnetInputStream extends FilterInputStream {
+public class TelnetInputStreamNG extends FilterInputStream {
 
 	Logger logger = System.getLogger("telnet.lvl1.in");
 
-	private TelnetSocket listener;
 	private boolean commandMode;
 	private boolean dataIsSubnegotiation;
 
@@ -37,16 +36,19 @@ public class TelnetInputStream extends FilterInputStream {
 	private List<Integer> subNegotiationBuffer = new ArrayList<>();
 	private int subNegotiationFor;
 	private boolean characterMode;
+	
+	private TelnetOutputStream reverseStream;
+	private TelnetProtocol protocol;
 
 	//-----------------------------------------------------------------
 	/**
 	 */
-	public TelnetInputStream(TelnetSocket list, InputStream in) {
+	public TelnetInputStreamNG(InputStream in, TelnetProtocol config) {
 		super(in);
-		if (in instanceof TelnetInputStream) {
+		this.protocol = config;
+		if (in instanceof TelnetInputStreamNG) {
 			throw new RuntimeException("Cannot wrap a TelnetInputStream");
 		}
-		this.listener = list;
 	}
 
 	//-----------------------------------------------------------------
@@ -77,7 +79,7 @@ public class TelnetInputStream extends FilterInputStream {
 	private int tracingRead() throws IOException {
 		int data = in.read();
 		String name = (data>=240)?ControlCode.getCodeFor(data).name():"";
-		logger.log(Level.WARNING, "RCV {0} {1} ", data, name);
+		logger.log(Level.TRACE, "RCV {0} {1} ", data, name);
 		return data;
 	}
 
@@ -112,7 +114,7 @@ public class TelnetInputStream extends FilterInputStream {
 					return -1;
 				}
 				logger.log(Level.INFO, "recv: {0} {1}", code, cmdVal);
-				listener.processCommand(new TelnetCommand(code, cmdVal));
+				protocol.processCommand(this, new TelnetCommand(code, cmdVal));
 				break;
 			case SB:
 				// Subnegotiation begin
@@ -137,7 +139,7 @@ public class TelnetInputStream extends FilterInputStream {
 				int[] values = new int[subNegotiationBuffer.size()];
 				int i=0;
 				for (Integer v : subNegotiationBuffer) values[i++]=v;
-				listener.processSubnegotiation(subNegotiationFor,values);
+				protocol.processSubnegotiation(this, subNegotiationFor,values);
 				subNegotiationBuffer.clear();
 				dataIsSubnegotiation = false;
 				break;
@@ -146,15 +148,13 @@ public class TelnetInputStream extends FilterInputStream {
 				if (sendGoAheadAsANSISepator) {
 					commandMode = false;;
 					logger.log(Level.DEBUG, "GA found - convert To ANSI RS (0x1E)");
-					logger.log(Level.DEBUG, "call listener "+listener);
-					listener.processCommand(new TelnetCommand(code));
+					protocol.processCommand(this, new TelnetCommand(code));
 					return 0x1E; // Record separator
 				} 
 			default:
 				commandMode = false;;
 				logger.log(Level.ERROR, "Leaving command mode");
-				logger.log(Level.DEBUG, "call listener "+listener);
-				listener.processCommand(new TelnetCommand(code));
+				protocol.processCommand(this, new TelnetCommand(code));
 			}
 		}
 
@@ -225,13 +225,13 @@ public class TelnetInputStream extends FilterInputStream {
 
 	//-----------------------------------------------------------------
 	private Integer readInCommandMode() throws IOException {
-		logger.log(Level.ERROR, "readInCommandMode");
+		logger.log(Level.DEBUG, "readInCommandMode");
 		if (!commandMode) {
 			throw new RuntimeException("Not in command mode");
 		}
 		
 		int commandRaw = tracingRead();
-		logger.log(Level.ERROR, "read command {0}", commandRaw);
+		logger.log(Level.DEBUG, "read command {0}", commandRaw);
 		if (commandRaw==-1)
 			return -1;
 		ControlCode code = ControlCode.getCodeFor(commandRaw);
@@ -253,8 +253,8 @@ public class TelnetInputStream extends FilterInputStream {
 				logger.log(Level.WARNING, "Connection reset");
 				return -1;
 			}
-			logger.log(Level.INFO, "recv: {0} {1}", code, cmdVal);
-			listener.processCommand(new TelnetCommand(code, cmdVal));
+			logger.log(Level.DEBUG, "recv: {0} {1}", code, cmdVal);
+			protocol.processCommand(this, new TelnetCommand(code, cmdVal));
 			break;
 		case SB:
 			// Subnegotiation begin
@@ -279,7 +279,7 @@ public class TelnetInputStream extends FilterInputStream {
 			int[] values = new int[subNegotiationBuffer.size()];
 			int i=0;
 			for (Integer v : subNegotiationBuffer) values[i++]=v;
-			listener.processSubnegotiation(subNegotiationFor,values);
+			protocol.processSubnegotiation(this, subNegotiationFor,values);
 			subNegotiationBuffer.clear();
 			dataIsSubnegotiation = false;
 			break;
@@ -288,15 +288,13 @@ public class TelnetInputStream extends FilterInputStream {
 			if (sendGoAheadAsANSISepator) {
 				commandMode = false;;
 				logger.log(Level.DEBUG, "GA found - convert To ANSI RS (0x1E)");
-				logger.log(Level.DEBUG, "call listener "+listener);
-				listener.processCommand(new TelnetCommand(code));
+				protocol.processCommand(this, new TelnetCommand(code));
 				return 0x1E; // Record separator
 			} 
 		default:
 			commandMode = false;;
 			logger.log(Level.ERROR, "Leaving command mode");
-			logger.log(Level.DEBUG, "call listener "+listener);
-			listener.processCommand(new TelnetCommand(code));
+			protocol.processCommand(this, new TelnetCommand(code));
 		}
 
 		return readUntilCommandMode();
@@ -396,7 +394,7 @@ public class TelnetInputStream extends FilterInputStream {
 					dataIsSubnegotiation = false;
 					int[] values = new int[subNegotiationBuffer.size()];
 					int i=0; for (Integer  t: subNegotiationBuffer) values[i++]=t;
-					listener.processSubnegotiation(subNegotiationFor, values);
+					protocol.processSubnegotiation(this, subNegotiationFor, values);
 					return data;
 				} else if (data<255) {
 					logger.log(Level.WARNING, "Received a control code !=SE {0} while in sub-negotiation",data);
@@ -603,6 +601,30 @@ public class TelnetInputStream extends FilterInputStream {
 
 	public void setSendGoAheadAsANSISepator(boolean sendGoAheadAsANSISepator) {
 		this.sendGoAheadAsANSISepator = sendGoAheadAsANSISepator;
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @return the reverseStream
+	 */
+	public TelnetOutputStream getReverseStream() {
+		return reverseStream;
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @param reverseStream the reverseStream to set
+	 */
+	public void setReverseStream(TelnetOutputStream reverseStream) {
+		this.reverseStream = reverseStream;
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @return the protocol
+	 */
+	public TelnetProtocol getProtocol() {
+		return protocol;
 	}
 
 }

@@ -65,6 +65,15 @@ public class GenericMUDCommunicationProtocol extends TelnetSubnegotiationHandler
 		public void telnetReceiveGMCP(RawGMCPMessage message);
 	}
 
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getOptionCode()
+	 */
+	@Override
+	public int getOptionCode() {
+		return CODE;
+	}
+
 	//-----------------------------------------------------------------
 	/**
 	 * Called after the use of a option has been confirmed

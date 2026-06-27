@@ -192,6 +192,15 @@ public class LineMode extends TelnetSubnegotiationHandler {
 //    	super(TelnetOption.LINEMODE.getCode(), "LINEMODE");
     }
 
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getOptionCode()
+	 */
+	@Override
+	public int getOptionCode() {
+		return 34;
+	}
+
 	//-----------------------------------------------------------------
 	/**
 	 * Called after the use of a option has been confirmed

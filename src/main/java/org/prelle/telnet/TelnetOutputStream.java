@@ -9,6 +9,7 @@ import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
+import java.util.Objects;
 
 import org.prelle.telnet.TelnetConstants.ControlCode;
 
@@ -28,6 +29,7 @@ public class TelnetOutputStream extends OutputStream {
 	/**
 	 */
 	public TelnetOutputStream(OutputStream out) {
+		Objects.requireNonNull(out, "OutputStream cannot be null");
 		realOut = out;
 	}
 	
@@ -115,7 +117,7 @@ public class TelnetOutputStream extends OutputStream {
 		data[0] = (byte)ControlCode.IAC.code();
 		data[1] = (byte)ControlCode.WILL.code();
 		data[2] = (byte)optionCode;
-		logger.log(Level.INFO,"send: IAC WILL {0}={1}",optionCode, TelnetOption.valueOf(optionCode));
+		logger.log(Level.ERROR,"send: IAC WILL {0}={1}",optionCode, TelnetOption.valueOf(optionCode));
 		realOut.write(data);
 		realOut.flush();
 	}
