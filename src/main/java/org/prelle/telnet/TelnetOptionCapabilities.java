@@ -19,7 +19,7 @@ public class TelnetOptionCapabilities {
 	private Map<Integer, Object> configData = new LinkedHashMap<>();
 	List<Integer> capExchangeAwaitResponses = new ArrayList<>();
 	List<Integer> capSubNegAwaitResponses = new ArrayList<>();
-	Map<TelnetOption, TelnetConfigOption> capabilities;
+	Map<WellKnownTelnetOptions, TelnetConfigOption> capabilities;
 
 	//-------------------------------------------------------------------
 	/**
@@ -50,12 +50,12 @@ public class TelnetOptionCapabilities {
 	}
 
 	//-------------------------------------------------------------------
-	public TelnetConfigOption getConfigOption(TelnetOption key) {
+	public TelnetConfigOption getConfigOption(WellKnownTelnetOptions key) {
 		return capabilities.get(key);
 	}
 
 	//-------------------------------------------------------------------
-	public Set<Entry<TelnetOption, TelnetConfigOption>> getCapabilities() {
+	public Set<Entry<WellKnownTelnetOptions, TelnetConfigOption>> getCapabilities() {
 		return capabilities.entrySet();
 	}
 

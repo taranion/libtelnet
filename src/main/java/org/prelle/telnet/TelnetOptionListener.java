@@ -5,6 +5,7 @@ import java.lang.System.Logger.Level;
 /**
  *
  */
+@Deprecated
 public interface TelnetOptionListener {
 
 	public default void remotePartySent(TelnetSocket socket, int code, TelnetCommand command) {

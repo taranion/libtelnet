@@ -89,7 +89,6 @@ public class TelnetInputStreamNG extends FilterInputStream {
 	 */
 	@Override
 	public int read() throws IOException {
-		System.err.println("TelnetInputStream.read() called");
 		if (commandMode) {
 			int commandRaw = tracingRead();
 			if (commandRaw==-1)
@@ -113,7 +112,8 @@ public class TelnetInputStreamNG extends FilterInputStream {
 					logger.log(Level.WARNING, "Connection reset");
 					return -1;
 				}
-				logger.log(Level.INFO, "recv: {0} {1}", code, cmdVal);
+				String name = protocol.getExtensionName(cmdVal);
+				logger.log(Level.INFO, "recv: {0} {1}", code, name);
 				protocol.processCommand(this, new TelnetCommand(code, cmdVal));
 				break;
 			case SB:
@@ -125,7 +125,7 @@ public class TelnetInputStreamNG extends FilterInputStream {
 					logger.log(Level.TRACE, "Leaving command mode");
 					return -1;
 				}
-				TelnetOption option = TelnetOption.valueOf(subNegotiationFor);
+				WellKnownTelnetOptions option = WellKnownTelnetOptions.valueOf(subNegotiationFor);
 				logger.log(Level.DEBUG, "Subnegotiation begins for {0}/{1}", subNegotiationFor, option);
 				dataIsSubnegotiation = true;
 				commandMode = false;;
@@ -134,7 +134,7 @@ public class TelnetInputStreamNG extends FilterInputStream {
 				break;
 			case SE:
 				// Subnegotiation end
-				option = TelnetOption.valueOf(subNegotiationFor);
+				option = WellKnownTelnetOptions.valueOf(subNegotiationFor);
 				logger.log(Level.DEBUG, "Subnegotiation ends for {0}/{1}: {2}",subNegotiationFor, option,subNegotiationBuffer);
 				int[] values = new int[subNegotiationBuffer.size()];
 				int i=0;
@@ -164,28 +164,25 @@ public class TelnetInputStreamNG extends FilterInputStream {
 
 		// Loop until next data is received
 		commandMode = false;;
-//		do {
-			int data = -1;
-			while (true) {
-				data = in.read();
-				logger.log(Level.ERROR, "RCV DATA {0} ({1})", data, (char)data);
-				if (data==-1)
-					return data;
-				// If not in binary mode, codes >128 can be ignored
-				if (data>=128 && !binaryMode && data<255) {
-					logger.log(Level.WARNING, "Ignore character code {0} / {2} / {1} because not in binary mode",data, (char)data, Integer.toHexString(data));
-				}
-				else
-					break;
+		int data = -1;
+		data = in.read();
+		
+		switch (data) {
+		case -1:
+			// Lost connection
+			logger.log(Level.INFO, "Lost stream");
+			return -1;
+		case 255:
+			// Enter command mode
+			logger.log(Level.DEBUG, "RCV IAC - Entering command mode");
+			commandMode = true;
+			return read();
+		default:
+			if (data>=128 && !binaryMode && data<255) {
+				logger.log(Level.WARNING, "Ignore character code {0} / {2} / {1} because not in binary mode",data, (char)data, Integer.toHexString(data));
 			}
-
-			if (data==255) {
-				logger.log(Level.ERROR, "Entering command mode");
-				commandMode = true;
-				return read();
-			}
-//		} while (true);
 			return data;
+		}
 	}
 
 	//-----------------------------------------------------------------
@@ -265,7 +262,7 @@ public class TelnetInputStreamNG extends FilterInputStream {
 				logger.log(Level.TRACE, "Leaving command mode");
 				return -1;
 			}
-			TelnetOption option = TelnetOption.valueOf(subNegotiationFor);
+			WellKnownTelnetOptions option = WellKnownTelnetOptions.valueOf(subNegotiationFor);
 			logger.log(Level.DEBUG, "Subnegotiation begins for {0}/{1}", subNegotiationFor, option);
 			dataIsSubnegotiation = true;
 			commandMode = false;;
@@ -274,7 +271,7 @@ public class TelnetInputStreamNG extends FilterInputStream {
 			break;
 		case SE:
 			// Subnegotiation end
-			option = TelnetOption.valueOf(subNegotiationFor);
+			option = WellKnownTelnetOptions.valueOf(subNegotiationFor);
 			logger.log(Level.DEBUG, "Subnegotiation ends for {0}/{1}: {2}",subNegotiationFor, option,subNegotiationBuffer);
 			int[] values = new int[subNegotiationBuffer.size()];
 			int i=0;

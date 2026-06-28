@@ -8,11 +8,9 @@ import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 
 import org.prelle.telnet.CommunicationRole;
-import org.prelle.telnet.TelnetOption;
 import org.prelle.telnet.TelnetOptionListener;
-import org.prelle.telnet.TelnetOptionRegistry;
 import org.prelle.telnet.TelnetOutputStream;
-import org.prelle.telnet.TelnetSocket;
+import org.prelle.telnet.TelnetProtocol;
 import org.prelle.telnet.TelnetSubnegotiationHandler;
 
 /**
@@ -23,9 +21,9 @@ import org.prelle.telnet.TelnetSubnegotiationHandler;
  * @author prelle
  *
  */
-public class GenericMUDCommunicationProtocol extends TelnetSubnegotiationHandler {
+public class GenericMUDCommunicationProtocol implements TelnetSubnegotiationHandler {
 
-	protected final static Logger logger = System.getLogger("gmcp.raw");
+	protected final static Logger logger = System.getLogger("telnet.gmcp");
 
 	public final static int CODE = 201;
 
@@ -74,14 +72,19 @@ public class GenericMUDCommunicationProtocol extends TelnetSubnegotiationHandler
 		return CODE;
 	}
 
-	//-----------------------------------------------------------------
+	//-------------------------------------------------------------------
+	@Override
+	public String getName() {
+		return "GMCP";
+	}
+
+	//-------------------------------------------------------------------
 	/**
-	 * Called after the use of a option has been confirmed
-	 * @return TRUE when answers to a subnegotiation are expected
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#startCommunicationAs(org.prelle.telnet.CommunicationRole)
 	 */
-	public boolean initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {
-		logger.log(Level.INFO, "No need for initialization for {0} / as {2}",option.name(), getClass().getName(), role);
-		return false;
+	@Override
+	public boolean startCommunicationAs(CommunicationRole role) {
+		return true;
 	}
 
 	//-------------------------------------------------------------------
@@ -96,9 +99,9 @@ public class GenericMUDCommunicationProtocol extends TelnetSubnegotiationHandler
 	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
 	@Override
-	public void handleSubnegotiation(int code, int[] values, TelnetSocket origin, TelnetOutputStream out) {
+	public void handleSubnegotiation(int[] values, TelnetProtocol stack) {
 		RawGMCPMessage msg = new RawGMCPMessage(values);
-		TelnetOptionListener listenerR = origin.getOptionListener(CODE);
+		TelnetOptionListener listenerR = stack.getOptionListener(CODE);
 		if (!msg.getNamespace().toLowerCase().contains("core.ping"))
 			logger.log(Level.INFO,"RCV {0} with {1}", msg.getNamespace(), msg.msg);
 //		System.err.println("GenericMUDCommunicationProtocol: RCV: "+msg);
@@ -107,6 +110,12 @@ public class GenericMUDCommunicationProtocol extends TelnetSubnegotiationHandler
 			listener.telnetReceiveGMCP(msg);
 		} else
 			logger.log(Level.WARNING, "No listener for GMCP - use session.getSocket().setOptionListener(TelnetOption.GMCP, ...)");
+	}
+
+	@Override
+	public boolean negotiateDetails(TelnetProtocol stack) {
+		// TODO Auto-generated method stub
+		return true;
 	}
 
 }

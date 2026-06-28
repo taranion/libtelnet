@@ -8,8 +8,8 @@ import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map.Entry;
 
 import org.prelle.telnet.TelnetConstants.ControlCode;
@@ -22,8 +22,6 @@ public class TelnetServerSocket extends ServerSocket {
 
     private final static Logger logger = System.getLogger("telnet.lvl3");
 
-	private Map<Integer, ControlCode> negotiate = new LinkedHashMap<>();
-
 	//-----------------------------------------------------------------
 	public TelnetServerSocket(int port) throws IOException {
 		super(port);
@@ -32,14 +30,6 @@ public class TelnetServerSocket extends ServerSocket {
 	//-----------------------------------------------------------------
 	public TelnetServerSocket(int port, int backlog) throws IOException {
 		super(port, backlog);
-	}
-
-	//-----------------------------------------------------------------
-	public TelnetServerSocket support(int code, ControlCode willOrDo) {
-//		if (willOrDo!=ControlCode.WILL && willOrDo!=ControlCode.DO)
-//			throw new IllegalArgumentException("Only WILL or DO expected here");
-		negotiate.put(code, willOrDo);
-		return this;
 	}
 
 //	//-----------------------------------------------------------------
@@ -65,16 +55,13 @@ public class TelnetServerSocket extends ServerSocket {
 		logger.log(Level.DEBUG,"Waiting for new connections");
 		implAccept(ret);
 //		ret.setTcpNoDelay(true);
-		for (Entry<Integer, ControlCode> entry : negotiate.entrySet()) {
-			ret.support(entry.getKey(), entry.getValue());
-		}
 
 		/*
 		 * Send all by default enabled variables
 		 */
-		logger.log(Level.DEBUG,"Incoming connection from {0},Port {1} - now initialize options", ret.getInetAddress().getHostAddress(), ret.getPort());
-		ret.out().logger = System.getLogger("telnet.lvl1.out."+ret.getInetAddress().getHostAddress());
+		logger.log(Level.DEBUG,"Incoming connection from {0},Port {1}", ret.getInetAddress().getHostAddress(), ret.getPort());
 		ret.in().logger = System.getLogger("telnet.lvl1.in."+ret.getInetAddress().getHostAddress());
+		ret.out().logger = System.getLogger("telnet.lvl1.out."+ret.getInetAddress().getHostAddress());
 
 		logger.log(Level.DEBUG,"LEAVE accept()");
 		return ret;

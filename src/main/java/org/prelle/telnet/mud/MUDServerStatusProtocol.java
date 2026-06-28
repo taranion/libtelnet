@@ -11,10 +11,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Supplier;
 
-import org.prelle.telnet.CommunicationRole;
-import org.prelle.telnet.TelnetOption;
-import org.prelle.telnet.TelnetOutputStream;
-import org.prelle.telnet.TelnetSocket;
+import org.prelle.telnet.TelnetProtocol;
 import org.prelle.telnet.TelnetSubnegotiationHandler;
 
 /**
@@ -22,7 +19,7 @@ import org.prelle.telnet.TelnetSubnegotiationHandler;
  * @author prelle
  *
  */
-public class MUDServerStatusProtocol extends TelnetSubnegotiationHandler {
+public class MUDServerStatusProtocol implements TelnetSubnegotiationHandler {
 
 	protected final static Logger logger = System.getLogger("telnet.option.mssp");
 
@@ -46,13 +43,16 @@ public class MUDServerStatusProtocol extends TelnetSubnegotiationHandler {
 	public int getOptionCode() {
 		return CODE;
 	}
+	@Override
+	public String getName() { return "MSSP";}
+
 
 	//-------------------------------------------------------------------
 	/**
 	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
 	@Override
-	public void handleSubnegotiation(int code, int[] values, TelnetSocket origin, TelnetOutputStream out) {
+	public void handleSubnegotiation(int[] values, TelnetProtocol stack) {
 		logger.log(Level.ERROR, "Subnegotiate for MSSP: "+Arrays.toString(values));
 		int operation = values[0];
 		
@@ -64,25 +64,20 @@ public class MUDServerStatusProtocol extends TelnetSubnegotiationHandler {
 	 * Called after the use of a option has been confirmed
 	 * @return TRUE when answers to a subnegotiation are expected
 	 */
-	public boolean initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {
-		logger.log(Level.ERROR, "TODO: initializeAs "+role);
-		switch (role) {
-		case SERVER:
-			Map<String,String> data = dataSupplier.get();
-			StringBuilder buf = new StringBuilder();
-			for (Entry<String,String> entry : data.entrySet()) {
-				buf.append((char)MSSP_VAR);
-				buf.append(entry.getKey());
-				buf.append((char)MSSP_VAL);
-				buf.append(entry.getValue());
-			}
-			System.out.println("Send "+buf);
-			try {
-				out.sendSubNegotiation(CODE, buf.toString());
-			} catch (IOException e) {
-				logger.log(Level.WARNING, "Failed sending telnet option",e);
-			}
-			break;
+	public boolean negotiateDetails(TelnetProtocol stack) {
+		Map<String,String> data = dataSupplier.get();
+		StringBuilder buf = new StringBuilder();
+		for (Entry<String,String> entry : data.entrySet()) {
+			buf.append((char)MSSP_VAR);
+			buf.append(entry.getKey());
+			buf.append((char)MSSP_VAL);
+			buf.append(entry.getValue());
+		}
+		System.out.println("Send "+buf);
+		try {
+			stack.getOutputStream().sendSubNegotiation(CODE, buf.toString());
+		} catch (IOException e) {
+			logger.log(Level.WARNING, "Failed sending telnet option",e);
 		}
 		return false;
 	}

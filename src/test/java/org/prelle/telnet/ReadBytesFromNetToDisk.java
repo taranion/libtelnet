@@ -21,7 +21,7 @@ public class ReadBytesFromNetToDisk {
 	 * @throws InterruptedException 
 	 */
 	public static void main(String[] args) throws UnknownHostException, IOException, InterruptedException {
-		TelnetSocket sock = new TelnetSocket("mud.paramud.com", 23);
+		Socket sock = new Socket("mud.paramud.com", 23);
 		Path out = Paths.get("from_socket.dat");
 		Files.deleteIfExists(out);
 		Thread.sleep(100);

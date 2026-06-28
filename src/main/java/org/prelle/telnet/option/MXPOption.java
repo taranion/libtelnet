@@ -7,24 +7,20 @@ import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import org.prelle.telnet.CommunicationRole;
-import org.prelle.telnet.TelnetOption;
 import org.prelle.telnet.TelnetOptionListener;
-import org.prelle.telnet.TelnetOutputStream;
-import org.prelle.telnet.TelnetSocket;
+import org.prelle.telnet.TelnetProtocol;
 import org.prelle.telnet.TelnetSubnegotiationHandler;
-import org.prelle.telnet.mud.MUDTerminalTypeData;
 
 /**
  *
  * @author prelle
  *
  */
-public class MXPOption extends TelnetSubnegotiationHandler {
+public class MXPOption implements TelnetSubnegotiationHandler {
 
 	protected final static Logger logger = System.getLogger("telnet.option.mxp");
 	
@@ -53,34 +49,42 @@ public class MXPOption extends TelnetSubnegotiationHandler {
 	public int getOptionCode() {
 		return 91;
 	}
-
+	
 	//-------------------------------------------------------------------
+	@Override
+	public String getName() { return "MXP"; }
+	
+	//-----------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#initializeAs(org.prelle.telnet.TelnetOption, org.prelle.telnet.CommunicationRole, org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
+	 * Called from TelnetProtocol to learn if this handler will initiate communication or wait for the other side to do so.
 	 */
-	public boolean initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {
-		System.err.println("MXPOption.initializeAs "+role);
+	public boolean startCommunicationAs(CommunicationRole role) {
+		return role==CommunicationRole.SERVER;
+	}
+
+	//-----------------------------------------------------------------
+	/**
+	 * Called after the use of a option has been confirmed
+	 * @return TRUE when answers to a subnegotiation are expected
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#negotiateDetails(org.prelle.telnet.TelnetProtocol)
+	 */
+	public boolean negotiateDetails(TelnetProtocol stack) {
+		logger.log(Level.ERROR, "Ask for support");
+		String support = "\u001B[6z<SUPPORT>\u001B[7z";
 		try {
-			if (role==CommunicationRole.SERVER) {
-				logger.log(Level.ERROR, "Ask for support");
-				String support = "\u001B[6z<SUPPORT>\u001B[7z";
-				out.write(support.getBytes(StandardCharsets.US_ASCII));
-				return true;
-			}
+			stack.getOutputStream().write(support.getBytes(StandardCharsets.US_ASCII));
+			return true;
 		} catch (IOException e) {
-			logger.log(Level.ERROR, "Failed requesting terminal type",e);
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 		return false;
 	}
 
 	//-------------------------------------------------------------------
 	@Override
-	public void handleSubnegotiation(int code, int[] values, TelnetSocket origin, TelnetOutputStream out) {
+	public void handleSubnegotiation(int[] values, TelnetProtocol stack) {
 		logger.log(Level.WARNING, "MXPOption.handleSubnegotiation: "+Arrays.toString(values));
-	}
-
-	public void processMXP(String input) {
-		logger.log(Level.ERROR, "MXP:"+input);
 	}
 
 }

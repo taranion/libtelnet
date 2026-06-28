@@ -4,6 +4,7 @@
 package org.prelle.telnet.option;
 
 import java.io.IOException;
+import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -11,17 +12,19 @@ import java.util.List;
 
 import org.prelle.telnet.CommunicationRole;
 import org.prelle.telnet.TelnetConstants;
-import org.prelle.telnet.TelnetOption;
 import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetOutputStream;
-import org.prelle.telnet.TelnetSocket;
+import org.prelle.telnet.TelnetProtocol;
 import org.prelle.telnet.TelnetSubnegotiationHandler;
+import org.prelle.telnet.WellKnownTelnetOptions;
 
 /**
  * @author prelle
  *
  */
-public class LineMode extends TelnetSubnegotiationHandler {
+public class LineMode implements TelnetSubnegotiationHandler {
+
+	protected final static Logger logger = System.getLogger("telnet.linemode");
 
 	public static class LineModeConfig {
 		LineModeListener listener;
@@ -200,6 +203,18 @@ public class LineMode extends TelnetSubnegotiationHandler {
 	public int getOptionCode() {
 		return 34;
 	}
+	
+	//-------------------------------------------------------------------
+	@Override
+	public String getName() { return "LINEMODE"; }
+	
+	//-----------------------------------------------------------------
+	/**
+	 * Called from TelnetProtocol to learn if this handler will initiate communication or wait for the other side to do so.
+	 */
+	public boolean startCommunicationAs(CommunicationRole role) {
+		return role==CommunicationRole.SERVER;
+	}
 
 	//-----------------------------------------------------------------
 	/**
@@ -207,12 +222,11 @@ public class LineMode extends TelnetSubnegotiationHandler {
 	 * @return TRUE if a subnegotiation is needed
 	 */
     @Override
-	public boolean initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {
-    	this.role = role;
-		try {
+	public boolean negotiateDetails(TelnetProtocol stack) {
+ 		try {
 			if (role==CommunicationRole.SERVER) {
 				logger.log(Level.INFO, "Start character-a-time mode by clearing EDIT flag");
-				setFlags(out, List.of(ModeBit.TRAPSIG));
+				setFlags(stack.getOutputStream(), List.of(ModeBit.TRAPSIG));
 				return true;
 			}
 		} catch (IOException e) {
@@ -221,59 +235,15 @@ public class LineMode extends TelnetSubnegotiationHandler {
 		return false;
 	}
 
-//	//-----------------------------------------------------------------
-//	/**
-//	 * @throws IOException
-//	 * @see org.prelle.telnet.TelnetOptionHandler#initialize(org.prelle.telnet.TelnetSocket)
-//	 */
-//	@Override
-//	public void initialize(TelnetSocket console) throws IOException {
-//		requestUsage(console);
-//	}
-//
-//	//-----------------------------------------------------------------
-//	/**
-//	 * @see org.prelle.telnet.TelnetOptionHandler#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
-//	 */
-//	@Override
-//	public void performSubNegotiation(TelnetSocket nvt, TelnetInputStream in) throws IOException {
-//		in.setHigherLevelControl(true);
-//		int type = in.read();
-//		switch (type) {
-//		case MODE:
-//			logger.log(Level.DEBUG,"Client requests mode mask");
-//			int mask = in.read();
-//			in.read();  // IAC
-//			in.read();  // SE
-//			break;
-//		case SLC:
-//			while (true) {
-//				int funct = in.read();
-//				int modif = in.read();
-//				if (funct==TelnetConstants.IAC && modif==TelnetConstants.SE) break;
-//				int ascii = in.read();
-//				if (ascii==255)
-//					ascii = ascii*in.read();
-//				logger.log(Level.DEBUG,"  Function="+funct+"  Modifier="+modif+"   ASCII="+ascii);
-//				logger.log(Level.DEBUG,"  Function="+FUNCTIONS[funct]+"  Modifier="+modif+"   ASCII="+ascii);
-//			}
-//			break;
-//		default:
-//			logger.log(Level.DEBUG,"??? "+type);
-//			in.read(); // IAC
-//			in.read(); // SB
-//		}
-//
-//		in.setHigherLevelControl(false);
-//	}
 
 	//-------------------------------------------------------------------
 	/**
 	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
     @Override
-	public void handleSubnegotiation(int code, int[] values, TelnetSocket origin, TelnetOutputStream out) {
+	public void handleSubnegotiation(int[] values, TelnetProtocol stack) {
 		logger.log(Level.DEBUG, "LineMode sub {0} as {1}",Arrays.toString(values), role);
+		
 		Operation op = null;
 		if (values[0]>=TelnetConstants.WILL) {
 			ControlCode c0 = ControlCode.getCodeFor(values[0]);
@@ -281,7 +251,7 @@ public class LineMode extends TelnetSubnegotiationHandler {
 			logger.log(Level.INFO, "IAC SB LINEMODE {0} {1}", c0, op);
 			int[] remain = new int[values.length-2];
 			System.arraycopy(values, 2, remain, 0, remain.length);
-			forwardMask(origin, out, c0, remain);
+			forwardMask(stack, c0, remain);
 			return;
 		} else {
 			op = Operation.valueOf(values[0]);
@@ -295,13 +265,13 @@ public class LineMode extends TelnetSubnegotiationHandler {
 				logger.log(Level.WARNING, "Ignore, because we are server - noone tells us what to do");
 				return;
 			}
-			LineModeListener lmList = origin.getOptionListener(TelnetOption.LINEMODE.getCode());
+			LineModeListener lmList = stack.getOptionListener(WellKnownTelnetOptions.LINEMODE.getCode());
 			if (lmList!=null) {
 				if (modes.contains(ModeBit.MODE_ACK)) {
 					lmList.linemodeFlagsAcknowledged(modes);					
 				} else {
 					List<ModeBit> confirmed = lmList.linemodeFlagsSuggested(modes);
-					confirmMode(out,confirmed);
+					confirmMode(stack.getOutputStream(), confirmed);
 				}
 			} else
 				logger.log(Level.WARNING, "No LineModeListener configured");
@@ -355,14 +325,14 @@ public class LineMode extends TelnetSubnegotiationHandler {
 		values[0] = (byte) Operation.MODE.value;
 		values[1] = (byte) mask;
 		try {
-			out.sendSubNegotiation(TelnetOption.LINEMODE.getCode(), values);
+			out.sendSubNegotiation(WellKnownTelnetOptions.LINEMODE.getCode(), values);
 		} catch (IOException e) {
 			logger.log(Level.WARNING, "Error sending subnegotiation",e);
 		}
 	}
 
 	//-------------------------------------------------------------------
-	private void forwardMask(TelnetSocket origin, TelnetOutputStream out, ControlCode c0, int[] values) {
+	private void forwardMask(TelnetProtocol stack, ControlCode c0, int[] values) {
 		logger.log(Level.WARNING, "Forwardmask {0}: {1}",c0,Arrays.toString(values));
 		List<Integer> codes = new ArrayList<>();
 		for (int i=0; i<values.length; i++) {
@@ -374,7 +344,7 @@ public class LineMode extends TelnetSubnegotiationHandler {
 			}
 		}
 
-		LineModeListener lmList = origin.getOptionListener(TelnetOption.LINEMODE.getCode());
+		LineModeListener lmList = stack.getOptionListener(WellKnownTelnetOptions.LINEMODE.getCode());
 		if (lmList!=null)
 			lmList.sendFlushOn(codes);
 	}
@@ -386,7 +356,7 @@ public class LineMode extends TelnetSubnegotiationHandler {
 			flagMask |= flag.value;
 		}
 
-		out.sendSubNegotiation(TelnetOption.LINEMODE.getCode(), new byte[] {
+		out.sendSubNegotiation(WellKnownTelnetOptions.LINEMODE.getCode(), new byte[] {
 				(byte)Operation.MODE.value,
 				(byte)flagMask
 				});

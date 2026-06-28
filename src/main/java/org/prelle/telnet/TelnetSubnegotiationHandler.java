@@ -3,53 +3,55 @@
  */
 package org.prelle.telnet;
 
-import java.lang.System.Logger;
-import java.lang.System.Logger.Level;
+import java.io.IOException;
 
 /**
  * @author prelle
  *
  */
-public abstract class TelnetSubnegotiationHandler implements TelnetConstants {
-
-	protected final static Logger logger = System.getLogger("telnet.option");
+public interface TelnetSubnegotiationHandler extends TelnetConstants {
 	
 	//-----------------------------------------------------------------
-	public abstract int getOptionCode();
+	int getOptionCode();
+	
 	//-----------------------------------------------------------------
-	public String getName() {
-		TelnetOption opt = TelnetOption.valueOf(getOptionCode());
-		return (opt!=null) ? opt.name() : String.valueOf(getOptionCode());
+	String getName();
+	
+	//-----------------------------------------------------------------
+	default String resolveSubCommandName(int position, byte b) {
+		return String.valueOf(b);
 	}
+	
 	//-----------------------------------------------------------------
-	//public abstract boolean startCommunicationAs(CommunicationRole role);
+	/**
+	 * Called from TelnetProtocol to learn if this handler will initiate communication or wait for the other side to do so.
+	 */
+	default boolean startCommunicationAs(CommunicationRole role) {
+		return role==CommunicationRole.SERVER;
+	}
+
+	//-----------------------------------------------------------------
+	/**
+	 * Called after the use of a option has been confirmed
+	 * @param role 
+	 * @return TRUE when answers to a subnegotiation are expected
+	 */
+	default ControlCode initiate(TelnetProtocol stack, CommunicationRole role) throws IOException {
+		stack.getOutputStream().sendDo(getOptionCode());
+		return ControlCode.DO;
+	}
 
 	//-----------------------------------------------------------------
 	/**
 	 * Called after the use of a option has been confirmed
 	 * @return TRUE when answers to a subnegotiation are expected
 	 */
-	public boolean initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {
-		logger.log(Level.WARNING, "Forgot to implement initialization for {0} / {1} as {2}",option.name(), getClass().getName(), role);
-		return false;
-	}
+	boolean negotiateDetails(TelnetProtocol stack);
 
 	//-----------------------------------------------------------------
 	/**
-	 * Called after the use of a option has been confirmed
-	 * @return TRUE when answers to a subnegotiation are expected
+	 * Called when a subnegotiation for this option is received
 	 */
-	public void initializeAs(CommunicationRole role, TelnetInputStreamNG origin, TelnetOutputStream out) {
-		logger.log(Level.WARNING, "Forgot to implement initialization for {0} / {1} as {2}",getName(), getClass().getName(), role);
-	}
-
-	//-----------------------------------------------------------------
-	@Deprecated
-	public abstract void handleSubnegotiation(int code, int[] values, TelnetSocket origin, TelnetOutputStream out);
-
-	//-----------------------------------------------------------------
-	public void handleSubnegotiation(int code, int[] values, TelnetInputStreamNG origin, TelnetOutputStream out) {
-		logger.log(Level.WARNING, "Forgot to implement subnegotiation for {0} / {1}",getName(), getClass().getName());
-	}
+	void handleSubnegotiation(int[] values, TelnetProtocol stack);
 
 }

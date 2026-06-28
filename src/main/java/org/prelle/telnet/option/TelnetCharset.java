@@ -15,11 +15,8 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 import org.prelle.telnet.CommunicationRole;
-import org.prelle.telnet.TelnetInputStreamNG;
-import org.prelle.telnet.TelnetOption;
 import org.prelle.telnet.TelnetOptionListener;
-import org.prelle.telnet.TelnetOutputStream;
-import org.prelle.telnet.TelnetSocket;
+import org.prelle.telnet.TelnetProtocol;
 import org.prelle.telnet.TelnetSubnegotiationHandler;
 
 /**
@@ -27,7 +24,7 @@ import org.prelle.telnet.TelnetSubnegotiationHandler;
  * @author prelle
  *
  */
-public class TelnetCharset extends TelnetSubnegotiationHandler {
+public class TelnetCharset implements TelnetSubnegotiationHandler {
 
 	protected final static Logger logger = System.getLogger("telnet.option.charset");
 
@@ -66,13 +63,25 @@ public class TelnetCharset extends TelnetSubnegotiationHandler {
 	public int getOptionCode() {
 		return CODE;
 	}
+	
+	//-------------------------------------------------------------------
+	@Override
+	public String getName() { return "CHARSET"; }
+	
+	//-----------------------------------------------------------------
+	/**
+	 * Called from TelnetProtocol to learn if this handler will initiate communication or wait for the other side to do so.
+	 */
+	public boolean startCommunicationAs(CommunicationRole role) {
+		return role==CommunicationRole.SERVER;
+	}
 
 	//-------------------------------------------------------------------
 	/**
 	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
 	@Override
-	public void handleSubnegotiation(int code, int[] values, TelnetSocket origin, TelnetOutputStream out) {
+	public void handleSubnegotiation(int[] values, TelnetProtocol stack) {
 		logger.log(Level.DEBUG, "Subnegotiate for CHARSET: "+Arrays.toString(values));
 		int operation = values[0];
 		
@@ -92,9 +101,9 @@ public class TelnetCharset extends TelnetSubnegotiationHandler {
 			else
 				charset = Charset.forName(csName);
 			
-			origin.setOptionData(CODE, charset);
+			stack.setOptionData(CODE, charset);
 			try {
-				CharsetListener listener = origin.getOptionListener(code);
+				CharsetListener listener = stack.getOptionListener(getOptionCode());
 				if (listener!=null) {
 					listener.telnetCharsetNegotiated(charset);
 				} else {
@@ -136,7 +145,7 @@ public class TelnetCharset extends TelnetSubnegotiationHandler {
 					logger.log(Level.WARNING, "Unknown charset "+csName);
 				}
 			});
-			Charset consoleCharset = origin.getOptionData(CODE);
+			Charset consoleCharset = stack.getOptionData(CODE);
 			if (requested.contains(consoleCharset)) {
 				byte[] append = consoleCharset.toString().getBytes(StandardCharsets.US_ASCII);
 //				byte[] toSend = new byte[1+append.length];
@@ -144,7 +153,7 @@ public class TelnetCharset extends TelnetSubnegotiationHandler {
 //				System.arraycopy(append, 0, toSend, 0, append.length);
 				logger.log(Level.WARNING, "Accept "+consoleCharset);
 				try {
-					out.sendSubNegotiation(CODE, ACCEPTED, append);
+					stack.getOutputStream().sendSubNegotiation(CODE, ACCEPTED, append);
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -163,116 +172,32 @@ public class TelnetCharset extends TelnetSubnegotiationHandler {
 	 * Called after the use of a option has been confirmed
 	 * @return TRUE when answers to a subnegotiation are expected
 	 */
-	public boolean initializeAs(TelnetOption option, CommunicationRole role, TelnetSocket origin, TelnetOutputStream out) {
-		logger.log(Level.WARNING, "TODO: initializeAs "+role);
-		if (role==CommunicationRole.SERVER) {
-			logger.log(Level.DEBUG, "Ask remote party to send environment");
-			try {
-				origin.setOptionData(CODE, new HashMap<String,String>());
-				byte[] charsetData = " UTF-8 CP437 ASCII".getBytes(StandardCharsets.US_ASCII);
-				byte[] send = new byte[charsetData.length+7];
-				send[0] = (byte)IAC;
-				send[1] = (byte)SB;
-				send[2] = (byte)CODE;
-				send[3] = (byte)REQUEST;
-				send[4] = (byte)32;
-				System.arraycopy(charsetData, 0, send, 5, charsetData.length);
-				send[5+charsetData.length] = (byte)IAC;
-				send[6+charsetData.length] = (byte)SE;
-				logger.log(Level.DEBUG, "SND {0}", Arrays.toString(send));
-				out.writeCommand(send);
-				out.flush();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			return true;
-		} else {
-			logger.log(Level.WARNING, "Acting as PROVIDER not implemented");
-		}
-		return false;
-	}
-
 	@Override
-	public void handleSubnegotiation(int code, int[] values, TelnetInputStreamNG origin, TelnetOutputStream out) {
-		logger.log(Level.DEBUG, "Subnegotiate for CHARSET: "+Arrays.toString(values));
-		int operation = values[0];
-		
-		if (operation==ACCEPTED) {
-			byte[] data = new byte[values.length-1];
-			for (int i=0; i<data.length; i++) {
-				data[i] = (byte)values[i+1];
-			}
-			String csName = new String(data).trim();
-			Charset charset = null;
-			if ("ISO 8859-15".equals(csName))
-				charset = StandardCharsets.ISO_8859_1;
-			else if ("ISO 8859-1".equals(csName))
-				charset = StandardCharsets.ISO_8859_1;
-			else if ("UTF-8".equals(csName) || "UTF8".equals(csName))
-				charset = StandardCharsets.UTF_8;
-			else
-				charset = Charset.forName(csName);
-			
-			try {
-				if (callback!=null) {
-					callback.telnetCharsetNegotiated(charset);
-				} else {
-					logger.log(Level.TRACE, "No CharsetListener");
-				}
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		} else if (operation==REQUEST) {
-			byte[] data = new byte[values.length-1];
-			for (int i=0; i<data.length; i++) {
-				data[i] = (byte)values[i+1];
-			}
-			String namesRaw = new String(data);
-			logger.log(Level.INFO, "Remote party requested raw: "+namesRaw);
-			// The first character is assumed to be the separator. It may be absent though, in which case we use some default
-			char first = namesRaw.charAt(0);
-			String sep = Character.isAlphabetic(first)?" ,;":String.valueOf(first);
-			// Now tokenize
-			List<String> csNames = new ArrayList<>();
-			for (StringTokenizer tok=new StringTokenizer(namesRaw,sep); tok.hasMoreTokens(); ) {
-				csNames.add(tok.nextToken());
-			}
-			List<Charset> requested = new ArrayList<>();
-			csNames.forEach(csName -> {
-				try {
-					Charset charset = null;
-					if ("ISO 8859-15".equals(csName))
-						charset = StandardCharsets.ISO_8859_1;
-					else if ("ISO 8859-1".equals(csName))
-						charset = StandardCharsets.ISO_8859_1;
-					else if ("UTF-8".equals(csName) || "UTF8".equals(csName))
-						charset = StandardCharsets.UTF_8;
-					else
-						charset = Charset.forName(csName);
-					requested.add(charset);
-				} catch (Exception e) {
-					logger.log(Level.WARNING, "Unknown charset "+csName);
-				}
-			});
-			if (requested.contains(consoleCharset)) {
-				byte[] append = consoleCharset.toString().getBytes(StandardCharsets.US_ASCII);
-//				byte[] toSend = new byte[1+append.length];
-//				toSend[0] = ACCEPTED;
-//				System.arraycopy(append, 0, toSend, 0, append.length);
-				logger.log(Level.WARNING, "Accept "+consoleCharset);
-				try {
-					out.sendSubNegotiation(CODE, ACCEPTED, append);
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-			
-		} else if (operation==REJECTED) {
-			logger.log(Level.WARNING, "The remote party rejected our charset suggestions");
-			System.err.println("TelnetCharset: Remote party rejected charsets");
+	public boolean negotiateDetails(TelnetProtocol stack) {
+		logger.log(Level.INFO, "ENTER: initialize()");
+		logger.log(Level.DEBUG, "Ask remote party to send environment");
+		try {
+			stack.setOptionData(CODE, new HashMap<String,String>());
+			byte[] charsetData = " UTF-8 CP437 ASCII".getBytes(StandardCharsets.US_ASCII);
+			byte[] send = new byte[charsetData.length+7];
+			send[0] = (byte)IAC;
+			send[1] = (byte)SB;
+			send[2] = (byte)CODE;
+			send[3] = (byte)REQUEST;
+			send[4] = (byte)32;
+			System.arraycopy(charsetData, 0, send, 5, charsetData.length);
+			send[5+charsetData.length] = (byte)IAC;
+			send[6+charsetData.length] = (byte)SE;
+			logger.log(Level.DEBUG, "SND {0}", Arrays.toString(send));
+			stack.getOutputStream().writeCommand(send);
+			stack.getOutputStream().flush();
+			return true;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return false;
+		} finally {
+			logger.log(Level.INFO, "LEAVE: initialize()");
 		}
 	}
 

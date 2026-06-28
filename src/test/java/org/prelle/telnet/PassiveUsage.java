@@ -9,16 +9,17 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
-import java.net.Socket;
 
-import org.prelle.telnet.TelnetOption;
-import org.prelle.telnet.TelnetSocket.State;
+import org.prelle.telnet.option.LineMode;
+import org.prelle.telnet.option.TelnetCharset;
+import org.prelle.telnet.option.TelnetEnvironmentOption;
+import org.prelle.telnet.option.TerminalType;
 
 /**
  * @author prelle
  *
  */
-public class PassiveUsage implements Runnable, TelnetSocketListener, TelnetConstants {
+public class PassiveUsage implements Runnable, TelnetConstants {
 
     private final static Logger logger = System.getLogger("app");
 
@@ -36,16 +37,7 @@ public class PassiveUsage implements Runnable, TelnetSocketListener, TelnetConst
 	}
 
 	public PassiveUsage() throws IOException {
-		serverSocket = new TelnetServerSocket(4000)
-				.support(TelnetOption.LINEMODE.getCode(), ControlCode.WILL)
-//				.support(new SuppressGoAhead(), Role.PROVIDER)
-//				.support(new TelnetEcho(), Role.PROVIDER)
-//				.passivelySupport(TelnetOptions.ECHO)
-//				.passivelySupport(TelnetOptions.EOR)
-//				.passivelySupport(TelnetOptions.MSP)
-//				.withMUDTerminalTypeStandard()
-//				.withNAWS()
-				;
+		serverSocket = new TelnetServerSocket(4000);
 
 
 		thread = new Thread(this,"ThreadCheck");
@@ -57,19 +49,24 @@ public class PassiveUsage implements Runnable, TelnetSocketListener, TelnetConst
 	public void run() {
 		while (true) {
 			try {
-				Socket vanillaSocket = serverSocket.accept();
-				TelnetSocket socket = (TelnetSocket)vanillaSocket;
-				socket.addSocketListener(this);
+				TelnetSocket socket = (TelnetSocket) serverSocket.accept();
+				socket.negotiateOptionsAsync(
+						new TerminalType(),
+						new LineMode(),
+						//new TelnetCharset(null, null),
+						new TelnetEnvironmentOption()
+						);
+				
+				InputStream in = socket.getInputStream();
 
 				OutputStream out = socket.getOutputStream();
-				logger.log(Level.DEBUG,"Incoming connection via "+socket.getClass()+" and output via "+out);
+				logger.log(Level.DEBUG,"Incoming connection via "+in.getClass()+" and output via "+out);
 				PrintWriter pw = new PrintWriter(out);
 				pw.print("Wie heisst Du? ");
 //				socket.requestEcho();
 				pw.flush();
 
 				int data = -1;
-				InputStream in = socket.getInputStream();
 				do {
 					data = in.read();
 					System.out.println("Read "+data+" as "+(char)data);
@@ -96,22 +93,4 @@ public class PassiveUsage implements Runnable, TelnetSocketListener, TelnetConst
 		}
 	}
 
-	//-------------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.TelnetSocketListener#telnetOptionStatusChange(org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetSubnegotiationHandler, boolean)
-	 */
-	@Override
-	public void telnetOptionStatusChange(TelnetSocket nvt, TelnetOption option, boolean active) {
-		logger.log(Level.INFO, "Feature {0} is {1}", option.name(), active?"enabled":"disabled");
-	}
-
-	public void telnetCommandReceived(TelnetSocket nvt, TelnetCommand command) {
-		logger.log(Level.INFO, "RCV "+command);
-	}
-
-	@Override
-	public void telnetSocketChanged(TelnetSocket nvt, State oldState, State newState) {
-		// TODO Auto-generated method stub
-
-	}
 }

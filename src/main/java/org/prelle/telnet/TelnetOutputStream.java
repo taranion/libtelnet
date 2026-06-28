@@ -24,12 +24,14 @@ public class TelnetOutputStream extends OutputStream {
 	private OutputStream realOut;
 	private boolean  binaryMode = true;
 	private boolean injectCRBeforeLF = true;
+	private TelnetProtocol stack;
 
 	//-----------------------------------------------------------------
 	/**
 	 */
-	public TelnetOutputStream(OutputStream out) {
+	public TelnetOutputStream(OutputStream out, TelnetProtocol stack) {
 		Objects.requireNonNull(out, "OutputStream cannot be null");
+		this.stack = stack;
 		realOut = out;
 	}
 	
@@ -97,6 +99,40 @@ public class TelnetOutputStream extends OutputStream {
 
 	//-----------------------------------------------------------------
 	public void writeCommand(byte[] data) throws IOException {
+		if (data.length>2 && data[0]==(byte)ControlCode.IAC.code()) {
+			StringBuilder buf = new StringBuilder();
+			// Replace byte values with their names
+			buf.append(ControlCode.getCodeFor(data[0]&0xff)+" ");
+			buf.append(ControlCode.getCodeFor(data[1]&0xff)+" ");
+			TelnetSubnegotiationHandler handler = stack.getExtensionForOption(data[2]);
+			if (handler==null) {
+				buf.append(ControlCode.getCodeFor(data[2]&0xff));
+			} else {
+				buf.append(handler.getName());
+			}
+			buf.append(' ');
+			// Subnegotiation content
+			for (int i=3; i<(data.length-2); i++) {
+				byte b = data[i];
+				if (b>=0 && b<32) {
+					if (handler!=null) {
+						buf.append(handler.resolveSubCommandName(i,b));
+					} else {
+						buf.append(b);
+					}
+				} else {
+					buf.append(((char)b));
+				}
+				buf.append(' ');
+			}
+			buf.append(ControlCode.getCodeFor(data[data.length-2]&0xff)+" ");
+			buf.append(ControlCode.getCodeFor(data[data.length-1]&0xff));
+			
+			logger.log(Level.INFO,"send: "+buf);
+		} else {
+			logger.log(Level.INFO,"send: {0}", Arrays.toString(data));
+		}
+		
 		realOut.write(data);
 	}
 
@@ -106,7 +142,7 @@ public class TelnetOutputStream extends OutputStream {
 		data[0] = (byte)ControlCode.IAC.code();
 		data[1] = (byte)ControlCode.DO.code();
 		data[2] = (byte)optionCode;
-		logger.log(Level.INFO,"send: IAC DO {0}={1}",optionCode, TelnetOption.valueOf(optionCode));
+		logger.log(Level.INFO,"send: IAC DO {0}={1}",optionCode, WellKnownTelnetOptions.valueOf(optionCode));
 		realOut.write(data);
 		realOut.flush();
 	}
@@ -117,7 +153,7 @@ public class TelnetOutputStream extends OutputStream {
 		data[0] = (byte)ControlCode.IAC.code();
 		data[1] = (byte)ControlCode.WILL.code();
 		data[2] = (byte)optionCode;
-		logger.log(Level.ERROR,"send: IAC WILL {0}={1}",optionCode, TelnetOption.valueOf(optionCode));
+		logger.log(Level.ERROR,"send: IAC WILL {0}={1}",optionCode, WellKnownTelnetOptions.valueOf(optionCode));
 		realOut.write(data);
 		realOut.flush();
 	}
@@ -128,7 +164,7 @@ public class TelnetOutputStream extends OutputStream {
 		data[0] = (byte)ControlCode.IAC.code();
 		data[1] = (byte)ControlCode.DONT.code();
 		data[2] = (byte)optionCode;
-		logger.log(Level.INFO,"send: IAC DONT {0}={1}",optionCode, TelnetOption.valueOf(optionCode));
+		logger.log(Level.INFO,"send: IAC DONT {0}={1}",optionCode, WellKnownTelnetOptions.valueOf(optionCode));
 		realOut.write(data);
 		realOut.flush();
 	}
@@ -139,7 +175,7 @@ public class TelnetOutputStream extends OutputStream {
 		data[0] = (byte)ControlCode.IAC.code();
 		data[1] = (byte)ControlCode.WONT.code();
 		data[2] = (byte)optionCode;
-		logger.log(Level.INFO,"send: IAC WONT {0}={1}",optionCode, TelnetOption.valueOf(optionCode));
+		logger.log(Level.INFO,"send: IAC WONT {0}={1}",optionCode, WellKnownTelnetOptions.valueOf(optionCode));
 		realOut.write(data);
 		realOut.flush();
 	}
