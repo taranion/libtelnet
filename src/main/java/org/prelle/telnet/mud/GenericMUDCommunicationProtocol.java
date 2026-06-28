@@ -6,6 +6,8 @@ package org.prelle.telnet.mud;
 import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.prelle.telnet.CommunicationRole;
 import org.prelle.telnet.TelnetOptionListener;
@@ -21,7 +23,7 @@ import org.prelle.telnet.TelnetSubnegotiationHandler;
  * @author prelle
  *
  */
-public class GenericMUDCommunicationProtocol implements TelnetSubnegotiationHandler {
+public class GenericMUDCommunicationProtocol implements TelnetSubnegotiationHandler<GenericMUDCommunicationProtocol.GMCPReceiver> {
 
 	protected final static Logger logger = System.getLogger("telnet.gmcp");
 
@@ -62,6 +64,8 @@ public class GenericMUDCommunicationProtocol implements TelnetSubnegotiationHand
 	public static interface GMCPReceiver extends TelnetOptionListener {
 		public void telnetReceiveGMCP(RawGMCPMessage message);
 	}
+	
+	private List<GMCPReceiver> listeners = new ArrayList<>();
 
 	//-------------------------------------------------------------------
 	/**
@@ -116,6 +120,16 @@ public class GenericMUDCommunicationProtocol implements TelnetSubnegotiationHand
 	public boolean negotiateDetails(TelnetProtocol stack) {
 		// TODO Auto-generated method stub
 		return true;
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#addListener(org.prelle.telnet.TelnetOptionListener)
+	 */
+	@Override
+	public void addListener(GMCPReceiver listener) {
+		if (!listeners.contains(listener))
+			listeners.add(listener);
 	}
 
 }

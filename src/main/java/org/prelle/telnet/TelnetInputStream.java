@@ -17,7 +17,7 @@ import org.prelle.telnet.TelnetConstants.ControlCode;
  * @author prelle
  *
  */
-public class TelnetInputStreamNG extends FilterInputStream {
+public class TelnetInputStream extends FilterInputStream {
 
 	Logger logger = System.getLogger("telnet.lvl1.in");
 
@@ -43,12 +43,13 @@ public class TelnetInputStreamNG extends FilterInputStream {
 	//-----------------------------------------------------------------
 	/**
 	 */
-	public TelnetInputStreamNG(InputStream in, TelnetProtocol config) {
+	public TelnetInputStream(InputStream in, TelnetProtocol config) {
 		super(in);
 		this.protocol = config;
-		if (in instanceof TelnetInputStreamNG) {
+		if (in instanceof TelnetInputStream) {
 			throw new RuntimeException("Cannot wrap a TelnetInputStream");
 		}
+		config.setInputStream(this);
 	}
 
 	//-----------------------------------------------------------------

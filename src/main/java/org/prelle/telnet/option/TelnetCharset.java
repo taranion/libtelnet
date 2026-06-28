@@ -24,7 +24,7 @@ import org.prelle.telnet.TelnetSubnegotiationHandler;
  * @author prelle
  *
  */
-public class TelnetCharset implements TelnetSubnegotiationHandler {
+public class TelnetCharset implements TelnetSubnegotiationHandler<TelnetCharset.CharsetListener> {
 
 	protected final static Logger logger = System.getLogger("telnet.option.charset");
 
@@ -48,6 +48,8 @@ public class TelnetCharset implements TelnetSubnegotiationHandler {
 	private CharsetListener callback;
 	private List<String> supportedCharsets = new ArrayList<>();
 	private Charset consoleCharset;
+	
+	private List<CharsetListener> listeners = new ArrayList<>();
 
 	//-------------------------------------------------------------------
 	public TelnetCharset(CharsetListener callback, String ... charsets) {
@@ -204,6 +206,17 @@ public class TelnetCharset implements TelnetSubnegotiationHandler {
 	//-------------------------------------------------------------------
 	public void setCharset(Charset charset) {
 		logger.log(Level.WARNING, "setCharset not implemented yet");
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#addListener(org.prelle.telnet.TelnetOptionListener)
+	 */
+	@Override
+	public void addListener(CharsetListener listener) {
+		if (!listeners.contains(listener)) {
+			listeners.add(listener);
+		}
 	}
 
 }

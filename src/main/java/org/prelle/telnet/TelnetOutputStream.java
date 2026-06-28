@@ -32,6 +32,7 @@ public class TelnetOutputStream extends OutputStream {
 	public TelnetOutputStream(OutputStream out, TelnetProtocol stack) {
 		Objects.requireNonNull(out, "OutputStream cannot be null");
 		this.stack = stack;
+		stack.setOutputStream(this);
 		realOut = out;
 	}
 	

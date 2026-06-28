@@ -62,7 +62,7 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	//private static BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<Runnable>();
 	private static ExecutorService executor= Executors.newFixedThreadPool(1);
 
-	protected TelnetInputStreamNG in;
+	protected TelnetInputStream in;
 	protected TelnetOutputStream out;
 	private TelnetProtocol stack;
 
@@ -96,8 +96,19 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	}
 
 	//-----------------------------------------------------------------
-	public void addListener(TelnetListener listener) {
+	public TelnetSocket addListener(TelnetListener listener) {
 		stack.addListener(listener);
+		return this;
+	}
+
+	//-----------------------------------------------------------------
+	@SuppressWarnings("unchecked")
+	public TelnetSocket setOptionListener(WellKnownTelnetOptions option, TelnetOptionListener listener) {
+		if (stack.getExtensionForOption(option.getCode())==null) {
+			throw new IllegalArgumentException("No extension registered for option "+option);
+		}
+		stack.getExtensionForOption(option.getCode()).addListener(listener);
+		return this;
 	}
 
 	//-------------------------------------------------------------------
@@ -125,7 +136,7 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	@Override
 	public InputStream getInputStream() throws IOException {
 		if (in==null) {
-			in = new TelnetInputStreamNG( super.getInputStream(), stack);
+			in = new TelnetInputStream( super.getInputStream(), stack);
 			stack.setInputStream(in);
 		}
 		return in;
@@ -151,8 +162,16 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	}
 
 	//-----------------------------------------------------------------
-	TelnetInputStreamNG in() throws IOException {
-		return (TelnetInputStreamNG) getInputStream();
+	TelnetInputStream in() throws IOException {
+		return (TelnetInputStream) getInputStream();
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @return the stack
+	 */
+	public TelnetProtocol getStack() {
+		return stack;
 	}
 
 

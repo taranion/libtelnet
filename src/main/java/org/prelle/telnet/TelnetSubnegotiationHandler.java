@@ -9,7 +9,7 @@ import java.io.IOException;
  * @author prelle
  *
  */
-public interface TelnetSubnegotiationHandler extends TelnetConstants {
+public interface TelnetSubnegotiationHandler<E extends  TelnetOptionListener> extends TelnetConstants {
 	
 	//-----------------------------------------------------------------
 	int getOptionCode();
@@ -53,5 +53,8 @@ public interface TelnetSubnegotiationHandler extends TelnetConstants {
 	 * Called when a subnegotiation for this option is received
 	 */
 	void handleSubnegotiation(int[] values, TelnetProtocol stack);
+	
+	//-----------------------------------------------------------------
+	public void addListener(E listener);
 
 }

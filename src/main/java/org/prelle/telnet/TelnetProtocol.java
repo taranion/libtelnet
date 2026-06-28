@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.prelle.telnet.TelnetConstants.ControlCode;
 
@@ -49,7 +50,7 @@ public class TelnetProtocol {
 	/** Stores callbacks for specific options */
 	private Map<Integer, TelnetOptionListener> optionListener = new HashMap<>();
 	
-	private TelnetInputStreamNG inputStream;
+	private TelnetInputStream inputStream;
 	private TelnetOutputStream outputStream;
     
     private List<TelnetListener> listener;
@@ -79,6 +80,7 @@ public class TelnetProtocol {
 	//-------------------------------------------------------------------
 	public void initializeExtensions() {
 		logger.log(Level.DEBUG, "ENTER: initializeExtensions");
+		Objects.requireNonNull(outputStream, "Output stream must be set before initializing extensions");
 		for (TelnetSubnegotiationHandler ext : extensions.keySet()) {
 			try {
 				if (ext.startCommunicationAs(role)) {
@@ -129,7 +131,7 @@ public class TelnetProtocol {
 	}
 
 	//-----------------------------------------------------------------
-	private void handleDoDontWillWontResponse(TelnetInputStreamNG from, TelnetCommand command, NegotiatonState state) throws IOException {
+	private void handleDoDontWillWontResponse(TelnetInputStream from, TelnetCommand command, NegotiatonState state) throws IOException {
 		TelnetSubnegotiationHandler extension = getExtensionForOption(command.getData());
 		switch (state.state) {
 		case SUGGESTED:
@@ -166,7 +168,7 @@ public class TelnetProtocol {
 	}
 
 	//-----------------------------------------------------------------
-	private void handleDoDontWillWont(TelnetInputStreamNG from, TelnetCommand command) throws IOException {
+	private void handleDoDontWillWont(TelnetInputStream from, TelnetCommand command) throws IOException {
 		int optionCode = command.getData();
 		var option = WellKnownTelnetOptions.valueOf(optionCode);
 		NegotiatonState state = negotiationState.get(optionCode);
@@ -189,7 +191,7 @@ public class TelnetProtocol {
 	}
 
 	//-----------------------------------------------------------------
-	void processCommand(TelnetInputStreamNG from, TelnetCommand command) throws IOException {
+	void processCommand(TelnetInputStream from, TelnetCommand command) throws IOException {
 		switch (command.getCode()) {
 		case DO  : case DONT:
 		case WILL: case WONT:
@@ -289,7 +291,7 @@ public class TelnetProtocol {
 	}
 
 	//-------------------------------------------------------------------
-	public void processSubnegotiation(TelnetInputStreamNG from, int code, int[] values) {
+	public void processSubnegotiation(TelnetInputStream from, int code, int[] values) {
 		logger.log(Level.TRACE, "RCV Subnegotiation for {0}: {1}", code, Arrays.toString((values)));
 
 		TelnetSubnegotiationHandler handler = getExtensionForOption(code);
@@ -306,6 +308,7 @@ public class TelnetProtocol {
 		logger.log(Level.DEBUG, "Send events for option {0} to {1}", code, callback);
 		if (callback==null)
 			throw new NullPointerException();
+		TelnetSubnegotiationHandler handler = getExtensionForOption(code);
 		optionListener.put(code, callback);
 		return this;
 	}
@@ -363,7 +366,7 @@ public class TelnetProtocol {
 	/**
 	 * @return the inputStream
 	 */
-	public TelnetInputStreamNG getInputStream() {
+	public TelnetInputStream getInputStream() {
 		return inputStream;
 	}
 
@@ -371,7 +374,7 @@ public class TelnetProtocol {
 	/**
 	 * @param inputStream the inputStream to set
 	 */
-	public void setInputStream(TelnetInputStreamNG inputStream) {
+	public void setInputStream(TelnetInputStream inputStream) {
 		this.inputStream = inputStream;
 	}
 

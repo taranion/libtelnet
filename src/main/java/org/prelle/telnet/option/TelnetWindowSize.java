@@ -6,10 +6,13 @@ package org.prelle.telnet.option;
 import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.prelle.telnet.CommunicationRole;
 import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetProtocol;
+import org.prelle.telnet.TelnetSocket;
 import org.prelle.telnet.TelnetSubnegotiationHandler;
 
 /**
@@ -17,7 +20,7 @@ import org.prelle.telnet.TelnetSubnegotiationHandler;
  * @author prelle
  *
  */
-public class TelnetWindowSize implements TelnetSubnegotiationHandler {
+public class TelnetWindowSize implements TelnetSubnegotiationHandler<TelnetWindowSize.TelnetNAWSListener> {
 
 	public final static int CODE = 31;
 
@@ -26,6 +29,8 @@ public class TelnetWindowSize implements TelnetSubnegotiationHandler {
 	public static interface TelnetNAWSListener extends TelnetOptionListener {
 		public void telnetWindowSizeChanged(int width, int height);
 	}
+	
+	private List<TelnetNAWSListener> listeners = new ArrayList<>();
 
 	//-------------------------------------------------------------------
 	/**
@@ -91,6 +96,11 @@ public class TelnetWindowSize implements TelnetSubnegotiationHandler {
 	}
 
 	//-------------------------------------------------------------------
+	public static void sendUpdate(TelnetSocket origin, int w, int h) throws IOException {
+		sendUpdate(origin.getStack(), w, h);
+	}
+
+	//-------------------------------------------------------------------
 	public static void sendUpdate(TelnetProtocol origin, int w, int h) throws IOException {
 		logger.log(Level.INFO, "Send NAWS {0}x{1}", w,h);
 		byte[] command = new byte[4];
@@ -99,6 +109,17 @@ public class TelnetWindowSize implements TelnetSubnegotiationHandler {
 		command[2] = (byte) (h/256);
 		command[3] = (byte) (h%256);
 		origin.getOutputStream().sendSubNegotiation(CODE, command);
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#addListener(org.prelle.telnet.TelnetOptionListener)
+	 */
+	@Override
+	public void addListener(TelnetNAWSListener listener) {
+		if (!listeners.contains(listener)) {
+			listeners.add(listener);
+		}
 	}
 
 }

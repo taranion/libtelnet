@@ -17,7 +17,7 @@ public class TelnetConfiguration {
 		}
 	}
 
-	void processCommand(TelnetInputStreamNG from, TelnetCommand command) {
+	void processCommand(TelnetInputStream from, TelnetCommand command) {
 		
 	}
 	

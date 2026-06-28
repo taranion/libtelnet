@@ -22,7 +22,7 @@ import org.prelle.telnet.WellKnownTelnetOptions;
  * @author prelle
  *
  */
-public class LineMode implements TelnetSubnegotiationHandler {
+public class LineMode implements TelnetSubnegotiationHandler<LineMode.LineModeListener> {
 
 	protected final static Logger logger = System.getLogger("telnet.linemode");
 
@@ -188,6 +188,7 @@ public class LineMode implements TelnetSubnegotiationHandler {
 		public List<Integer> getCodes() { return this.codes; }
 	}
 
+	private List<LineModeListener> listeners = new ArrayList<>();
 	private CommunicationRole role;
 
 	//-----------------------------------------------------------------
@@ -360,6 +361,11 @@ public class LineMode implements TelnetSubnegotiationHandler {
 				(byte)Operation.MODE.value,
 				(byte)flagMask
 				});
+	}
+
+	@Override
+	public void addListener(LineModeListener listener) {
+		if (!listeners.contains(listener)) listeners.add(listener);
 	}
 
 }

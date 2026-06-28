@@ -6,11 +6,14 @@ package org.prelle.telnet.mud;
 import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Supplier;
 
+import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetProtocol;
 import org.prelle.telnet.TelnetSubnegotiationHandler;
 
@@ -19,16 +22,21 @@ import org.prelle.telnet.TelnetSubnegotiationHandler;
  * @author prelle
  *
  */
-public class MUDServerStatusProtocol implements TelnetSubnegotiationHandler {
+public class MUDServerStatusProtocol implements TelnetSubnegotiationHandler<MUDServerStatusProtocol.MSSPListener> {
 
 	protected final static Logger logger = System.getLogger("telnet.option.mssp");
 
+	public static interface MSSPListener extends TelnetOptionListener {
+		public void telnetMSSPDataReceived(Map<String,String> data);
+	}
+	
 	public final static int CODE = 70;
 
 	private final static int MSSP_VAR = 1;
 	private final static int MSSP_VAL = 2;
 
 	private Supplier<Map<String,String>> dataSupplier;
+	private List<MSSPListener> listeners = new ArrayList<>();
 	
 	//-------------------------------------------------------------------
 	public MUDServerStatusProtocol(Supplier<Map<String,String>> dataSupplier) {
@@ -80,6 +88,16 @@ public class MUDServerStatusProtocol implements TelnetSubnegotiationHandler {
 			logger.log(Level.WARNING, "Failed sending telnet option",e);
 		}
 		return false;
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#addListener(org.prelle.telnet.TelnetOptionListener)
+	 */
+	@Override
+	public void addListener(MSSPListener listener) {
+		if (!listeners.contains(listener))
+			listeners.add(listener);
 	}
 
 }

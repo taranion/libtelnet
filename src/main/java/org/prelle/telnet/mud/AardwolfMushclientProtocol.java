@@ -2,7 +2,9 @@ package org.prelle.telnet.mud;
 
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetProtocol;
@@ -11,7 +13,7 @@ import org.prelle.telnet.TelnetSubnegotiationHandler;
 /**
  *
  */
-public class AardwolfMushclientProtocol implements TelnetSubnegotiationHandler {
+public class AardwolfMushclientProtocol implements TelnetSubnegotiationHandler<AardwolfMushclientProtocol.AardwolfMushclientListener> {
 
 	protected final static Logger logger = System.getLogger("telnet.aard");
 
@@ -42,6 +44,7 @@ public class AardwolfMushclientProtocol implements TelnetSubnegotiationHandler {
 		public void telnetTickReceived();
 	}
 
+	private List<AardwolfMushclientListener> listeners = new ArrayList<>();
 
 	private final static int CODE = 102;
 
@@ -96,6 +99,15 @@ public class AardwolfMushclientProtocol implements TelnetSubnegotiationHandler {
 		default:
 			logger.log(Level.WARNING,"TODO: we received2 : {0}", Arrays.toString(values));
 		}
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#addListener(org.prelle.telnet.TelnetOptionListener)
+	 */
+	@Override
+	public void addListener(AardwolfMushclientListener listener) {
+		if (!listeners.contains(listener)) listeners.add(listener);
 	}
 
 }

@@ -27,7 +27,7 @@ import org.prelle.telnet.TelnetSubnegotiationHandler;
  * @author prelle
  *
  */
-public class TelnetEnvironmentOption implements TelnetSubnegotiationHandler {
+public class TelnetEnvironmentOption implements TelnetSubnegotiationHandler<TelnetEnvironmentOption.EnvironmentListener> {
 
 	protected final static Logger logger = System.getLogger("telnet.option.environ");
 
@@ -50,6 +50,7 @@ public class TelnetEnvironmentOption implements TelnetSubnegotiationHandler {
 
 	private Map<String,String> userVariables = new HashMap<>();
 	private Map<String,String> systemVariables = new HashMap<>();
+	private List<EnvironmentListener> listener = new ArrayList<>();
 	
 	//-------------------------------------------------------------------
 	public TelnetEnvironmentOption(String[] ...data) {
@@ -76,13 +77,15 @@ public class TelnetEnvironmentOption implements TelnetSubnegotiationHandler {
 	
 	//-------------------------------------------------------------------
 	public TelnetEnvironmentOption(Map<String,String> data, Map<String,String> systemData) {
-		userVariables = data;
-		systemVariables = systemData;
+		if (data!=null)
+			userVariables = data;
+		if (systemData!=null)
+			systemVariables = systemData;
 	}
 	
 	//-------------------------------------------------------------------
-	public TelnetEnvironmentOption() {
-		
+	public TelnetEnvironmentOption(EnvironmentListener listener) {
+		this.listener.add(listener);
 	}
 
 	//-------------------------------------------------------------------
@@ -205,19 +208,22 @@ public class TelnetEnvironmentOption implements TelnetSubnegotiationHandler {
 
 			logger.log(Level.TRACE, "RCV {0} = {1}", dat, (char)dat);
 		}
+		// If there is a rest
+		if (keyBuf.length()>0) {
+			logger.log(Level.INFO, "Variable {0}={1}", keyBuf, valBuf);
+			variables.put(keyBuf.toString(), valBuf.toString());
+		}
+
+		
 		logger.log(Level.DEBUG,"Telnet Environment done: {0}", variables);
 		origin.subnegotiationEndedFor(getOptionCode(),variables);
 
-		try {
-			EnvironmentListener listener = origin.getOptionListener(getOptionCode());
-			if (listener!=null) {
-				listener.telnetLearnedEnvironmentVariables(variables);
-			} else {
-				logger.log(Level.TRACE, "No EnvironmentListener");
+		if (listener!=null) {
+			for (EnvironmentListener l : listener) {
+				l.telnetLearnedEnvironmentVariables(variables);
 			}
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		} else {
+			logger.log(Level.TRACE, "No EnvironmentListener");
 		}
 	}
 
@@ -282,16 +288,12 @@ public class TelnetEnvironmentOption implements TelnetSubnegotiationHandler {
 		logger.log(Level.WARNING,"Telnet Environment done: {0}", variables);
 		origin.subnegotiationEndedFor(getOptionCode(),variables);
 
-		try {
-			EnvironmentListener listener = origin.getOptionListener(getOptionCode());
-			if (listener!=null) {
-				listener.telnetLearnedEnvironmentVariables(variables);
-			} else {
-				logger.log(Level.TRACE, "No EnvironmentListener");
+		if (listener!=null) {
+			for (EnvironmentListener l : listener) {
+				l.telnetLearnedEnvironmentVariables(variables);
 			}
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		} else {
+			logger.log(Level.TRACE, "No EnvironmentListener");
 		}
 	}
 
@@ -430,6 +432,13 @@ public class TelnetEnvironmentOption implements TelnetSubnegotiationHandler {
 			e.printStackTrace();
 		}
 		return true;
+	}
+
+	@Override
+	public void addListener(EnvironmentListener callback) {
+		if (!listener.contains(callback)) {
+			listener.add(callback);
+		}
 	}
 
 }

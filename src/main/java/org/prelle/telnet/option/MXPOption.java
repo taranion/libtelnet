@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -20,7 +21,7 @@ import org.prelle.telnet.TelnetSubnegotiationHandler;
  * @author prelle
  *
  */
-public class MXPOption implements TelnetSubnegotiationHandler {
+public class MXPOption implements TelnetSubnegotiationHandler<MXPOption.MXPListener> {
 
 	protected final static Logger logger = System.getLogger("telnet.option.mxp");
 	
@@ -35,6 +36,7 @@ public class MXPOption implements TelnetSubnegotiationHandler {
 
 	private List<String> supports;
 	private String client;
+	private List<MXPListener> listeners = new ArrayList<>();
 
 	//-----------------------------------------------------------------
 	public MXPOption(String ...supports) {
@@ -85,6 +87,15 @@ public class MXPOption implements TelnetSubnegotiationHandler {
 	@Override
 	public void handleSubnegotiation(int[] values, TelnetProtocol stack) {
 		logger.log(Level.WARNING, "MXPOption.handleSubnegotiation: "+Arrays.toString(values));
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#addListener(org.prelle.telnet.TelnetOptionListener)
+	 */
+	@Override
+	public void addListener(MXPListener listener) {
+		if (!listeners.contains(listener)) listeners.add(listener);
 	}
 
 }

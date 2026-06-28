@@ -18,6 +18,7 @@ import org.prelle.telnet.TelnetProtocol;
 import org.prelle.telnet.TelnetSubnegotiationHandler;
 import org.prelle.telnet.WellKnownTelnetOptions;
 import org.prelle.telnet.mud.MUDTerminalTypeData;
+import org.prelle.telnet.option.TelnetCharset.CharsetListener;
 
 /**
  * RFC 1091
@@ -25,7 +26,7 @@ import org.prelle.telnet.mud.MUDTerminalTypeData;
  * @author prelle
  *
  */
-public class TerminalType implements TelnetSubnegotiationHandler {
+public class TerminalType implements TelnetSubnegotiationHandler<TerminalType.TerminalTypeListener> {
 
 	protected final static Logger logger = System.getLogger("telnet.ttype");
 
@@ -65,6 +66,8 @@ public class TerminalType implements TelnetSubnegotiationHandler {
 	private String[] answers;
 
 	private Integer selected;
+	
+	private List<TerminalTypeListener> listeners = new ArrayList<>();
 
 	//-----------------------------------------------------------------
 	public TerminalType(String ...options) {
@@ -206,6 +209,17 @@ public class TerminalType implements TelnetSubnegotiationHandler {
 		send[5] = (byte)SE;
 		out.writeCommand(send);
 		out.flush();
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#addListener(org.prelle.telnet.TelnetOptionListener)
+	 */
+	@Override
+	public void addListener(TerminalTypeListener listener) {
+		if (!listeners.contains(listener)) {
+			listeners.add(listener);
+		}
 	}
 
 }
