@@ -11,9 +11,13 @@ import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 
 import org.prelle.telnet.option.LineMode;
+import org.prelle.telnet.option.LineMode.LineModeListener;
 import org.prelle.telnet.option.TelnetCharset;
+import org.prelle.telnet.option.TelnetCharset.CharsetListener;
 import org.prelle.telnet.option.TelnetEnvironmentOption;
+import org.prelle.telnet.option.TelnetEnvironmentOption.EnvironmentListener;
 import org.prelle.telnet.option.TerminalType;
+import org.prelle.telnet.option.TerminalType.TerminalTypeListener;
 
 /**
  * @author prelle
@@ -38,7 +42,16 @@ public class PassiveUsage implements Runnable, TelnetConstants {
 
 	public PassiveUsage() throws IOException {
 		serverSocket = new TelnetServerSocket(4000);
-
+		serverSocket.setExtensionFactory( (socket) -> {
+			return new TelnetSubnegotiationHandler[] { 
+					new TerminalType((TerminalTypeListener)null), 
+					new LineMode((LineModeListener)null) , 
+					new TelnetCharset((CharsetListener)null, "UTF-8","CP437","ISO-8859-1","ASCII"), 
+					new TelnetEnvironmentOption((EnvironmentListener) (variables) -> {
+						logger.log(Level.INFO,"Environment variables received: {0}", variables);
+					}) 
+				};
+		});
 
 		thread = new Thread(this,"ThreadCheck");
 		thread.start();
@@ -50,12 +63,16 @@ public class PassiveUsage implements Runnable, TelnetConstants {
 		while (true) {
 			try {
 				TelnetSocket socket = (TelnetSocket) serverSocket.accept();
-				socket.negotiateOptionsAsync(
-						new TerminalType(),
-						new LineMode(),
-						//new TelnetCharset(null, null),
-						new TelnetEnvironmentOption()
-						);
+				socket.addListener(  new TelnetListener() {
+					@Override
+					public void optionStateChanged(TelnetSubnegotiationHandler extension, boolean state) {
+						logger.log(Level.INFO,"Extension {0} changed to {1}", extension.getName(), state);
+					}
+
+					@Override
+					public void telnetCommandReceived(TelnetCommand command) {
+						logger.log(Level.INFO,"Telnet command received: {0}", command);
+					}});
 				
 				InputStream in = socket.getInputStream();
 

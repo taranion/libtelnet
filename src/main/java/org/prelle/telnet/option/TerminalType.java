@@ -74,6 +74,11 @@ public class TerminalType implements TelnetSubnegotiationHandler<TerminalType.Te
 		this.answers = options;
 	}
 
+	//-----------------------------------------------------------------
+	public TerminalType(TerminalTypeListener listener) {
+		listeners.add(listener);
+	}
+
 	//-------------------------------------------------------------------
 	/**
 	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getOptionCode()

@@ -85,6 +85,7 @@ public class TelnetEnvironmentOption implements TelnetSubnegotiationHandler<Teln
 	
 	//-------------------------------------------------------------------
 	public TelnetEnvironmentOption(EnvironmentListener listener) {
+		if (listener!=null)
 		this.listener.add(listener);
 	}
 

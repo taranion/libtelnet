@@ -196,6 +196,11 @@ public class LineMode implements TelnetSubnegotiationHandler<LineMode.LineModeLi
 //    	super(TelnetOption.LINEMODE.getCode(), "LINEMODE");
     }
 
+	//-----------------------------------------------------------------
+  public LineMode(LineModeListener callback) {
+	  listeners.add(callback);
+   }
+
 	//-------------------------------------------------------------------
 	/**
 	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getOptionCode()

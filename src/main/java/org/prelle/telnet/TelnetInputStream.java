@@ -6,8 +6,10 @@ package org.prelle.telnet;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,18 +22,19 @@ import org.prelle.telnet.TelnetConstants.ControlCode;
 public class TelnetInputStream extends FilterInputStream {
 
 	Logger logger = System.getLogger("telnet.lvl1.in");
+	
+	private static enum TelnetState {
+		OPTION_DETECTION,
+		SUBNEGOTIATION,
+		DATA
+	}
 
 	private boolean commandMode;
 	private boolean dataIsSubnegotiation;
 
-	/** If stickyCRLF is true, then we're a machine, like an IBM PC,
-    where a Newline is a CR followed by LF.  On UNIX, this is false
-    because Newline is represented with just a LF character. */
-	boolean         stickyCRLF = false;
-	boolean         seenCR = false;
-	boolean         sendGoAheadAsANSISepator = false;
+	private boolean         sendGoAheadAsANSISepator = false;
 
-	public boolean  binaryMode = true;
+	private boolean  binaryMode = true;
 
 	private List<Integer> subNegotiationBuffer = new ArrayList<>();
 	private int subNegotiationFor;
@@ -39,7 +42,9 @@ public class TelnetInputStream extends FilterInputStream {
 	
 	private TelnetOutputStream reverseStream;
 	private TelnetProtocol protocol;
-
+	private TelnetState state = TelnetState.OPTION_DETECTION;
+	
+	
 	//-----------------------------------------------------------------
 	/**
 	 */
@@ -50,6 +55,14 @@ public class TelnetInputStream extends FilterInputStream {
 			throw new RuntimeException("Cannot wrap a TelnetInputStream");
 		}
 		config.setInputStream(this);
+		
+		// Start sending request for all supported options
+		config.initializeExtensions();
+	}
+
+	//-----------------------------------------------------------------
+	public InputStream getWrappedInputStream() {
+		return super.in;
 	}
 
 	//-----------------------------------------------------------------
@@ -90,8 +103,10 @@ public class TelnetInputStream extends FilterInputStream {
 	 */
 	@Override
 	public int read() throws IOException {
+//		logger.log(Level.WARNING, "read() calls "+in.getClass().getName()+" read()");
 		if (commandMode) {
 			int commandRaw = tracingRead();
+			logger.log(Level.TRACE, "read command {0}", commandRaw);
 			if (commandRaw==-1)
 				return -1;
 			ControlCode code = ControlCode.getCodeFor(commandRaw);
@@ -167,6 +182,7 @@ public class TelnetInputStream extends FilterInputStream {
 		commandMode = false;;
 		int data = -1;
 		data = in.read();
+		logger.log(Level.TRACE, "read data {0}={1}", data, (char)data);
 		
 		switch (data) {
 		case -1:
@@ -200,7 +216,13 @@ public class TelnetInputStream extends FilterInputStream {
 
 			// Loop until next data is received
 			int data = -1;
-			data = tracingRead();
+			while (true) {
+				try {
+					data = tracingRead();
+					break;
+				} catch (SocketTimeoutException e) {
+				}
+			}
 			if (data==-1) {
 				logger.log(Level.ERROR, "Lost stream");
 				return data;
@@ -209,7 +231,7 @@ public class TelnetInputStream extends FilterInputStream {
 			if (data>=128 && !binaryMode && data<255) {
 				logger.log(Level.WARNING, "Ignore character code {0} / {2} / {1} because not in binary mode",data, (char)data, Integer.toHexString(data));
 			} else if (data==255) {
-				logger.log(Level.ERROR, "Entering command mode");
+				logger.log(Level.DEBUG, "Entering command mode");
 				commandMode = true;
 				return null;
 			}
@@ -291,7 +313,7 @@ public class TelnetInputStream extends FilterInputStream {
 			} 
 		default:
 			commandMode = false;;
-			logger.log(Level.ERROR, "Leaving command mode");
+			logger.log(Level.DEBUG, "Leaving command mode");
 			protocol.processCommand(this, new TelnetCommand(code));
 		}
 
@@ -372,7 +394,7 @@ public class TelnetInputStream extends FilterInputStream {
 
 	//-----------------------------------------------------------------
 	private int readInSubnegotiationMode() throws IOException {
-		logger.log(Level.ERROR, "readInSubnegotiationMode");
+		logger.log(Level.DEBUG, "readInSubnegotiationMode");
 		do {
 			int data = -1;
 			while (true) {
@@ -411,52 +433,52 @@ public class TelnetInputStream extends FilterInputStream {
 //		return in.read(b);
 //	}
 
-    /** read into a byte array */
-    public int read(byte bytes[]) throws IOException {
-        return read(bytes, 0, bytes.length);
-    }
-
-    /**
-     * Read into a byte array at offset <i>off</i> for length <i>length</i>
-     * bytes.
-     */
-    @Override
-    public int read(byte bytes[], int off, int length) throws IOException {
-//    	logger.log(Level.ERROR, "ENTER: read(byte[], {0}, {1})", off, length);
-    	try {
-            Integer c;
-            int offStart = off;
-
-            int amountRead = 0;
-            while (--length >= 0) {
-            	if (commandMode) {
-    				c = readInCommandMode();
-    			} else {
-    				c = readUntilCommandMode();				
-    			}
-				if (c==null) {
-					// Just entered command mode - return the current
-					logger.log(Level.ERROR, "Command mode detected");
-					if (amountRead>0)
-				           return (off > offStart) ? off - offStart : -1;
-					else continue;
-				} 
-           	
-                amountRead++;
-                if (c == -1)
-                    break;
-                bytes[off++] = (byte)((int)c);
-                if (c == '\n')
-                	break;
-            }
-            return (off > offStart) ? off - offStart : -1;
-    	} catch (Exception e) {
-			logger.log(Level.ERROR, "Exception in read(byte[], {0}, {1}): {2}", off, length, e);
-			throw e;
-    	} finally {
-//    		logger.log(Level.ERROR, "LEAVE: read(byte[], {0}, {1})", off, length);
-    	}
-    }
+//    /** read into a byte array */
+//    public int read(byte bytes[]) throws IOException {
+//        return read(bytes, 0, bytes.length);
+//    }
+//
+//    /**
+//     * Read into a byte array at offset <i>off</i> for length <i>length</i>
+//     * bytes.
+//     */
+//    @Override
+//    public int read(byte bytes[], int off, int length) throws IOException {
+////    	logger.log(Level.ERROR, "ENTER: read(byte[], {0}, {1})", off, length);
+//    	try {
+//            Integer c;
+//            int offStart = off;
+//
+//            int amountRead = 0;
+//            while (--length >= 0) {
+//            	if (commandMode) {
+//    				c = readInCommandMode();
+//    			} else {
+//    				c = readUntilCommandMode();				
+//    			}
+//				if (c==null) {
+//					// Just entered command mode - return the current
+//					logger.log(Level.DEBUG, "Command mode detected");
+//					if (amountRead>0)
+//				           return (off > offStart) ? off - offStart : -1;
+//					else continue;
+//				} 
+//           	
+//                amountRead++;
+//                if (c == -1)
+//                    break;
+//                bytes[off++] = (byte)((int)c);
+//                if (c == '\n')
+//                	break;
+//            }
+//            return (off > offStart) ? off - offStart : -1;
+//    	} catch (Exception e) {
+//			logger.log(Level.ERROR, "Exception in read(byte[], {0}, {1}): {2}", off, length, e);
+//			throw e;
+//    	} finally {
+////    		logger.log(Level.ERROR, "LEAVE: read(byte[], {0}, {1})", off, length);
+//    	}
+//    }
 
 	//-----------------------------------------------------------------
 	/* (non-Javadoc)

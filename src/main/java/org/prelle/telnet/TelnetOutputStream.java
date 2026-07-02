@@ -35,6 +35,11 @@ public class TelnetOutputStream extends OutputStream {
 		stack.setOutputStream(this);
 		realOut = out;
 	}
+
+	//-----------------------------------------------------------------
+	public OutputStream getWrappedOutputStream() {
+		return realOut;
+	}
 	
     //-------------------------------------------------------------------
     /**
@@ -193,7 +198,7 @@ public class TelnetOutputStream extends OutputStream {
 
 	//-----------------------------------------------------------------
 	public void sendSubNegotiation(int code, int command, byte[] value) throws IOException {
-		logger.log(Level.DEBUG,"sub-negotiation for {0}, command {1}, value={2}", code,command, value);
+//		logger.log(Level.DEBUG,"sub-negotiation for {0}, command {1}, value={2}", WellKnownTelnetOptions.valueOf(code),command, Arrays.toString(value));
 		byte[] data = new byte[6+value.length];
 		data[0] = (byte)ControlCode.IAC.code();
 		data[1] = (byte)ControlCode.SB.code();
@@ -202,7 +207,7 @@ public class TelnetOutputStream extends OutputStream {
 		System.arraycopy(value, 0, data, 4, value.length);
 		data[data.length-2] = (byte)ControlCode.IAC.code();
 		data[data.length-1] = (byte)ControlCode.SE.code();
-		logger.log(Level.WARNING,"sub-negotiation for {0}, value={1}", code,Arrays.toString(data));
+//		logger.log(Level.WARNING,"sub-negotiation for {0}, value={1}", WellKnownTelnetOptions.valueOf(code),Arrays.toString(data));
 		realOut.write(data);
 		realOut.flush();
 	}

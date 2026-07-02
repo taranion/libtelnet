@@ -54,7 +54,8 @@ public class TelnetCharset implements TelnetSubnegotiationHandler<TelnetCharset.
 	//-------------------------------------------------------------------
 	public TelnetCharset(CharsetListener callback, String ... charsets) {
 		this.callback = callback;
-		supportedCharsets = Arrays.asList(charsets);
+		if (charsets!=null)
+			supportedCharsets = Arrays.asList(charsets);
 	}
 
 	//-------------------------------------------------------------------

@@ -74,9 +74,23 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	//-----------------------------------------------------------------
 	public TelnetSocket() {
 		stack = new TelnetProtocol(CommunicationRole.SERVER);
-//		optionCaps.capabilities.put(WellKnownTelnetOptions.ECHO    , new TelnetConfigOption());
-//		optionCaps.capabilities.put(WellKnownTelnetOptions.EOR     , new TelnetConfigOption());
-//		optionCaps.capabilities.put(WellKnownTelnetOptions.LINEMODE, new TelnetConfigOption());
+	}
+
+	//-----------------------------------------------------------------
+	public TelnetSocket(InputStream wrapIn, OutputStream wrapOut) {
+		stack = new TelnetProtocol(CommunicationRole.SERVER);
+		out = new TelnetOutputStream(wrapOut, stack);
+		stack.setOutputStream(out);
+		in = new TelnetInputStream( wrapIn, stack);
+		stack.setInputStream(in);
+		
+		in.setReverseStream(out);
+		try {
+			this.setSoTimeout(500);
+		} catch (SocketException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 	//-----------------------------------------------------------------
@@ -172,6 +186,11 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	 */
 	public TelnetProtocol getStack() {
 		return stack;
+	}
+
+	//-------------------------------------------------------------------
+	public boolean isFeatureActive(Integer code) {
+		return stack.isFeatureActive(code);
 	}
 
 
