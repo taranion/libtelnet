@@ -14,6 +14,7 @@ import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetProtocol;
 import org.prelle.telnet.TelnetSocket;
 import org.prelle.telnet.TelnetSubnegotiationHandler;
+import org.prelle.telnet.TelnetConstants.ControlCode;
 
 /**
  * RFC 1073
@@ -31,6 +32,10 @@ public class TelnetWindowSize implements TelnetSubnegotiationHandler<TelnetWindo
 	}
 	
 	private List<TelnetNAWSListener> listeners = new ArrayList<>();
+	
+	private int rows = -1;
+	private int cols = -1;
+	private boolean enabled = false;
 
 	//-------------------------------------------------------------------
 	/**
@@ -55,7 +60,16 @@ public class TelnetWindowSize implements TelnetSubnegotiationHandler<TelnetWindo
 	public boolean startCommunicationAs(CommunicationRole role) {
 		return role==CommunicationRole.CLIENT;
 	}
-
+	
+	public ControlCode initiate(TelnetProtocol stack, CommunicationRole role) throws IOException {
+		if (role==CommunicationRole.CLIENT) {
+			stack.getOutputStream().sendWill(getOptionCode());
+			return ControlCode.WILL;
+		} else {
+			stack.getOutputStream().sendDo(getOptionCode());
+			return ControlCode.DO;
+		}
+	}
 	//-----------------------------------------------------------------
 	/**
 	 * Called after the use of a option has been confirmed
@@ -63,15 +77,22 @@ public class TelnetWindowSize implements TelnetSubnegotiationHandler<TelnetWindo
 	 */
 	@Override
 	public boolean negotiateDetails(TelnetProtocol origin) {
-		int[] size = origin.getOptionData(CODE);
-		if (size!=null && size.length==2) {
-			try {
-				sendUpdate(origin, size[0], size[1]);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+		try {
+			if (cols>0 && rows>0)
+				sendUpdate(origin, cols, rows);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
+//		int[] size = origin.getOptionData(CODE);
+//		if (size!=null && size.length==2) {
+//			try {
+//				sendUpdate(origin, size[0], size[1]);
+//			} catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//		}
 		return false;
 	}
 
@@ -101,14 +122,23 @@ public class TelnetWindowSize implements TelnetSubnegotiationHandler<TelnetWindo
 	}
 
 	//-------------------------------------------------------------------
+	public void update(TelnetProtocol origin, int w, int h) throws IOException {
+		this.cols = w;
+		this.rows = h;
+		sendUpdate(origin, w, h);
+	}
+
+	//-------------------------------------------------------------------
 	public static void sendUpdate(TelnetProtocol origin, int w, int h) throws IOException {
-		logger.log(Level.INFO, "Send NAWS {0}x{1}", w,h);
-		byte[] command = new byte[4];
-		command[0] = (byte) (w/256);
-		command[1] = (byte) (w%256);
-		command[2] = (byte) (h/256);
-		command[3] = (byte) (h%256);
-		origin.getOutputStream().sendSubNegotiation(CODE, command);
+		if (origin.isFeatureActive(CODE)) {
+			logger.log(Level.INFO, "Send NAWS {0}x{1}", w,h);
+			byte[] command = new byte[4];
+			command[0] = (byte) (w/256);
+			command[1] = (byte) (w%256);
+			command[2] = (byte) (h/256);
+			command[3] = (byte) (h%256);
+			origin.getOutputStream().sendSubNegotiation(CODE, command);
+		}
 	}
 
 	//-------------------------------------------------------------------

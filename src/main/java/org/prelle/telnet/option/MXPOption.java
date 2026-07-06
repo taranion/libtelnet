@@ -32,14 +32,17 @@ public class MXPOption implements TelnetSubnegotiationHandler<MXPOption.MXPListe
 
 	public static interface MXPListener extends TelnetOptionListener {
 		public void telnetMXPLearned(MXPFeatures data);
+		public void mxpDTDChanged(String newDTD);
 	}
 
+	private CommunicationRole role;
 	private List<String> supports;
 	private String client;
 	private List<MXPListener> listeners = new ArrayList<>();
 
 	//-----------------------------------------------------------------
-	public MXPOption(String ...supports) {
+	public MXPOption(CommunicationRole role,String ...supports) {
+		this.role = role;
 		this.supports = List.of(supports);
 	}
 
@@ -72,6 +75,10 @@ public class MXPOption implements TelnetSubnegotiationHandler<MXPOption.MXPListe
 	 */
 	public boolean negotiateDetails(TelnetProtocol stack) {
 		logger.log(Level.ERROR, "Ask for support");
+		if (role==CommunicationRole.CLIENT) {
+			// client should send support
+			return false;
+		}
 		String support = "\u001B[6z<SUPPORT>\u001B[7z";
 		try {
 			stack.getOutputStream().write(support.getBytes(StandardCharsets.US_ASCII));
@@ -98,4 +105,10 @@ public class MXPOption implements TelnetSubnegotiationHandler<MXPOption.MXPListe
 		if (!listeners.contains(listener)) listeners.add(listener);
 	}
 
+	//-------------------------------------------------------------------
+	public void fireDTDChange(String dtd) {
+		for (MXPListener l: listeners) {
+			l.mxpDTDChanged(dtd);
+		}
+	}
 }

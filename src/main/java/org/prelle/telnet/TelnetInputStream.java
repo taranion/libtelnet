@@ -61,6 +61,11 @@ public class TelnetInputStream extends FilterInputStream {
 	}
 
 	//-----------------------------------------------------------------
+	public String toString() {
+		return "Telnet <-- "+in;
+	}
+
+	//-----------------------------------------------------------------
 	public InputStream getWrappedInputStream() {
 		return super.in;
 	}
@@ -91,10 +96,34 @@ public class TelnetInputStream extends FilterInputStream {
 
 	//-----------------------------------------------------------------
 	private int tracingRead() throws IOException {
+		logger.log(Level.INFO, "ENTER: tracingRead()");
 		int data = in.read();
 		String name = (data>=240)?ControlCode.getCodeFor(data).name():"";
 		logger.log(Level.TRACE, "RCV {0} {1} ", data, name);
+		logger.log(Level.INFO, "LEAVE: tracingRead()");
 		return data;
+	}
+
+	//-----------------------------------------------------------------
+	public int read(byte[] buff, int offset, int length) throws IOException {
+		logger.log(Level.WARNING, "ENTER: read(byte[], {0}, {1})", offset, length);
+		int i=0;
+		try {
+		for (; i<length && in.available()>0; i++) {
+			if (offset+i>=buff.length) {
+				return (i>=0)?i:-1;
+			}
+			int c = read();
+			if (c==-1)
+				break;
+			buff[offset+i] = (byte)c;
+		}
+		return (i>0)?i:-1;
+		} catch (SocketTimeoutException e) {
+			return (i>=0)?i:-1;
+		} finally {
+//			logger.log(Level.WARNING, "LEAVE: read(byte[], {0}, {1}) read {2}", offset, length, i);
+		}
 	}
 
 	//-----------------------------------------------------------------
@@ -103,7 +132,7 @@ public class TelnetInputStream extends FilterInputStream {
 	 */
 	@Override
 	public int read() throws IOException {
-//		logger.log(Level.WARNING, "read() calls "+in.getClass().getName()+" read()");
+		logger.log(Level.INFO, "read()");
 		if (commandMode) {
 			int commandRaw = tracingRead();
 			logger.log(Level.TRACE, "read command {0}", commandRaw);
@@ -169,7 +198,7 @@ public class TelnetInputStream extends FilterInputStream {
 				} 
 			default:
 				commandMode = false;;
-				logger.log(Level.ERROR, "Leaving command mode");
+				logger.log(Level.DEBUG, "Leaving command mode");
 				protocol.processCommand(this, new TelnetCommand(code));
 			}
 		}

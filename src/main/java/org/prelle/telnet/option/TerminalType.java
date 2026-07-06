@@ -137,7 +137,7 @@ public class TerminalType implements TelnetSubnegotiationHandler<TerminalType.Te
 	public void handleSubnegotiation(int[] values, TelnetProtocol origin) {
 		int operation = values[0];
 		if (operation==SEND) {
-			logger.log(Level.INFO, "Remote party requests terminal type information: "+Arrays.toString(answers));
+			logger.log(Level.INFO, "Remote party requests terminal type information");
 			try {
 				sendNextFromList(origin.getOutputStream());
 			} catch (IOException e) {

@@ -111,6 +111,7 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 
 	//-----------------------------------------------------------------
 	public TelnetSocket addListener(TelnetListener listener) {
+		Objects.requireNonNull(listener, "listener must not be null");
 		stack.addListener(listener);
 		return this;
 	}
@@ -119,7 +120,9 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	@SuppressWarnings("unchecked")
 	public TelnetSocket setOptionListener(WellKnownTelnetOptions option, TelnetOptionListener listener) {
 		if (stack.getExtensionForOption(option.getCode())==null) {
-			throw new IllegalArgumentException("No extension registered for option "+option);
+			logger.log(Level.ERROR, "No extension registered for option "+option);
+			//throw new IllegalArgumentException("No extension registered for option "+option);
+			return this;
 		}
 		stack.getExtensionForOption(option.getCode()).addListener(listener);
 		return this;

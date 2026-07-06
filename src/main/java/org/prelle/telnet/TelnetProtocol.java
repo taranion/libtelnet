@@ -78,6 +78,7 @@ public class TelnetProtocol {
 
 	//-----------------------------------------------------------------
 	public void addListener(TelnetListener listener) {
+		Objects.requireNonNull(listener, "Listener cannot be null");
 		if (this.listener==null)
 			this.listener = new ArrayList<>();
 		this.listener.add(listener);
@@ -129,9 +130,13 @@ public class TelnetProtocol {
 
 	//-----------------------------------------------------------------
 	public void fireTelnetCommand(TelnetCommand command) {
-		logger.log(Level.ERROR, "fire {0} to {1} listener", command, listener.size());
+		logger.log(Level.DEBUG, "fire {0} to {1} listener", command, listener.size());
 		for (TelnetListener list : listener)
 			try {
+				if (list==null) {
+					logger.log(Level.ERROR, "Listener is null");
+					continue;
+				}
 				list.telnetCommandReceived(command);
 			} catch (Exception e) {
 				logger.log(Level.ERROR,"Error calling "+list.getClass()+".telnetCommandReceived: "+e,e);
@@ -216,9 +221,10 @@ public class TelnetProtocol {
 
 	//-------------------------------------------------------------------
 	private void handleNewlyConfirmed(NegotiatonState oldState, int code, ControlCode confirmedWith) {
-		TelnetSubnegotiationHandler extension = getExtensionForOption(code);
+		TelnetSubnegotiationHandler<?> extension = getExtensionForOption(code);
 		if (oldState==null || oldState.state==State.SUGGESTED) {
 			logger.log(Level.INFO, "CONFIRMED {0} with {1}", extension.getName(), confirmedWith);
+			extension.negotiateDetails(this);
 			// Inform the listener that the option is now confirmed
 			listener.forEach(callback -> callback.optionStateChanged(extension, true));
 		}
@@ -226,7 +232,7 @@ public class TelnetProtocol {
 
 	//-------------------------------------------------------------------
 	private void handleNewlyRejected(NegotiatonState oldState, int code, ControlCode confirmedWith) {
-		TelnetSubnegotiationHandler extension = getExtensionForOption(code);
+		TelnetSubnegotiationHandler<?> extension = getExtensionForOption(code);
 		if (oldState==null || oldState.state==State.SUGGESTED) {
 			// Inform the listener that the option is now rejected
 			listener.forEach(callback -> callback.optionStateChanged(extension, false));
