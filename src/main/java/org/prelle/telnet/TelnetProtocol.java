@@ -30,10 +30,10 @@ public class TelnetProtocol {
 	
 	
 	private static class NegotiatonState {
-		private TelnetSubnegotiationHandler<?> extension;
+		private TelnetOption<?> extension;
 		private State state;
 		ControlCode lastSent;
-		public NegotiatonState(TelnetSubnegotiationHandler<?> extension, State state, ControlCode lastSent) {
+		public NegotiatonState(TelnetOption<?> extension, State state, ControlCode lastSent) {
 			this.extension = extension;
 			this.state = state;
 			this.lastSent = lastSent;
@@ -48,13 +48,11 @@ public class TelnetProtocol {
 	}
 	
 	private CommunicationRole role;
-	private Map<TelnetSubnegotiationHandler, CommunicationRole> extensions = new HashMap<>();
+	private Map<TelnetOption, CommunicationRole> extensions = new HashMap<>();
 
 	private Map<Integer, NegotiatonState> negotiationState;
 	/** Stores data related to a specific config option on this connection */
 	private TelnetOptionCapabilities optionCaps = new TelnetOptionCapabilities();
-	/** Stores callbacks for specific options */
-	private Map<Integer, TelnetOptionListener> optionListener = new HashMap<>();
 	
 	private TelnetInputStream inputStream;
 	private TelnetOutputStream outputStream;
@@ -69,7 +67,7 @@ public class TelnetProtocol {
 	}
 
 	//-------------------------------------------------------------------
-	public TelnetProtocol add(TelnetSubnegotiationHandler extension) {
+	public TelnetProtocol add(TelnetOption extension) {
 		if (!extensions.containsKey(extension)) {
 			extensions.put(extension, role);
 		}
@@ -89,7 +87,7 @@ public class TelnetProtocol {
 		logger.log(Level.DEBUG, "ENTER: initializeExtensions() with {0} extensions", extensions.size());
 		try {
 			Objects.requireNonNull(outputStream, "Output stream must be set before initializing extensions");
-			for (TelnetSubnegotiationHandler ext : extensions.keySet()) {
+			for (TelnetOption ext : extensions.keySet()) {
 				try {
 					if (ext.startCommunicationAs(role)) {
 						ControlCode code = ext.initiate(this, role);
@@ -111,8 +109,8 @@ public class TelnetProtocol {
 	}
 
 	//-----------------------------------------------------------------
-	TelnetSubnegotiationHandler getExtensionForOption(int optionCode) {
-		for (TelnetSubnegotiationHandler ext : extensions.keySet()) {
+	TelnetOption getExtensionForOption(int optionCode) {
+		for (TelnetOption ext : extensions.keySet()) {
 			if (ext.getOptionCode()==optionCode)
 				return ext;
 		}
@@ -121,7 +119,7 @@ public class TelnetProtocol {
 
 	//-----------------------------------------------------------------
 	String getExtensionName(int optionCode) {
-		for (TelnetSubnegotiationHandler ext : extensions.keySet()) {
+		for (TelnetOption ext : extensions.keySet()) {
 			if (ext.getOptionCode()==optionCode)
 				return ext.getName();
 		}
@@ -145,7 +143,7 @@ public class TelnetProtocol {
 
 	//-----------------------------------------------------------------
 	private void handleDoDontWillWontResponse(TelnetInputStream from, TelnetCommand command, NegotiatonState state) throws IOException {
-		TelnetSubnegotiationHandler extension = getExtensionForOption(command.getData());
+		TelnetOption extension = getExtensionForOption(command.getData());
 		switch (state.state) {
 		case SUGGESTED:
 			// We already sent a suggestion, so this is a response to that
@@ -203,7 +201,7 @@ public class TelnetProtocol {
 			return;
 		}
 		// No, this is a new option
-		TelnetSubnegotiationHandler extension = getExtensionForOption(optionCode);
+		TelnetOption extension = getExtensionForOption(optionCode);
 		if (extension!=null) {
 			// This is an extension we support
 			logger.log(Level.DEBUG, "{0} {1}", command, extension.getName());
@@ -230,7 +228,7 @@ public class TelnetProtocol {
 
 	//-------------------------------------------------------------------
 	private void handleNewlyConfirmed(NegotiatonState oldState, int code, ControlCode confirmedWith) {
-		TelnetSubnegotiationHandler<?> extension = getExtensionForOption(code);
+		TelnetOption<?> extension = getExtensionForOption(code);
 		if (oldState==null || oldState.state==State.SUGGESTED) {
 			logger.log(Level.INFO, "CONFIRMED {0} with {1}", extension.getName(), confirmedWith);
 			extension.negotiateDetails(this);
@@ -241,7 +239,7 @@ public class TelnetProtocol {
 
 	//-------------------------------------------------------------------
 	private void handleNewlyRejected(NegotiatonState oldState, int code, ControlCode confirmedWith) {
-		TelnetSubnegotiationHandler<?> extension = getExtensionForOption(code);
+		TelnetOption<?> extension = getExtensionForOption(code);
 		if (oldState==null || oldState.state==State.SUGGESTED) {
 			// Inform the listener that the option is now rejected
 			listener.forEach(callback -> callback.optionStateChanged(extension, false));
@@ -257,7 +255,7 @@ public class TelnetProtocol {
 		}
 		logger.log(Level.INFO, "confirm "+command);
 
-		TelnetSubnegotiationHandler<?> extension = getExtensionForOption(command.getData());
+		TelnetOption<?> extension = getExtensionForOption(command.getData());
 		NegotiatonState state = negotiationState.get(command.getData());
 		switch (command.getCode()) {
 		case DO  : 
@@ -320,7 +318,7 @@ public class TelnetProtocol {
 			logger.log(Level.ERROR, "Cannot reject {0} because output stream is null", command);
 			return;
 		}
-		TelnetSubnegotiationHandler<?> extension = getExtensionForOption(command.getData());
+		TelnetOption<?> extension = getExtensionForOption(command.getData());
 		NegotiatonState state = negotiationState.get(command.getData());
 		switch (command.getCode()) {
 		case DO  : 
@@ -352,7 +350,7 @@ public class TelnetProtocol {
 	public void processSubnegotiation(TelnetInputStream from, int code, int[] values) {
 		logger.log(Level.TRACE, "RCV Subnegotiation for {0}: {1}", code, Arrays.toString((values)));
 
-		TelnetSubnegotiationHandler handler = getExtensionForOption(code);
+		TelnetOption handler = getExtensionForOption(code);
 		if (handler==null) {
 			logger.log(Level.WARNING, "Received {2} bytes subnegotiation for {0}/{1}, but cannot find a TelnetOptionHandler", code, WellKnownTelnetOptions.valueOf(code), values.length);
 			String strVal = new String(values, 0, values.length);
@@ -368,21 +366,6 @@ public class TelnetProtocol {
 			}
 		}
 		handler.handleSubnegotiation(values, this);
-	}
-	
-	//-----------------------------------------------------------------
-	public TelnetProtocol setOptionListener(int code, TelnetOptionListener callback) {
-		logger.log(Level.DEBUG, "Send events for option {0} to {1}", code, callback);
-		if (callback==null)
-			throw new NullPointerException();
-		TelnetSubnegotiationHandler handler = getExtensionForOption(code);
-		optionListener.put(code, callback);
-		return this;
-	}
-
-	//-----------------------------------------------------------------
-	public <E extends TelnetOptionListener> E getOptionListener(int code) {
-		return (E) optionListener.get(code);
 	}
 
 	//-----------------------------------------------------------------

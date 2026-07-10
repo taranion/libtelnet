@@ -19,7 +19,7 @@ import org.prelle.telnet.CommunicationRole;
 import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetProtocol;
-import org.prelle.telnet.TelnetSubnegotiationHandler;
+import org.prelle.telnet.TelnetOption;
 
 /**
  * RFC 857
@@ -27,7 +27,7 @@ import org.prelle.telnet.TelnetSubnegotiationHandler;
  * @author prelle
  *
  */
-public class TelnetEnvironmentOption implements TelnetSubnegotiationHandler<TelnetEnvironmentOption.EnvironmentListener> {
+public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOption.EnvironmentListener> {
 
 	protected final static Logger logger = System.getLogger("telnet.option.environ");
 
@@ -91,7 +91,7 @@ public class TelnetEnvironmentOption implements TelnetSubnegotiationHandler<Teln
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getOptionCode()
+	 * @see org.prelle.telnet.TelnetOption#getOptionCode()
 	 */
 	@Override
 	public int getOptionCode() {
@@ -103,7 +103,7 @@ public class TelnetEnvironmentOption implements TelnetSubnegotiationHandler<Teln
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#resolveSubCommandName(byte)
+	 * @see org.prelle.telnet.TelnetOption#resolveSubCommandName(byte)
 	 */
 	@Override
 	public String resolveSubCommandName(int position, byte value) {
@@ -127,7 +127,7 @@ public class TelnetEnvironmentOption implements TelnetSubnegotiationHandler<Teln
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#startCommunicationAs(org.prelle.telnet.CommunicationRole)
+	 * @see org.prelle.telnet.TelnetOption#startCommunicationAs(org.prelle.telnet.CommunicationRole)
 	 */
 	@Override
 	public boolean startCommunicationAs(CommunicationRole role) {

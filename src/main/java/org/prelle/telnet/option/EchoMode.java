@@ -6,13 +6,13 @@ import java.util.List;
 import org.prelle.telnet.CommunicationRole;
 import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetProtocol;
-import org.prelle.telnet.TelnetSubnegotiationHandler;
+import org.prelle.telnet.TelnetOption;
 import org.prelle.telnet.option.LineMode.ModeBit;
 
 /**
  * 
  */
-public class EchoMode implements TelnetSubnegotiationHandler<org.prelle.telnet.option.EchoMode.EchoModeListener> {
+public class EchoMode implements TelnetOption<org.prelle.telnet.option.EchoMode.EchoModeListener> {
 
 	protected final static Logger logger = System.getLogger("telnet.echo");
 

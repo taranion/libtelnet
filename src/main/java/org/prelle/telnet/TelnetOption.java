@@ -9,7 +9,7 @@ import java.io.IOException;
  * @author prelle
  *
  */
-public interface TelnetSubnegotiationHandler<E extends  TelnetOptionListener> extends TelnetConstants {
+public interface TelnetOption<E extends  TelnetOptionListener> extends TelnetConstants {
 	
 	//-----------------------------------------------------------------
 	int getOptionCode();
@@ -32,9 +32,10 @@ public interface TelnetSubnegotiationHandler<E extends  TelnetOptionListener> ex
 
 	//-----------------------------------------------------------------
 	/**
-	 * Called after the use of a option has been confirmed
+	 * Called after the use of a option has been confirmed in <code>startCommunicationAs</code>.
+	 * @param stack
 	 * @param role 
-	 * @return TRUE when answers to a sub-negotiation are expected
+	 * @return Telnet command that has been sent for this option.
 	 */
 	default ControlCode initiate(TelnetProtocol stack, CommunicationRole role) throws IOException {
 		stack.getOutputStream().sendDo(getOptionCode());

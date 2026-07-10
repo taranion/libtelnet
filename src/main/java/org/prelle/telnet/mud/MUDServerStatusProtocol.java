@@ -15,14 +15,14 @@ import java.util.function.Supplier;
 
 import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetProtocol;
-import org.prelle.telnet.TelnetSubnegotiationHandler;
+import org.prelle.telnet.TelnetOption;
 
 /**
  * https://tintin.mudhalla.net/protocols/mssp/
  * @author prelle
  *
  */
-public class MUDServerStatusProtocol implements TelnetSubnegotiationHandler<MUDServerStatusProtocol.MSSPListener> {
+public class MUDServerStatusProtocol implements TelnetOption<MUDServerStatusProtocol.MSSPListener> {
 
 	protected final static Logger logger = System.getLogger("telnet.option.mssp");
 
@@ -45,7 +45,7 @@ public class MUDServerStatusProtocol implements TelnetSubnegotiationHandler<MUDS
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getOptionCode()
+	 * @see org.prelle.telnet.TelnetOption#getOptionCode()
 	 */
 	@Override
 	public int getOptionCode() {
@@ -57,7 +57,7 @@ public class MUDServerStatusProtocol implements TelnetSubnegotiationHandler<MUDS
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
+	 * @see org.prelle.telnet.TelnetOption#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
 	@Override
 	public void handleSubnegotiation(int[] values, TelnetProtocol stack) {
@@ -92,7 +92,7 @@ public class MUDServerStatusProtocol implements TelnetSubnegotiationHandler<MUDS
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#addListener(org.prelle.telnet.TelnetOptionListener)
+	 * @see org.prelle.telnet.TelnetOption#addListener(org.prelle.telnet.TelnetOptionListener)
 	 */
 	@Override
 	public void addListener(MSSPListener listener) {

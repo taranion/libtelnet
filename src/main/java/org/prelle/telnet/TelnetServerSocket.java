@@ -18,7 +18,7 @@ public class TelnetServerSocket extends ServerSocket {
 
     private final static Logger logger = System.getLogger("telnet.lvl3");
     
-    private Function<TelnetSocket, TelnetSubnegotiationHandler[]> configFactory;
+    private Function<TelnetSocket, TelnetOption[]> configFactory;
 
 	//-----------------------------------------------------------------
 	public TelnetServerSocket(int port) throws IOException {
@@ -31,7 +31,7 @@ public class TelnetServerSocket extends ServerSocket {
 	}
 
 	//-----------------------------------------------------------------
-	public void setExtensionFactory(Function<TelnetSocket, TelnetSubnegotiationHandler[]> configFactory) {
+	public void setExtensionFactory(Function<TelnetSocket, TelnetOption[]> configFactory) {
 		this.configFactory = configFactory;
 	}
 
@@ -59,7 +59,7 @@ public class TelnetServerSocket extends ServerSocket {
 
 		// Call an eventually existing supplier for extensions
 		if (configFactory != null) {
-			for (TelnetSubnegotiationHandler<?> extension : configFactory.apply(ret)) {
+			for (TelnetOption<?> extension : configFactory.apply(ret)) {
 				ret.getStack().add(extension);
 			}
 		}

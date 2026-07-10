@@ -110,7 +110,7 @@ public class TelnetOutputStream extends OutputStream {
 			// Replace byte values with their names
 			buf.append(ControlCode.getCodeFor(data[0]&0xff)+" ");
 			buf.append(ControlCode.getCodeFor(data[1]&0xff)+" ");
-			TelnetSubnegotiationHandler handler = stack.getExtensionForOption(data[2]);
+			TelnetOption handler = stack.getExtensionForOption(data[2]);
 			if (handler==null) {
 				buf.append(ControlCode.getCodeFor(data[2]&0xff));
 			} else {

@@ -13,7 +13,7 @@ import org.prelle.telnet.CommunicationRole;
 import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetProtocol;
 import org.prelle.telnet.TelnetSocket;
-import org.prelle.telnet.TelnetSubnegotiationHandler;
+import org.prelle.telnet.TelnetOption;
 import org.prelle.telnet.TelnetConstants.ControlCode;
 
 /**
@@ -21,7 +21,7 @@ import org.prelle.telnet.TelnetConstants.ControlCode;
  * @author prelle
  *
  */
-public class TelnetWindowSize implements TelnetSubnegotiationHandler<TelnetWindowSize.TelnetNAWSListener> {
+public class TelnetWindowSize implements TelnetOption<TelnetWindowSize.TelnetNAWSListener> {
 
 	public final static int CODE = 31;
 
@@ -48,7 +48,7 @@ public class TelnetWindowSize implements TelnetSubnegotiationHandler<TelnetWindo
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getOptionCode()
+	 * @see org.prelle.telnet.TelnetOption#getOptionCode()
 	 */
 	@Override
 	public int getOptionCode() {
@@ -57,7 +57,7 @@ public class TelnetWindowSize implements TelnetSubnegotiationHandler<TelnetWindo
 	
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getName()
+	 * @see org.prelle.telnet.TelnetOption#getName()
 	 */
 	@Override
 	public String getName() { return "NAWS"; }
@@ -72,7 +72,7 @@ public class TelnetWindowSize implements TelnetSubnegotiationHandler<TelnetWindo
 	
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#initiate(org.prelle.telnet.TelnetProtocol, org.prelle.telnet.CommunicationRole)
+	 * @see org.prelle.telnet.TelnetOption#initiate(org.prelle.telnet.TelnetProtocol, org.prelle.telnet.CommunicationRole)
 	 */
 	@Override
 	public ControlCode initiate(TelnetProtocol stack, CommunicationRole role) throws IOException {
@@ -154,7 +154,7 @@ public class TelnetWindowSize implements TelnetSubnegotiationHandler<TelnetWindo
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#addListener(org.prelle.telnet.TelnetOptionListener)
+	 * @see org.prelle.telnet.TelnetOption#addListener(org.prelle.telnet.TelnetOptionListener)
 	 */
 	@Override
 	public void addListener(TelnetNAWSListener listener) {

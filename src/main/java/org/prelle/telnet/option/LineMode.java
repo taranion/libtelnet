@@ -15,14 +15,14 @@ import org.prelle.telnet.TelnetConstants;
 import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetProtocol;
-import org.prelle.telnet.TelnetSubnegotiationHandler;
+import org.prelle.telnet.TelnetOption;
 import org.prelle.telnet.WellKnownTelnetOptions;
 
 /**
  * @author prelle
  *
  */
-public class LineMode implements TelnetSubnegotiationHandler<LineMode.LineModeListener> {
+public class LineMode implements TelnetOption<LineMode.LineModeListener> {
 
 	protected final static Logger logger = System.getLogger("telnet.linemode");
 
@@ -178,15 +178,15 @@ public class LineMode implements TelnetSubnegotiationHandler<LineMode.LineModeLi
 		public List<ModeBit> getModes() { return this.lineModes; }
 	}
 
-	public static class SendBufferedDataOn {
-		private TelnetConstants.ControlCode request;
-		private List<Integer> codes;
-		public SendBufferedDataOn(TelnetConstants.ControlCode request, List<Integer> codes) {
-			 this.codes = codes;
-			 this.request = request;
-		}
-		public List<Integer> getCodes() { return this.codes; }
-	}
+//	public static class SendBufferedDataOn {
+//		private TelnetConstants.ControlCode request;
+//		private List<Integer> codes;
+//		public SendBufferedDataOn(TelnetConstants.ControlCode request, List<Integer> codes) {
+//			 this.codes = codes;
+//			 this.request = request;
+//		}
+//		public List<Integer> getCodes() { return this.codes; }
+//	}
 
 	private List<LineModeListener> listeners = new ArrayList<>();
 	private CommunicationRole role;
@@ -203,7 +203,7 @@ public class LineMode implements TelnetSubnegotiationHandler<LineMode.LineModeLi
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getOptionCode()
+	 * @see org.prelle.telnet.TelnetOption#getOptionCode()
 	 */
 	@Override
 	public int getOptionCode() {
@@ -244,7 +244,7 @@ public class LineMode implements TelnetSubnegotiationHandler<LineMode.LineModeLi
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
+	 * @see org.prelle.telnet.TelnetOption#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
     @Override
 	public void handleSubnegotiation(int[] values, TelnetProtocol stack) {
@@ -271,16 +271,14 @@ public class LineMode implements TelnetSubnegotiationHandler<LineMode.LineModeLi
 				logger.log(Level.WARNING, "Ignore, because we are server - noone tells us what to do");
 				return;
 			}
-			LineModeListener lmList = stack.getOptionListener(WellKnownTelnetOptions.LINEMODE.getCode());
-			if (lmList!=null) {
+			listeners.forEach(lmList -> {
 				if (modes.contains(ModeBit.MODE_ACK)) {
 					lmList.linemodeFlagsAcknowledged(modes);					
 				} else {
 					List<ModeBit> confirmed = lmList.linemodeFlagsSuggested(modes);
 					confirmMode(stack.getOutputStream(), confirmed);
 				}
-			} else
-				logger.log(Level.WARNING, "No LineModeListener configured");
+			});
 			break;
 		case SLC:
 			logger.log(Level.INFO, "IAC SB LINEMODE SLC {0}", Arrays.toString(values));
@@ -350,9 +348,7 @@ public class LineMode implements TelnetSubnegotiationHandler<LineMode.LineModeLi
 			}
 		}
 
-		LineModeListener lmList = stack.getOptionListener(WellKnownTelnetOptions.LINEMODE.getCode());
-		if (lmList!=null)
-			lmList.sendFlushOn(codes);
+		listeners.forEach(lmList -> lmList.sendFlushOn(codes));
 	}
 
 	//-------------------------------------------------------------------

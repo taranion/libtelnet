@@ -6,14 +6,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.prelle.telnet.TelnetOption;
 import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetProtocol;
-import org.prelle.telnet.TelnetSubnegotiationHandler;
 
 /**
  *
  */
-public class AardwolfMushclientProtocol implements TelnetSubnegotiationHandler<AardwolfMushclientProtocol.AardwolfMushclientListener> {
+public class AardwolfMushclientProtocol implements TelnetOption<AardwolfMushclientProtocol.AardwolfMushclientListener> {
 
 	protected final static Logger logger = System.getLogger("telnet.aard");
 
@@ -50,7 +50,7 @@ public class AardwolfMushclientProtocol implements TelnetSubnegotiationHandler<A
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getOptionCode()
+	 * @see org.prelle.telnet.TelnetOption#getOptionCode()
 	 */
 	@Override
 	public int getOptionCode() {
@@ -59,14 +59,14 @@ public class AardwolfMushclientProtocol implements TelnetSubnegotiationHandler<A
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getName()
+	 * @see org.prelle.telnet.TelnetOption#getName()
 	 */
 	@Override
 	public String getName() { return "AMP"; }
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#negotiateDetails(org.prelle.telnet.TelnetProtocol)
+	 * @see org.prelle.telnet.TelnetOption#negotiateDetails(org.prelle.telnet.TelnetProtocol)
 	 */
 	@Override
 	public boolean negotiateDetails(TelnetProtocol stack) {
@@ -75,26 +75,21 @@ public class AardwolfMushclientProtocol implements TelnetSubnegotiationHandler<A
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
+	 * @see org.prelle.telnet.TelnetOption#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
 	@Override
 	public void handleSubnegotiation(int[] values, TelnetProtocol nvt) {
-		AardwolfMushclientListener listener = nvt.getOptionListener(CODE);
 		switch (values[0]) {
 		case 100:
 			MUDMode mode = MUDMode.valueOf(values[1]);
 			logger.log(Level.DEBUG,"RCV: mode="+mode);
 			if (mode!=null) {
-				if (listener!=null) listener.telnetMudModeChanged(mode);
-				else logger.log(Level.WARNING, "No AardwolfMushclientListener found as TelnetOptionListener");
-			} else {
-				logger.log(Level.ERROR, "Unknown mode {0} for Aardwolf protocol 102", values[1]);
+				listeners.forEach(l -> l.telnetMudModeChanged(mode));
 			}
 		case 101:
 			// Received MUD tick
 			logger.log(Level.DEBUG,"RCV: TICK");
-			if (listener!=null) listener.telnetTickReceived();
-			else logger.log(Level.WARNING, "No AardwolfMushclientListener found as TelnetOptionListener");
+			listeners.forEach(l -> l.telnetTickReceived());
 			break;
 		default:
 			logger.log(Level.WARNING,"TODO: we received2 : {0}", Arrays.toString(values));
@@ -103,7 +98,7 @@ public class AardwolfMushclientProtocol implements TelnetSubnegotiationHandler<A
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#addListener(org.prelle.telnet.TelnetOptionListener)
+	 * @see org.prelle.telnet.TelnetOption#addListener(org.prelle.telnet.TelnetOptionListener)
 	 */
 	@Override
 	public void addListener(AardwolfMushclientListener listener) {

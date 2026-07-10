@@ -13,7 +13,7 @@ import org.prelle.telnet.CommunicationRole;
 import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetProtocol;
-import org.prelle.telnet.TelnetSubnegotiationHandler;
+import org.prelle.telnet.TelnetOption;
 
 /**
  * @see https://tintin.mudhalla.net/protocols/gmcp/
@@ -23,7 +23,7 @@ import org.prelle.telnet.TelnetSubnegotiationHandler;
  * @author prelle
  *
  */
-public class GenericMUDCommunicationProtocol implements TelnetSubnegotiationHandler<GenericMUDCommunicationProtocol.GMCPReceiver> {
+public class GenericMUDCommunicationProtocol implements TelnetOption<GenericMUDCommunicationProtocol.GMCPReceiver> {
 
 	protected final static Logger logger = System.getLogger("telnet.gmcp");
 
@@ -78,7 +78,7 @@ public class GenericMUDCommunicationProtocol implements TelnetSubnegotiationHand
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getOptionCode()
+	 * @see org.prelle.telnet.TelnetOption#getOptionCode()
 	 */
 	@Override
 	public int getOptionCode() {
@@ -93,7 +93,7 @@ public class GenericMUDCommunicationProtocol implements TelnetSubnegotiationHand
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#startCommunicationAs(org.prelle.telnet.CommunicationRole)
+	 * @see org.prelle.telnet.TelnetOption#startCommunicationAs(org.prelle.telnet.CommunicationRole)
 	 */
 	@Override
 	public boolean startCommunicationAs(CommunicationRole role) {
@@ -117,7 +117,7 @@ public class GenericMUDCommunicationProtocol implements TelnetSubnegotiationHand
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
+	 * @see org.prelle.telnet.TelnetOption#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
 	@Override
 	public void handleSubnegotiation(int[] values, TelnetProtocol stack) {
@@ -143,7 +143,7 @@ public class GenericMUDCommunicationProtocol implements TelnetSubnegotiationHand
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#addListener(org.prelle.telnet.TelnetOptionListener)
+	 * @see org.prelle.telnet.TelnetOption#addListener(org.prelle.telnet.TelnetOptionListener)
 	 */
 	@Override
 	public void addListener(GMCPReceiver listener) {

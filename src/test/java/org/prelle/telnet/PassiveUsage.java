@@ -43,7 +43,7 @@ public class PassiveUsage implements Runnable, TelnetConstants {
 	public PassiveUsage() throws IOException {
 		serverSocket = new TelnetServerSocket(4000);
 		serverSocket.setExtensionFactory( (socket) -> {
-			return new TelnetSubnegotiationHandler[] { 
+			return new TelnetOption[] { 
 					new TerminalType((TerminalTypeListener)null), 
 					new LineMode((LineModeListener)null) , 
 					new TelnetCharset((CharsetListener)null, "UTF-8","CP437","ISO-8859-1","ASCII"), 
@@ -65,7 +65,7 @@ public class PassiveUsage implements Runnable, TelnetConstants {
 				TelnetSocket socket = (TelnetSocket) serverSocket.accept();
 				socket.addListener(  new TelnetListener() {
 					@Override
-					public void optionStateChanged(TelnetSubnegotiationHandler extension, boolean state) {
+					public void optionStateChanged(TelnetOption extension, boolean state) {
 						logger.log(Level.INFO,"Extension {0} changed to {1}", extension.getName(), state);
 					}
 

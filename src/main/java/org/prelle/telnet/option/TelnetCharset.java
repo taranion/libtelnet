@@ -17,14 +17,14 @@ import java.util.StringTokenizer;
 import org.prelle.telnet.CommunicationRole;
 import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetProtocol;
-import org.prelle.telnet.TelnetSubnegotiationHandler;
+import org.prelle.telnet.TelnetOption;
 
 /**
  * https://datatracker.ietf.org/doc/html/rfc2066
  * @author prelle
  *
  */
-public class TelnetCharset implements TelnetSubnegotiationHandler<TelnetCharset.CharsetListener> {
+public class TelnetCharset implements TelnetOption<TelnetCharset.CharsetListener> {
 
 	protected final static Logger logger = System.getLogger("telnet.option.charset");
 
@@ -60,7 +60,7 @@ public class TelnetCharset implements TelnetSubnegotiationHandler<TelnetCharset.
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getOptionCode()
+	 * @see org.prelle.telnet.TelnetOption#getOptionCode()
 	 */
 	@Override
 	public int getOptionCode() {
@@ -81,7 +81,7 @@ public class TelnetCharset implements TelnetSubnegotiationHandler<TelnetCharset.
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
+	 * @see org.prelle.telnet.TelnetOption#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
 	@Override
 	public void handleSubnegotiation(int[] values, TelnetProtocol stack) {
@@ -106,11 +106,8 @@ public class TelnetCharset implements TelnetSubnegotiationHandler<TelnetCharset.
 			
 			stack.setOptionData(CODE, charset);
 			try {
-				CharsetListener listener = stack.getOptionListener(getOptionCode());
-				if (listener!=null) {
+				for (CharsetListener listener : listeners) {
 					listener.telnetCharsetNegotiated(charset);
-				} else {
-					logger.log(Level.TRACE, "No CharsetListener");
 				}
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
@@ -211,7 +208,7 @@ public class TelnetCharset implements TelnetSubnegotiationHandler<TelnetCharset.
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#addListener(org.prelle.telnet.TelnetOptionListener)
+	 * @see org.prelle.telnet.TelnetOption#addListener(org.prelle.telnet.TelnetOptionListener)
 	 */
 	@Override
 	public void addListener(CharsetListener listener) {

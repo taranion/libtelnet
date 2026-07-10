@@ -36,7 +36,7 @@ import org.prelle.telnet.TelnetSocket.State;
  */
 public class TelnetSocket extends Socket implements TelnetConstants {
 	
-	public static record NegotiationResult(TelnetSubnegotiationHandler handler, boolean accepted, Object data) {
+	public static record NegotiationResult(TelnetOption handler, boolean accepted, Object data) {
 		public <E> E getResultData() {
 			return (E) data;
 		}
@@ -129,16 +129,16 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	}
 
 	//-------------------------------------------------------------------
-	public void negotiateOptionsAsync(TelnetSubnegotiationHandler...options) {
+	public void negotiateOptionsAsync(TelnetOption...options) {
 		stack.getOutputStream();
-		for (TelnetSubnegotiationHandler option : options) {
+		for (TelnetOption option : options) {
 			stack.add(option);
 		}
 		stack.initializeExtensions();
 	}
 
 	//-------------------------------------------------------------------
-	public List<NegotiationResult> negotiateOptionsAndWait(TelnetSubnegotiationHandler...options) {
+	public List<NegotiationResult> negotiateOptionsAndWait(TelnetOption...options) {
 		List<NegotiationResult> result = new ArrayList<>();
 		synchronized (this) {
 			negotiateOptionsAsync(options);

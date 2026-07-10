@@ -15,7 +15,7 @@ import org.prelle.telnet.CommunicationRole;
 import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.TelnetProtocol;
-import org.prelle.telnet.TelnetSubnegotiationHandler;
+import org.prelle.telnet.TelnetOption;
 import org.prelle.telnet.WellKnownTelnetOptions;
 import org.prelle.telnet.mud.MUDTerminalTypeData;
 import org.prelle.telnet.option.TelnetCharset.CharsetListener;
@@ -26,7 +26,7 @@ import org.prelle.telnet.option.TelnetCharset.CharsetListener;
  * @author prelle
  *
  */
-public class TerminalType implements TelnetSubnegotiationHandler<TerminalType.TerminalTypeListener> {
+public class TerminalType implements TelnetOption<TerminalType.TerminalTypeListener> {
 
 	protected final static Logger logger = System.getLogger("telnet.ttype");
 
@@ -81,7 +81,7 @@ public class TerminalType implements TelnetSubnegotiationHandler<TerminalType.Te
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getOptionCode()
+	 * @see org.prelle.telnet.TelnetOption#getOptionCode()
 	 */
 	@Override
 	public int getOptionCode() {
@@ -92,7 +92,7 @@ public class TerminalType implements TelnetSubnegotiationHandler<TerminalType.Te
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#resolveSubCommandName(byte)
+	 * @see org.prelle.telnet.TelnetOption#resolveSubCommandName(byte)
 	 */
 	@Override
 	public String resolveSubCommandName(int position, byte value) {
@@ -105,7 +105,7 @@ public class TerminalType implements TelnetSubnegotiationHandler<TerminalType.Te
 	
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#startCommunicationAs(org.prelle.telnet.CommunicationRole)
+	 * @see org.prelle.telnet.TelnetOption#startCommunicationAs(org.prelle.telnet.CommunicationRole)
 	 */
 	@Override
 	public boolean startCommunicationAs(CommunicationRole role) {
@@ -114,7 +114,7 @@ public class TerminalType implements TelnetSubnegotiationHandler<TerminalType.Te
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#initializeAs(org.prelle.telnet.WellKnownTelnetOptions, org.prelle.telnet.CommunicationRole, org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
+	 * @see org.prelle.telnet.TelnetOption#initializeAs(org.prelle.telnet.WellKnownTelnetOptions, org.prelle.telnet.CommunicationRole, org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
 	public boolean negotiateDetails(TelnetProtocol stack) {
 		try {
@@ -167,16 +167,12 @@ public class TerminalType implements TelnetSubnegotiationHandler<TerminalType.Te
 					logger.log(Level.INFO, "Received {0}", received);
 					origin.subnegotiationEndedFor(getOptionCode(),received);
 
-					TerminalTypeListener listener = origin.getOptionListener(getOptionCode());
-					logger.log(Level.INFO, "Listener {0}", listener);
-					if (listener!=null) {
+					for (TerminalTypeListener listener : listeners) {
 						if (received.size()==3) {
 							listener.telnetTerminalTypesLearned(new MUDTerminalTypeData(received));
 						} else {
 							listener.telnetTerminalTypesLearned(new TerminalTypeData(received));
 						}
-					} else {
-						logger.log(Level.TRACE, "No TerminalTypeListener");
 					}
 				}
 		}
@@ -218,7 +214,7 @@ public class TerminalType implements TelnetSubnegotiationHandler<TerminalType.Te
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#addListener(org.prelle.telnet.TelnetOptionListener)
+	 * @see org.prelle.telnet.TelnetOption#addListener(org.prelle.telnet.TelnetOptionListener)
 	 */
 	@Override
 	public void addListener(TerminalTypeListener listener) {

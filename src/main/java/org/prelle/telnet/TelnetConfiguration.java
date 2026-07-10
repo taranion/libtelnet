@@ -8,10 +8,10 @@ import java.util.List;
  */
 public class TelnetConfiguration {
 	
-	private List<TelnetSubnegotiationHandler> extensions = new ArrayList<>();
+	private List<TelnetOption> extensions = new ArrayList<>();
 
 	//-------------------------------------------------------------------
-	public void add(TelnetSubnegotiationHandler extension) {
+	public void add(TelnetOption extension) {
 		if (!extensions.contains(extension)) {
 			extensions.add(extension);
 		}
