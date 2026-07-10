@@ -28,6 +28,16 @@ public class TelnetInputStream extends FilterInputStream {
 		SUBNEGOTIATION,
 		DATA
 	}
+	
+	private static class PreReadData {
+		public byte[] data;
+		public boolean userData;
+		public int offset;
+		public PreReadData(byte[] data, boolean userData) {
+			this.data = data;
+			this.userData = userData;
+		}
+	}
 
 	private boolean commandMode;
 	private boolean dataIsSubnegotiation;
@@ -43,6 +53,11 @@ public class TelnetInputStream extends FilterInputStream {
 	private TelnetOutputStream reverseStream;
 	private TelnetProtocol protocol;
 	private TelnetState state = TelnetState.OPTION_DETECTION;
+	
+	/** Read available data into this buffer */
+	private byte[] buffer = new byte[1024];
+	private int bufferOffset = 0;
+	
 	
 	
 	//-----------------------------------------------------------------
@@ -96,17 +111,17 @@ public class TelnetInputStream extends FilterInputStream {
 
 	//-----------------------------------------------------------------
 	private int tracingRead() throws IOException {
-		logger.log(Level.INFO, "ENTER: tracingRead()");
+//		logger.log(Level.INFO, "ENTER: tracingRead()");
 		int data = in.read();
 		String name = (data>=240)?ControlCode.getCodeFor(data).name():"";
 		logger.log(Level.TRACE, "RCV {0} {1} ", data, name);
-		logger.log(Level.INFO, "LEAVE: tracingRead()");
+//		logger.log(Level.INFO, "LEAVE: tracingRead()");
 		return data;
 	}
 
 	//-----------------------------------------------------------------
 	public int read(byte[] buff, int offset, int length) throws IOException {
-		logger.log(Level.WARNING, "ENTER: read(byte[], {0}, {1})", offset, length);
+//		logger.log(Level.WARNING, "ENTER: read(byte[], {0}, {1})", offset, length);
 		int i=0;
 		try {
 		for (; i<length && in.available()>0; i++) {
@@ -132,7 +147,7 @@ public class TelnetInputStream extends FilterInputStream {
 	 */
 	@Override
 	public int read() throws IOException {
-		logger.log(Level.INFO, "read()");
+//		logger.log(Level.INFO, "read()");
 		if (commandMode) {
 			int commandRaw = tracingRead();
 			logger.log(Level.TRACE, "read command {0}", commandRaw);
@@ -211,7 +226,7 @@ public class TelnetInputStream extends FilterInputStream {
 		commandMode = false;;
 		int data = -1;
 		data = in.read();
-		logger.log(Level.TRACE, "read data {0}={1}", data, (char)data);
+//		logger.log(Level.ERROR, "read data {0}={1}", data, (char)data);
 		
 		switch (data) {
 		case -1:
@@ -524,6 +539,7 @@ public class TelnetInputStream extends FilterInputStream {
 	 */
 	@Override
 	public int available() throws IOException {
+//		logger.log(Level.ERROR, "available will be passed to "+in);
 		return in.available();
 	}
 

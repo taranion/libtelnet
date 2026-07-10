@@ -38,6 +38,15 @@ public class TelnetWindowSize implements TelnetSubnegotiationHandler<TelnetWindo
 	private boolean enabled = false;
 
 	//-------------------------------------------------------------------
+	public TelnetWindowSize() {
+	}
+
+	//-------------------------------------------------------------------
+	public TelnetWindowSize(TelnetNAWSListener callback) {
+		addListener(callback);
+	}
+
+	//-------------------------------------------------------------------
 	/**
 	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getOptionCode()
 	 */
@@ -58,9 +67,14 @@ public class TelnetWindowSize implements TelnetSubnegotiationHandler<TelnetWindo
 	 * Called from TelnetProtocol to learn if this handler will initiate communication or wait for the other side to do so.
 	 */
 	public boolean startCommunicationAs(CommunicationRole role) {
-		return role==CommunicationRole.CLIENT;
+		return role==CommunicationRole.SERVER;
 	}
 	
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#initiate(org.prelle.telnet.TelnetProtocol, org.prelle.telnet.CommunicationRole)
+	 */
+	@Override
 	public ControlCode initiate(TelnetProtocol stack, CommunicationRole role) throws IOException {
 		if (role==CommunicationRole.CLIENT) {
 			stack.getOutputStream().sendWill(getOptionCode());
@@ -77,6 +91,7 @@ public class TelnetWindowSize implements TelnetSubnegotiationHandler<TelnetWindo
 	 */
 	@Override
 	public boolean negotiateDetails(TelnetProtocol origin) {
+		System.err.println("TelnetWindowSize.negotiateDetails: cols="+cols+", rows="+rows);
 		try {
 			if (cols>0 && rows>0)
 				sendUpdate(origin, cols, rows);
@@ -108,12 +123,8 @@ public class TelnetWindowSize implements TelnetSubnegotiationHandler<TelnetWindo
 		logger.log(Level.DEBUG,"Terminal size = "+ x+"*"+y);
 		stack.subnegotiationEndedFor(code, new int[] {x,y});
 
-		TelnetNAWSListener listener = stack.getOptionListener(code);
-		if (listener!=null) {
-			listener.telnetWindowSizeChanged(x, y);
-		} else {
-			logger.log(Level.TRACE, "No TelnetNAWSListener");
-		}
+//		TelnetNAWSListener listener = stack.getOptionListener(code);
+		listeners.forEach( l -> l.telnetWindowSizeChanged(x, y));
 	}
 
 	//-------------------------------------------------------------------

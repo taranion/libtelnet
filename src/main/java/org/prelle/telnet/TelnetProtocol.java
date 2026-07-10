@@ -177,6 +177,15 @@ public class TelnetProtocol {
 				logger.log(Level.WARNING, "Received {0} while state is {1} - ignoring", command, state);
 			}
 			break;
+		case CONFIRMED:
+		case REJECTED:
+			// E.g. when disabling an option
+			if (command.getCode()==ControlCode.WONT || command.getCode()==ControlCode.DONT) {
+				// The remote site wants to stop doing this option
+				confirm(from.getReverseStream(), command);
+				listener.forEach(callback -> callback.optionStateChanged(extension, false));
+			}
+			break;
 		default:
 			logger.log(Level.WARNING, "Received {0} while state is {1} - ignoring", command, state);
 		}
@@ -276,6 +285,32 @@ public class TelnetProtocol {
 				state.setState(State.CONFIRMED);
 			}
 			break;
+		case WONT: 
+			respondWith = ControlCode.DONT;
+			out.sendDont(command.getData()); 
+			handleNewlyConfirmed(state, command.getData(), respondWith);
+			if (state==null) {
+				state = new NegotiatonState(extension, State.REJECTED, respondWith);
+				negotiationState.put(command.getData(), state);
+			} else {
+				state.lastSent = respondWith;
+				state.setState(State.REJECTED);
+			}
+			break;
+		case DONT: 
+			respondWith = ControlCode.WONT;
+			out.sendWont(command.getData()); 
+			handleNewlyConfirmed(state, command.getData(), respondWith);
+			if (state==null) {
+				state = new NegotiatonState(extension, State.REJECTED, respondWith);
+				negotiationState.put(command.getData(), state);
+			} else {
+				state.lastSent = respondWith;
+				state.setState(State.REJECTED);
+			}
+			break;
+		default:
+			logger.log(Level.ERROR, "Don't know how to confirm a {0} command", command);
 		}
 	}
 
@@ -308,6 +343,8 @@ public class TelnetProtocol {
 				state.setState(State.REJECTED);
 			}
 			break;
+		default:
+			logger.log(Level.ERROR, "Don''t know how to reject a {0} command", command);
 		}
 	}
 
@@ -368,23 +405,25 @@ public class TelnetProtocol {
 	/**
 	 * Called by TelnetSubnegotiationHandler implementor classes
 	 */
+	@Deprecated
 	public void subnegotiationEndedFor(int optionCode, Object data) {
 		setOptionData(optionCode, data);
 		logger.log(Level.INFO, "Negotiation for option {0}/{2} received {1}", optionCode, data, WellKnownTelnetOptions.valueOf(optionCode));
 		logger.log(Level.DEBUG, "expected are "+optionCaps.capSubNegAwaitResponses);
 //		logger.log(Level.DEBUG, "status is "+state);
-//
-//		if (state==State.OPTION_SUBNEGOTIATION) {
-//			synchronized (optionCaps.capSubNegAwaitResponses) {
-//				if (optionCaps.capSubNegAwaitResponses.contains( (Integer)optionCode)) {
-//					optionCaps.capSubNegAwaitResponses.remove((Integer)optionCode);
-//					if (optionCaps.capSubNegAwaitResponses.isEmpty()) {
-//						logger.log(Level.WARNING, "DONE SUBNEG------------------------------");
-//						optionCaps.capSubNegAwaitResponses.notify();
-//					}
-//				}
-//			}
-//		}
+
+		NegotiatonState negState = negotiationState.get(optionCode);
+		if (negState.state==State.OPTION_SUBNEGOTIATION) {
+			synchronized (optionCaps.capSubNegAwaitResponses) {
+				if (optionCaps.capSubNegAwaitResponses.contains( (Integer)optionCode)) {
+					optionCaps.capSubNegAwaitResponses.remove((Integer)optionCode);
+					if (optionCaps.capSubNegAwaitResponses.isEmpty()) {
+						logger.log(Level.WARNING, "DONE SUBNEG------------------------------");
+						optionCaps.capSubNegAwaitResponses.notify();
+					}
+				}
+			}
+		}
 	}
 
 	//-------------------------------------------------------------------

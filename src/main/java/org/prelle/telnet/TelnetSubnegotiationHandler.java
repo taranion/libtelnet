@@ -34,7 +34,7 @@ public interface TelnetSubnegotiationHandler<E extends  TelnetOptionListener> ex
 	/**
 	 * Called after the use of a option has been confirmed
 	 * @param role 
-	 * @return TRUE when answers to a subnegotiation are expected
+	 * @return TRUE when answers to a sub-negotiation are expected
 	 */
 	default ControlCode initiate(TelnetProtocol stack, CommunicationRole role) throws IOException {
 		stack.getOutputStream().sendDo(getOptionCode());
@@ -44,7 +44,7 @@ public interface TelnetSubnegotiationHandler<E extends  TelnetOptionListener> ex
 	//-----------------------------------------------------------------
 	/**
 	 * Called after the use of a option has been confirmed
-	 * @return TRUE when answers to a subnegotiation are expected
+	 * @return TRUE when answers to a sub-negotiation are expected
 	 */
 	boolean negotiateDetails(TelnetProtocol stack);
 

@@ -74,11 +74,11 @@ public class MXPOption implements TelnetSubnegotiationHandler<MXPOption.MXPListe
 	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#negotiateDetails(org.prelle.telnet.TelnetProtocol)
 	 */
 	public boolean negotiateDetails(TelnetProtocol stack) {
-		logger.log(Level.ERROR, "Ask for support");
 		if (role==CommunicationRole.CLIENT) {
 			// client should send support
 			return false;
 		}
+		logger.log(Level.ERROR, "Ask for support");
 		String support = "\u001B[6z<SUPPORT>\u001B[7z";
 		try {
 			stack.getOutputStream().write(support.getBytes(StandardCharsets.US_ASCII));

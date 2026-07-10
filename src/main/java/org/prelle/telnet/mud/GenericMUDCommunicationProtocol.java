@@ -68,6 +68,15 @@ public class GenericMUDCommunicationProtocol implements TelnetSubnegotiationHand
 	private List<GMCPReceiver> listeners = new ArrayList<>();
 
 	//-------------------------------------------------------------------
+	public GenericMUDCommunicationProtocol() {
+	}
+
+	//-------------------------------------------------------------------
+	public GenericMUDCommunicationProtocol(GMCPReceiver callback) {
+		addListener(callback);
+	}
+
+	//-------------------------------------------------------------------
 	/**
 	 * @see org.prelle.telnet.TelnetSubnegotiationHandler#getOptionCode()
 	 */
@@ -88,7 +97,15 @@ public class GenericMUDCommunicationProtocol implements TelnetSubnegotiationHand
 	 */
 	@Override
 	public boolean startCommunicationAs(CommunicationRole role) {
-		return true;
+		return role==CommunicationRole.SERVER;
+	}
+	
+	public ControlCode initiate(TelnetProtocol stack, CommunicationRole role) throws IOException {
+		if (role==CommunicationRole.SERVER) {
+			stack.getOutputStream().sendWill(getOptionCode());
+			return ControlCode.WILL;
+		}
+		return null;
 	}
 
 	//-------------------------------------------------------------------
@@ -104,21 +121,23 @@ public class GenericMUDCommunicationProtocol implements TelnetSubnegotiationHand
 	 */
 	@Override
 	public void handleSubnegotiation(int[] values, TelnetProtocol stack) {
+		System.err.println("GenericMUDCommunicationProtocol: RCV: "+values.length+" bytes");
 		RawGMCPMessage msg = new RawGMCPMessage(values);
-		TelnetOptionListener listenerR = stack.getOptionListener(CODE);
 		if (!msg.getNamespace().toLowerCase().contains("core.ping"))
 			logger.log(Level.INFO,"RCV {0} with {1}", msg.getNamespace(), msg.msg);
 //		System.err.println("GenericMUDCommunicationProtocol: RCV: "+msg);
-		GMCPReceiver listener = (GMCPReceiver)listenerR;
-		if (listener!=null) {
-			listener.telnetReceiveGMCP(msg);
-		} else
-			logger.log(Level.WARNING, "No listener for GMCP - use session.getSocket().setOptionListener(TelnetOption.GMCP, ...)");
+		listeners.forEach(l -> l.telnetReceiveGMCP(msg));
 	}
 
 	@Override
 	public boolean negotiateDetails(TelnetProtocol stack) {
-		// TODO Auto-generated method stub
+		System.err.println("GenericMUDCommunicationProtocol.negotiateDetails() called");
+		try {
+			send(stack.getOutputStream(), "Server.Hello","()");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		return true;
 	}
 
