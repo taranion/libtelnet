@@ -129,23 +129,27 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	}
 
 	//-------------------------------------------------------------------
-	public void negotiateOptionsAsync(TelnetOption...options) {
-		stack.getOutputStream();
-		for (TelnetOption option : options) {
-			stack.add(option);
+	public List<Integer> negotiateOptionsAsync(TelnetOption...options) {
+		logger.log(Level.INFO, "ENTER: negotiateOptionsAsync");
+		try {
+			stack.getOutputStream();
+			List<Integer> result = new ArrayList<>();
+			for (TelnetOption option : options) {
+				stack.add(option);
+				result.add(option.getOptionCode());
+			}
+			stack.initializeExtensions();
+			return result;
+		} finally {
+			logger.log(Level.INFO, "LEAVE: negotiateOptionsAsync");
 		}
-		stack.initializeExtensions();
 	}
 
-	//-------------------------------------------------------------------
-	public List<NegotiationResult> negotiateOptionsAndWait(TelnetOption...options) {
-		List<NegotiationResult> result = new ArrayList<>();
-		synchronized (this) {
-			negotiateOptionsAsync(options);
-		}
-		return result;
+	//-----------------------------------------------------------------
+	public void waitUntilSubnegotiationDone() {
+		stack.waitUntilSubnegotiationDone(2000);
 	}
-
+	
 	//-----------------------------------------------------------------
 	/**
 	 * @see java.net.Socket#getInputStream()

@@ -42,7 +42,7 @@ public class TelnetInputStream extends FilterInputStream {
 	private boolean commandMode;
 	private boolean dataIsSubnegotiation;
 
-	private boolean         sendGoAheadAsANSISepator = false;
+	private boolean sendGoAheadAsANSISepator = false;
 
 	private boolean  binaryMode = true;
 
@@ -58,7 +58,7 @@ public class TelnetInputStream extends FilterInputStream {
 	private byte[] buffer = new byte[1024];
 	private int bufferOffset = 0;
 	
-	
+	private List<Integer> preReadData = new ArrayList<>();
 	
 	//-----------------------------------------------------------------
 	/**
@@ -147,7 +147,14 @@ public class TelnetInputStream extends FilterInputStream {
 	 */
 	@Override
 	public int read() throws IOException {
-//		logger.log(Level.INFO, "read()");
+//		logger.log(Level.WARNING, "read() from {0} with preRead={1}", this, preReadData);
+		if (!preReadData.isEmpty()) {
+			int data = preReadData.remove(0);
+			logger.log(Level.TRACE, "read pre-read data {0}", data);
+			return data;
+		}
+		
+		
 		if (commandMode) {
 			int commandRaw = tracingRead();
 			logger.log(Level.TRACE, "read command {0}", commandRaw);
@@ -690,6 +697,14 @@ public class TelnetInputStream extends FilterInputStream {
 	 */
 	public TelnetProtocol getProtocol() {
 		return protocol;
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @param preReadData the preReadData to set
+	 */
+	public void addPreReadData(List<Integer> data) {
+		this.preReadData.addAll(data);
 	}
 
 }

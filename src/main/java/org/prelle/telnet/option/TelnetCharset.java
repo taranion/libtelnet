@@ -10,14 +10,13 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.StringTokenizer;
 
 import org.prelle.telnet.CommunicationRole;
+import org.prelle.telnet.TelnetOption;
 import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetProtocol;
-import org.prelle.telnet.TelnetOption;
 
 /**
  * https://datatracker.ietf.org/doc/html/rfc2066
@@ -94,25 +93,28 @@ public class TelnetCharset implements TelnetOption<TelnetCharset.CharsetListener
 				data[i] = (byte)values[i+1];
 			}
 			String csName = new String(data).trim();
-			Charset charset = null;
 			if ("ISO 8859-15".equals(csName))
-				charset = StandardCharsets.ISO_8859_1;
+				consoleCharset = StandardCharsets.ISO_8859_1;
 			else if ("ISO 8859-1".equals(csName))
-				charset = StandardCharsets.ISO_8859_1;
+				consoleCharset = StandardCharsets.ISO_8859_1;
 			else if ("UTF-8".equals(csName) || "UTF8".equals(csName))
-				charset = StandardCharsets.UTF_8;
+				consoleCharset = StandardCharsets.UTF_8;
 			else
-				charset = Charset.forName(csName);
+				consoleCharset = Charset.forName(csName);
 			
-			stack.setOptionData(CODE, charset);
 			try {
 				for (CharsetListener listener : listeners) {
-					listener.telnetCharsetNegotiated(charset);
+					listener.telnetCharsetNegotiated(consoleCharset);
 				}
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
+			
+			for (CharsetListener listener : listeners) {
+				listener.telnetCharsetNegotiated(consoleCharset);
+			}
+			stack.fireSubnegotiationFinished(this);
 		} else if (operation==REQUEST) {
 			byte[] data = new byte[values.length-1];
 			for (int i=0; i<data.length; i++) {
@@ -145,7 +147,6 @@ public class TelnetCharset implements TelnetOption<TelnetCharset.CharsetListener
 					logger.log(Level.WARNING, "Unknown charset "+csName);
 				}
 			});
-			Charset consoleCharset = stack.getOptionData(CODE);
 			if (requested.contains(consoleCharset)) {
 				byte[] append = consoleCharset.toString().getBytes(StandardCharsets.US_ASCII);
 //				byte[] toSend = new byte[1+append.length];
@@ -174,10 +175,9 @@ public class TelnetCharset implements TelnetOption<TelnetCharset.CharsetListener
 	 */
 	@Override
 	public boolean negotiateDetails(TelnetProtocol stack) {
-		logger.log(Level.INFO, "ENTER: initialize()");
-		logger.log(Level.DEBUG, "Ask remote party to send environment");
+		logger.log(Level.DEBUG, "ENTER: initialize()");
+		logger.log(Level.INFO, "Ask remote party to send supported charsets");
 		try {
-			stack.setOptionData(CODE, new HashMap<String,String>());
 			byte[] charsetData = " UTF-8 CP437 ASCII".getBytes(StandardCharsets.US_ASCII);
 			byte[] send = new byte[charsetData.length+7];
 			send[0] = (byte)IAC;
@@ -188,7 +188,7 @@ public class TelnetCharset implements TelnetOption<TelnetCharset.CharsetListener
 			System.arraycopy(charsetData, 0, send, 5, charsetData.length);
 			send[5+charsetData.length] = (byte)IAC;
 			send[6+charsetData.length] = (byte)SE;
-			logger.log(Level.DEBUG, "SND {0}", Arrays.toString(send));
+			logger.log(Level.WARNING, "SND {0}", Arrays.toString(send));
 			stack.getOutputStream().writeCommand(send);
 			stack.getOutputStream().flush();
 			return true;
@@ -197,7 +197,7 @@ public class TelnetCharset implements TelnetOption<TelnetCharset.CharsetListener
 			e.printStackTrace();
 			return false;
 		} finally {
-			logger.log(Level.INFO, "LEAVE: initialize()");
+			logger.log(Level.DEBUG, "LEAVE: initialize()");
 		}
 	}
 

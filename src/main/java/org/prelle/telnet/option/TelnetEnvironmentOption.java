@@ -52,6 +52,8 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 	private Map<String,String> systemVariables = new HashMap<>();
 	private List<EnvironmentListener> listener = new ArrayList<>();
 	
+	private int answersExpected = 0;
+	
 	//-------------------------------------------------------------------
 	public TelnetEnvironmentOption(String[] ...data) {
 		for (String[] pair : data) {
@@ -99,7 +101,7 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 	}
 
 	@Override
-	public String getName() { return "ENVIRON";}
+	public String getName() { return "MNES";}
 
 	//-------------------------------------------------------------------
 	/**
@@ -140,9 +142,10 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 	 */
 	@Override
 	public void handleSubnegotiation(int[] values, TelnetProtocol stack) {
-		logger.log(Level.DEBUG,"performSubNegotiation for ENVIRON");
+		logger.log(Level.DEBUG, "Subnegotiate for ENVIRON: "+Arrays.toString(values));
 		int operation = values[0];
 
+		if (answersExpected>0) answersExpected--;
 		switch (operation) {
 		case IS: handleIS(values, stack); break;
 		case INFO: handleINFO(values, stack); break;
@@ -150,17 +153,17 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 		default:
 			logger.log(Level.WARNING, "Operation {0} not supported yet", resolveSubCommandName(3, (byte)operation));
 		}
+		
+		if (answersExpected==0) {
+			stack.fireSubnegotiationFinished(this);
+		}
 	}
 
 	//-------------------------------------------------------------------
 	private void handleIS(int[] values, TelnetProtocol origin) {
 		StringBuffer keyBuf = new StringBuffer();
 		StringBuffer valBuf = new StringBuffer();
-		Map<String,String> variables = origin.getOptionData(CODE);
-		if (variables==null) {
-			variables = new HashMap<String,String>();
-			origin.setOptionData(CODE, variables);
-		}
+		Map<String,String> variables = new HashMap<String,String>();
 		int mode = -1;
 		int i=1;
 		while (i<values.length) {
@@ -180,6 +183,7 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 				if (keyBuf.length()>0) {
 					logger.log(Level.INFO, "System Variable {0}={1}", keyBuf, valBuf);
 					variables.put(keyBuf.toString(), valBuf.toString());
+					systemVariables.put(keyBuf.toString(), valBuf.toString());
 				}
 				keyBuf = new StringBuffer();
 				break;
@@ -188,6 +192,7 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 				if (keyBuf.length()>0) {
 					logger.log(Level.INFO, "User Variable {0} = {1}", keyBuf, valBuf);
 					variables.put(keyBuf.toString(), valBuf.toString());
+					userVariables.put(keyBuf.toString(), valBuf.toString());
 				}
 				keyBuf = new StringBuffer();
 				break;
@@ -213,11 +218,11 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 		if (keyBuf.length()>0) {
 			logger.log(Level.INFO, "Variable {0}={1}", keyBuf, valBuf);
 			variables.put(keyBuf.toString(), valBuf.toString());
+			systemVariables.put(keyBuf.toString(), valBuf.toString());
 		}
 
 		
 		logger.log(Level.DEBUG,"Telnet Environment done: {0}", variables);
-		origin.subnegotiationEndedFor(getOptionCode(),variables);
 
 		if (listener!=null) {
 			for (EnvironmentListener l : listener) {
@@ -226,6 +231,7 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 		} else {
 			logger.log(Level.TRACE, "No EnvironmentListener");
 		}
+		origin.fireSubnegotiationFinished(this);
 	}
 
 	//-------------------------------------------------------------------
@@ -233,7 +239,7 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 		logger.log(Level.DEBUG, "handleINFO "+Arrays.toString(values));
 		StringBuffer keyBuf = new StringBuffer();
 		StringBuffer valBuf = new StringBuffer();
-		Map<String,String> variables = origin.getOptionData(CODE);
+		Map<String,String> variables = new HashMap<>();
 		int mode = -1;
 		int i=1;
 		while (i<values.length) {
@@ -287,7 +293,6 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 			variables.put(keyBuf.toString(), valBuf.toString());
 		}
 		logger.log(Level.WARNING,"Telnet Environment done: {0}", variables);
-		origin.subnegotiationEndedFor(getOptionCode(),variables);
 
 		if (listener!=null) {
 			for (EnvironmentListener l : listener) {
@@ -296,6 +301,7 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 		} else {
 			logger.log(Level.TRACE, "No EnvironmentListener");
 		}
+		origin.fireSubnegotiationFinished(this);
 	}
 
 	//-------------------------------------------------------------------
@@ -397,8 +403,8 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 	public boolean negotiateDetails(TelnetProtocol origin) {
 		logger.log(Level.DEBUG, "Ask remote party to send environment");
 		TelnetOutputStream out = origin.getOutputStream();
+		answersExpected = 3;
 		try {
-			origin.setOptionData(CODE, new HashMap<String,String>());
 			byte[] send = new byte[8];
 			send[0] = (byte)IAC;
 			send[1] = (byte)SB;
@@ -440,6 +446,22 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 		if (!listener.contains(callback)) {
 			listener.add(callback);
 		}
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @return the userVariables
+	 */
+	public Map<String, String> getUserVariables() {
+		return userVariables;
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @return the systemVariables
+	 */
+	public Map<String, String> getSystemVariables() {
+		return systemVariables;
 	}
 
 }

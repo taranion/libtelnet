@@ -48,8 +48,8 @@ public class LineMode implements TelnetOption<LineMode.LineModeListener> {
 		 * @param suggested
 		 * @return Return with confirmed flags
 		 */
-		public List<ModeBit> linemodeFlagsSuggested(List<ModeBit> suggested);
-		public void linemodeFlagsAcknowledged(List<ModeBit> acknowledged);
+		public List<ModeBit> onLinemodeFlagsSuggested(List<ModeBit> suggested);
+		public void onLinemodeFlagsAcknowledged(List<ModeBit> acknowledged);
 		public void sendFlushOn(List<Integer> flushCodes);
 	}
 
@@ -63,8 +63,22 @@ public class LineMode implements TelnetOption<LineMode.LineModeListener> {
 		 * done.
 		 */
 		EDIT(1),
+		/**
+		 * When set, the client side should translate appropriate
+         * interrupts/signals to their Telnet equivalent.  (These
+         * would be IP, BRK, AYT, ABORT, EOF, and SUSP) When unset,
+         * the client should pass interrupts/signals as their normal
+		 * ASCII values.
+		 */
 		TRAPSIG(2),
 		MODE_ACK(4),
+		/**
+		 * When set, the client side should expand the Horizontal
+         * Tab (HT) code, USASCII 9, into the appropriate number of
+         * spaces to move the printer to the next horizontal tab
+         * stop.  When unset, the client side should allow the
+         * Horizontal Tab code to pass through un-modified.
+		 */
 		SOFT_TAB(8),
 		LIT_ECHO(16)
 		;
@@ -190,6 +204,7 @@ public class LineMode implements TelnetOption<LineMode.LineModeListener> {
 
 	private List<LineModeListener> listeners = new ArrayList<>();
 	private CommunicationRole role;
+	private List<ModeBit> modes = new ArrayList<>();
 
 	//-----------------------------------------------------------------
    public LineMode() {
@@ -197,10 +212,15 @@ public class LineMode implements TelnetOption<LineMode.LineModeListener> {
     }
 
 	//-----------------------------------------------------------------
-  public LineMode(LineModeListener callback) {
+ 	public LineMode(LineModeListener callback) {
 	  listeners.add(callback);
-   }
-
+ 	}
+ 	
+	//-------------------------------------------------------------------
+ 	public String toString() {
+ 		return String.valueOf(modes);
+ 	}
+ 	
 	//-------------------------------------------------------------------
 	/**
 	 * @see org.prelle.telnet.TelnetOption#getOptionCode()
@@ -265,17 +285,17 @@ public class LineMode implements TelnetOption<LineMode.LineModeListener> {
 		switch (op) {
 		case MODE:
 			int mask = values[1];
-			List<ModeBit> modes = ModeBit.toModeList(mask);
-			logger.log(Level.DEBUG, "IAC SB LINEMODE MODE "+modes);
+			modes = ModeBit.toModeList(mask);
+			logger.log(Level.INFO, "IAC SB LINEMODE MODE "+modes);
 			if (role==CommunicationRole.SERVER && !modes.contains(ModeBit.MODE_ACK)) {
 				logger.log(Level.WARNING, "Ignore, because we are server - noone tells us what to do");
 				return;
 			}
 			listeners.forEach(lmList -> {
 				if (modes.contains(ModeBit.MODE_ACK)) {
-					lmList.linemodeFlagsAcknowledged(modes);					
+					lmList.onLinemodeFlagsAcknowledged(modes);					
 				} else {
-					List<ModeBit> confirmed = lmList.linemodeFlagsSuggested(modes);
+					List<ModeBit> confirmed = lmList.onLinemodeFlagsSuggested(modes);
 					confirmMode(stack.getOutputStream(), confirmed);
 				}
 			});

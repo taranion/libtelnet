@@ -69,14 +69,14 @@ public class ActiveUsage implements LineModeListener {
 //	}
 
 	@Override
-	public List<ModeBit> linemodeFlagsSuggested(List<ModeBit> suggested) {
+	public List<ModeBit> onLinemodeFlagsSuggested(List<ModeBit> suggested) {
 		System.out.println("Linemode is now "+suggested);
 		return suggested;
 	}
 
 	//-------------------------------------------------------------------
 	@Override
-	public void linemodeFlagsAcknowledged(List<ModeBit> acknowledged) {
+	public void onLinemodeFlagsAcknowledged(List<ModeBit> acknowledged) {
 		acknowledged.remove(ModeBit.MODE_ACK);
 		logger.log(Level.INFO, "linemodeFlagsAcknowledged {0} ",acknowledged);
 		

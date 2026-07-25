@@ -28,7 +28,7 @@ import org.prelle.telnet.option.TelnetCharset.CharsetListener;
  */
 public class TerminalType implements TelnetOption<TerminalType.TerminalTypeListener> {
 
-	protected final static Logger logger = System.getLogger("telnet.ttype");
+	protected final static Logger logger = System.getLogger("telnet.option.ttype");
 
 	public static class TerminalTypeData {
 		protected List<String> options = new ArrayList<>();
@@ -63,7 +63,7 @@ public class TerminalType implements TelnetOption<TerminalType.TerminalTypeListe
 	private final static int IS   = 0;
 	private final static int SEND = 1;
 
-	private String[] answers;
+	protected List<String> options;
 
 	private Integer selected;
 	
@@ -71,7 +71,10 @@ public class TerminalType implements TelnetOption<TerminalType.TerminalTypeListe
 
 	//-----------------------------------------------------------------
 	public TerminalType(String ...options) {
-		this.answers = options;
+		if (options==null || options.length==0) {
+			this.options = new ArrayList<>();
+		} else
+			this.options = List.of(options);
 	}
 
 	//-----------------------------------------------------------------
@@ -119,8 +122,6 @@ public class TerminalType implements TelnetOption<TerminalType.TerminalTypeListe
 	public boolean negotiateDetails(TelnetProtocol stack) {
 		try {
 			logger.log(Level.DEBUG, "Ask remote party to send terminal types");
-			List<String> received = new ArrayList<>();
-			stack.setOptionData(WellKnownTelnetOptions.TERMINAL_TYPE.getCode(), received);
 			requestNext(stack.getOutputStream());
 			return true;
 		} catch (IOException e) {
@@ -148,40 +149,34 @@ public class TerminalType implements TelnetOption<TerminalType.TerminalTypeListe
 //			logger.log(Level.DEBUG, "Remote party provides terminal type information");
 			byte[] data = new byte[values.length-1];
 			for (int i=1; i<values.length; i++) data[i-1]=(byte) values[i];
-			List<String> received = origin.getOptionData(WellKnownTelnetOptions.TERMINAL_TYPE.getCode());
-			if (received==null) {
-				received = new ArrayList<>();
-				origin.setOptionData(WellKnownTelnetOptions.TERMINAL_TYPE.getCode(), received);
-			}
 			String value = new String(data, StandardCharsets.US_ASCII);
-				logger.log(Level.INFO, "TERMINAL_TYPE: Received {0}", value);
-				if (!received.contains(value) && !"UNKNOWN".equals(value)) {
-					received.add(value);
-					try {
-						requestNext(origin.getOutputStream());
-					} catch (IOException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				} else {
-					logger.log(Level.INFO, "Received {0}", received);
-					origin.subnegotiationEndedFor(getOptionCode(),received);
-
-					for (TerminalTypeListener listener : listeners) {
-						if (received.size()==3) {
-							listener.telnetTerminalTypesLearned(new MUDTerminalTypeData(received));
-						} else {
-							listener.telnetTerminalTypesLearned(new TerminalTypeData(received));
-						}
+			logger.log(Level.INFO, "TERMINAL_TYPE: Received {0}", value);
+			if (!options.contains(value) && !"UNKNOWN".equals(value)) {
+				options.add(value);
+				try {
+					requestNext(origin.getOutputStream());
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} else {
+				logger.log(Level.INFO, "Received {0}", options);
+				for (TerminalTypeListener listener : listeners) {
+					if (options.size()==3) {
+						listener.telnetTerminalTypesLearned(new MUDTerminalTypeData(options));
+					} else {
+						listener.telnetTerminalTypesLearned(new TerminalTypeData(options));
 					}
 				}
+				origin.fireSubnegotiationFinished(this);
+			}
 		}
 
 	}
 
 	//-----------------------------------------------------------------
 	private void sendNextFromList(TelnetOutputStream out) throws IOException {
-		if (answers==null || answers.length==0) {
+		if (options==null || options.size()==0) {
 			out.sendSubNegotiation(WellKnownTelnetOptions.TERMINAL_TYPE.getCode(), IS, "xterm".getBytes(StandardCharsets.ISO_8859_1));
 			return;
 		}
@@ -191,8 +186,8 @@ public class TerminalType implements TelnetOption<TerminalType.TerminalTypeListe
 		}
 		selected++;
 
-		String toSend = (selected<answers.length)?answers[selected]:answers[answers.length-1];
-		if (selected>=answers.length) {
+		String toSend = (selected<options.size())?options.get(selected):options.get(options.size()-1);
+		if (selected>=options.size()) {
 			selected=null;
 		}
 		logger.log(Level.INFO,"Send terminal type ''{0}''", toSend);

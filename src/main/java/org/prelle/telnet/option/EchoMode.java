@@ -1,11 +1,13 @@
 package org.prelle.telnet.option;
 
+import java.io.IOException;
 import java.lang.System.Logger;
 import java.util.List;
 
 import org.prelle.telnet.CommunicationRole;
 import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetProtocol;
+import org.prelle.telnet.TelnetConstants.ControlCode;
 import org.prelle.telnet.TelnetOption;
 import org.prelle.telnet.option.LineMode.ModeBit;
 
@@ -40,9 +42,15 @@ public class EchoMode implements TelnetOption<org.prelle.telnet.option.EchoMode.
 	//-----------------------------------------------------------------
 	@Override
 	public boolean startCommunicationAs(CommunicationRole role) {
-		return false;
+		return role==CommunicationRole.SERVER;
 	}
 
+	@Override
+	public ControlCode initiate(TelnetProtocol stack, CommunicationRole role) throws IOException {
+		stack.getOutputStream().sendWill(getOptionCode());
+		return ControlCode.WILL;
+	}
+	
 	@Override
 	public boolean negotiateDetails(TelnetProtocol stack) {
 		logger.log(Logger.Level.WARNING, "EchoMode.negotiateDetails");

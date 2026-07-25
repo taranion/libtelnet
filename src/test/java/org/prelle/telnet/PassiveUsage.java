@@ -72,6 +72,11 @@ public class PassiveUsage implements Runnable, TelnetConstants {
 					@Override
 					public void telnetCommandReceived(TelnetCommand command) {
 						logger.log(Level.INFO,"Telnet command received: {0}", command);
+					}
+
+					@Override
+					public void telnetReady() {
+						logger.log(Level.INFO,"telnetReady");
 					}});
 				
 				InputStream in = socket.getInputStream();

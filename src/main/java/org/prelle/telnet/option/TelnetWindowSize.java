@@ -10,11 +10,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.prelle.telnet.CommunicationRole;
+import org.prelle.telnet.TelnetOption;
 import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetProtocol;
 import org.prelle.telnet.TelnetSocket;
-import org.prelle.telnet.TelnetOption;
-import org.prelle.telnet.TelnetConstants.ControlCode;
 
 /**
  * RFC 1073
@@ -117,13 +116,11 @@ public class TelnetWindowSize implements TelnetOption<TelnetWindowSize.TelnetNAW
 	 */
 	@Override
 	public void handleSubnegotiation(int[] values, TelnetProtocol stack) {
-		int code = getOptionCode();
 		int x = values[0]*256 + values[1];
 		int y = values[2]*256 + values[3];
-		logger.log(Level.DEBUG,"Terminal size = "+ x+"*"+y);
-		stack.subnegotiationEndedFor(code, new int[] {x,y});
-
-//		TelnetNAWSListener listener = stack.getOptionListener(code);
+		logger.log(Level.DEBUG,"Terminal size = "+ x+"x"+y);
+		cols = x;
+		rows = y;
 		listeners.forEach( l -> l.telnetWindowSizeChanged(x, y));
 	}
 
@@ -163,4 +160,6 @@ public class TelnetWindowSize implements TelnetOption<TelnetWindowSize.TelnetNAW
 		}
 	}
 
+	public int getRows() { return rows; }
+	public int getColumns() { return cols; }
 }
