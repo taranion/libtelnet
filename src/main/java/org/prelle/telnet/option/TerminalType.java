@@ -95,7 +95,7 @@ public class TerminalType implements TelnetOption<TerminalType.TerminalTypeListe
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetOption#resolveSubCommandName(byte)
+	 * @see org.prelle.telnet.TelnetOption#resolveSubCommandName(int, byte)
 	 */
 	@Override
 	public String resolveSubCommandName(int position, byte value) {
@@ -117,7 +117,7 @@ public class TerminalType implements TelnetOption<TerminalType.TerminalTypeListe
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetOption#initializeAs(org.prelle.telnet.WellKnownTelnetOptions, org.prelle.telnet.CommunicationRole, org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
+	 * @see org.prelle.telnet.TelnetOption#negotiateDetails(org.prelle.telnet.TelnetProtocol)
 	 */
 	public boolean negotiateDetails(TelnetProtocol stack) {
 		try {
@@ -132,7 +132,7 @@ public class TerminalType implements TelnetOption<TerminalType.TerminalTypeListe
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetOptionHandler#handleSubnegotiation(org.prelle.telnet.Role, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
+	 * @see org.prelle.telnet.TelnetOption#handleSubnegotiation(int[], org.prelle.telnet.TelnetProtocol)
 	 */
 	@Override
 	public void handleSubnegotiation(int[] values, TelnetProtocol origin) {

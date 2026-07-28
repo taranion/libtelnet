@@ -94,7 +94,8 @@ public class TelnetProtocol {
 	public void initializeExtensions() {
 		logger.log(Level.INFO, "ENTER: initializeExtensions() with {0} extensions", extensions.size());
 		try {
-			Objects.requireNonNull(outputStream, "Output stream must be set before initializing extensions");
+			if (!extensions.isEmpty())
+				Objects.requireNonNull(outputStream, "Output stream must be set before initializing extensions");
 			for (TelnetOption<?> ext : extensions.keySet()) {
 				try {
 					if (ext.startCommunicationAs(role)) {
@@ -106,7 +107,8 @@ public class TelnetProtocol {
 				}
 			}
 			try {
-				outputStream.flush();
+				if (outputStream!=null)
+					outputStream.flush();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -231,13 +233,15 @@ public class TelnetProtocol {
 
 	//-----------------------------------------------------------------
 	private void handleDoDontWillWontResponse(TelnetInputStream from, TelnetCommand command, NegotiatonState state) throws IOException {
-		TelnetOption extension = getExtensionForOption(command.getData());
+		TelnetOption<?> extension = getExtensionForOption(command.getData());
+		logger.log(Level.INFO, "Handle {0} response while in state {1} and we sent {2}", command, state, state.lastSent);
 		switch (state.state) {
 		case SUGGESTED:
 			// We already sent a suggestion, so this is a response to that
 			if (state.lastSent==ControlCode.WILL && command.getCode()==ControlCode.DO) {
 				// We suggested WILL, and the other side said DO - confirmed
 				state.setState(State.CONFIRMED);
+				logger.log(Level.INFO, "Confirmed {0} with {1}", extension.getName(), command);
 				if (extension.startCommunicationAs(role)) {
 					logger.log(Level.INFO, "Start subnegotiation for {0}", extension.getName());
 					if (extension.negotiateDetails(this))
@@ -247,6 +251,7 @@ public class TelnetProtocol {
 			} else if (state.lastSent==ControlCode.DO && command.getCode()==ControlCode.WILL) {
 				// We suggested DO, and the other side said WILL - confirmed
 				state.setState(State.CONFIRMED);
+				logger.log(Level.INFO, "Confirmed {0} with {1}", extension.getName(), command);
 				if (extension.startCommunicationAs(role)) {
 					logger.log(Level.INFO, "Start subnegotiation for {0}", extension.getName());
 					if (extension.negotiateDetails(this))
@@ -256,10 +261,12 @@ public class TelnetProtocol {
 			} else if (state.lastSent==ControlCode.WILL && command.getCode()==ControlCode.DONT) {
 				// We suggested WILL, and the other side said DONT - rejected
 				state.setState(State.REJECTED);
+				logger.log(Level.INFO, "Rejected {0} with {1}", extension.getName(), command);
 				listener.forEach(callback -> callback.optionStateChanged(extension, false));
 			} else if (state.lastSent==ControlCode.DO && command.getCode()==ControlCode.WONT) {
 				// We suggested DO, and the other side said WONT - rejected
 				state.setState(State.REJECTED);
+				logger.log(Level.INFO, "Rejected {0} with {1}", extension.getName(), command);
 				listener.forEach(callback -> callback.optionStateChanged(extension, false));
 			} else {
 				logger.log(Level.WARNING, "Received {0} while state is {1} - ignoring", command, state);
@@ -285,6 +292,7 @@ public class TelnetProtocol {
 				listener.forEach(callback -> callback.optionStateChanged(extension, false));
 			}
 			break;
+		case READY:
 		default:
 			logger.log(Level.WARNING, "Received {0} while state is {1} - ignoring", command, state);
 		}
@@ -318,6 +326,7 @@ public class TelnetProtocol {
 
 	//-----------------------------------------------------------------
 	void processCommand(TelnetInputStream from, TelnetCommand command) throws IOException {
+		logger.log(Level.DEBUG, "processCommand {0}", command);
 		switch (command.getCode()) {
 		case DO  : case DONT:
 		case WILL: case WONT:
@@ -455,7 +464,7 @@ public class TelnetProtocol {
 
 	//-------------------------------------------------------------------
 	public void processSubnegotiation(TelnetInputStream from, int code, int[] values) {
-		logger.log(Level.TRACE, "RCV Subnegotiation for {0}: {1}", code, Arrays.toString((values)));
+		logger.log(Level.INFO, "RCV Subnegotiation for {0}: {1}", code, Arrays.toString((values)));
 
 		TelnetOption handler = getExtensionForOption(code);
 		if (handler==null) {

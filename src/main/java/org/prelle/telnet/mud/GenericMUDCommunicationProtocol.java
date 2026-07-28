@@ -25,7 +25,7 @@ import org.prelle.telnet.TelnetOption;
  */
 public class GenericMUDCommunicationProtocol implements TelnetOption<GenericMUDCommunicationProtocol.GMCPReceiver> {
 
-	protected final static Logger logger = System.getLogger("telnet.gmcp");
+	protected final static Logger logger = System.getLogger("telnet.option.gmcp");
 
 	public final static int CODE = 201;
 

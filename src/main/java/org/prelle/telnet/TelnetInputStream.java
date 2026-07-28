@@ -57,6 +57,7 @@ public class TelnetInputStream extends FilterInputStream {
 	/** Read available data into this buffer */
 	private byte[] buffer = new byte[1024];
 	private int bufferOffset = 0;
+	private boolean bufferHasData = false;
 	
 	private List<Integer> preReadData = new ArrayList<>();
 	
@@ -121,23 +122,25 @@ public class TelnetInputStream extends FilterInputStream {
 
 	//-----------------------------------------------------------------
 	public int read(byte[] buff, int offset, int length) throws IOException {
-//		logger.log(Level.WARNING, "ENTER: read(byte[], {0}, {1})", offset, length);
+		logger.log(Level.WARNING, "ENTER: read(byte[], {0}, {1})", offset, length);
 		int i=0;
+		bufferHasData = false;
 		try {
-		for (; i<length && in.available()>0; i++) {
-			if (offset+i>=buff.length) {
-				return (i>=0)?i:-1;
+			for (; i<length && in.available()>0; i++) {
+				if (offset+i>=buff.length) {
+					return (i>=0)?i:-1;
+				}
+				int c = read();
+				if (c==-1)
+					break;
+				buff[offset+i] = (byte)c;
+				bufferHasData = true;
 			}
-			int c = read();
-			if (c==-1)
-				break;
-			buff[offset+i] = (byte)c;
-		}
-		return (i>0)?i:-1;
+			return (i>0)?i:-1;
 		} catch (SocketTimeoutException e) {
 			return (i>=0)?i:-1;
 		} finally {
-//			logger.log(Level.WARNING, "LEAVE: read(byte[], {0}, {1}) read {2}", offset, length, i);
+			logger.log(Level.WARNING, "LEAVE: read(byte[], {0}, {1}) read {2}", offset, length, i);
 		}
 	}
 
@@ -217,7 +220,12 @@ public class TelnetInputStream extends FilterInputStream {
 					logger.log(Level.DEBUG, "GA found - convert To ANSI RS (0x1E)");
 					protocol.processCommand(this, new TelnetCommand(code));
 					return 0x1E; // Record separator
-				} 
+				} else if (bufferHasData) {
+					logger.log(Level.WARNING, "GA found - but buffer has data - return data");
+					
+					commandMode = false;;
+					return -1;
+				}
 			default:
 				commandMode = false;;
 				logger.log(Level.DEBUG, "Leaving command mode");

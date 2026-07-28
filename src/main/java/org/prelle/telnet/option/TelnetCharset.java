@@ -84,7 +84,7 @@ public class TelnetCharset implements TelnetOption<TelnetCharset.CharsetListener
 	 */
 	@Override
 	public void handleSubnegotiation(int[] values, TelnetProtocol stack) {
-		logger.log(Level.DEBUG, "Subnegotiate for CHARSET: "+Arrays.toString(values));
+		logger.log(Level.DEBUG, "RCV Subnegotiate for CHARSET: "+Arrays.toString(values));
 		int operation = values[0];
 		
 		if (operation==ACCEPTED) {
@@ -93,6 +93,7 @@ public class TelnetCharset implements TelnetOption<TelnetCharset.CharsetListener
 				data[i] = (byte)values[i+1];
 			}
 			String csName = new String(data).trim();
+			logger.log(Level.INFO, "Remote party accepted charset: "+csName);
 			if ("ISO 8859-15".equals(csName))
 				consoleCharset = StandardCharsets.ISO_8859_1;
 			else if ("ISO 8859-1".equals(csName))
@@ -163,7 +164,6 @@ public class TelnetCharset implements TelnetOption<TelnetCharset.CharsetListener
 			
 		} else if (operation==REJECTED) {
 			logger.log(Level.WARNING, "The remote party rejected our charset suggestions");
-			System.err.println("TelnetCharset: Remote party rejected charsets");
 		}
 		
 	}
@@ -175,10 +175,11 @@ public class TelnetCharset implements TelnetOption<TelnetCharset.CharsetListener
 	 */
 	@Override
 	public boolean negotiateDetails(TelnetProtocol stack) {
-		logger.log(Level.DEBUG, "ENTER: initialize()");
-		logger.log(Level.INFO, "Ask remote party to send supported charsets");
+		logger.log(Level.INFO, "ENTER: negotiateDetails()------------------------------------");
 		try {
-			byte[] charsetData = " UTF-8 CP437 ASCII".getBytes(StandardCharsets.US_ASCII);
+			var line = (" "+String.join(" ", supportedCharsets));
+			logger.log(Level.INFO, "Inform client that we support \"{0}\"", line);
+			byte[] charsetData = line.getBytes(StandardCharsets.US_ASCII);
 			byte[] send = new byte[charsetData.length+7];
 			send[0] = (byte)IAC;
 			send[1] = (byte)SB;
@@ -188,7 +189,7 @@ public class TelnetCharset implements TelnetOption<TelnetCharset.CharsetListener
 			System.arraycopy(charsetData, 0, send, 5, charsetData.length);
 			send[5+charsetData.length] = (byte)IAC;
 			send[6+charsetData.length] = (byte)SE;
-			logger.log(Level.WARNING, "SND {0}", Arrays.toString(send));
+			logger.log(Level.DEBUG, "SND {0}", Arrays.toString(send));
 			stack.getOutputStream().writeCommand(send);
 			stack.getOutputStream().flush();
 			return true;
@@ -197,7 +198,7 @@ public class TelnetCharset implements TelnetOption<TelnetCharset.CharsetListener
 			e.printStackTrace();
 			return false;
 		} finally {
-			logger.log(Level.DEBUG, "LEAVE: initialize()");
+			logger.log(Level.DEBUG, "LEAVE: negotiateDetails()");
 		}
 	}
 
