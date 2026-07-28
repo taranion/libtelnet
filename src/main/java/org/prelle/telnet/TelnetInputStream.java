@@ -42,7 +42,7 @@ public class TelnetInputStream extends FilterInputStream {
 	private boolean commandMode;
 	private boolean dataIsSubnegotiation;
 
-	private boolean sendGoAheadAsANSISepator = false;
+	private boolean sendGoAheadAsANSISeparator = false;
 
 	private boolean  binaryMode = true;
 
@@ -135,6 +135,14 @@ public class TelnetInputStream extends FilterInputStream {
 					break;
 				buff[offset+i] = (byte)c;
 				bufferHasData = true;
+				// If the read byte is the ANSI record separator generated from a GA
+				// we should stop filling the buffer here and return the bytes
+				// read so far. The next read() call will continue with the
+				// remaining data (e.g. the byte that followed the GA sequence).
+				if (c == 0x1E) {
+					// return number of bytes including the RS we just placed
+					return (i+1);
+				}
 			}
 			return (i>0)?i:-1;
 		} catch (SocketTimeoutException e) {
@@ -215,7 +223,7 @@ public class TelnetInputStream extends FilterInputStream {
 				break;
 			case GA:
 				// Go ahead found
-				if (sendGoAheadAsANSISepator) {
+				if (sendGoAheadAsANSISeparator) {
 					commandMode = false;;
 					logger.log(Level.DEBUG, "GA found - convert To ANSI RS (0x1E)");
 					protocol.processCommand(this, new TelnetCommand(code));
@@ -364,7 +372,7 @@ public class TelnetInputStream extends FilterInputStream {
 			break;
 		case GA:
 			// Go ahead found
-			if (sendGoAheadAsANSISepator) {
+			if (sendGoAheadAsANSISeparator) {
 				commandMode = false;;
 				logger.log(Level.DEBUG, "GA found - convert To ANSI RS (0x1E)");
 				protocol.processCommand(this, new TelnetCommand(code));
@@ -676,11 +684,11 @@ public class TelnetInputStream extends FilterInputStream {
 	}
 
 	public boolean isSendGoAheadAsANSISepator() {
-		return sendGoAheadAsANSISepator;
+		return sendGoAheadAsANSISeparator;
 	}
 
 	public void setSendGoAheadAsANSISepator(boolean sendGoAheadAsANSISepator) {
-		this.sendGoAheadAsANSISepator = sendGoAheadAsANSISepator;
+		this.sendGoAheadAsANSISeparator = sendGoAheadAsANSISepator;
 	}
 
 	//-------------------------------------------------------------------

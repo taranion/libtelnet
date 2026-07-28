@@ -88,12 +88,17 @@ class InputStreamTest {
 		
 		byte[] buf = new byte[1024];
 		int read = tis.read(buf);
-		// Expected to read 12 bytes + 1 byte for the ANSI separator plus a final data char, so 14 bytes in total
-		assertEquals(14, read, "Read should have not been interrupted");
+		// Expected to read 12 bytes + 1 byte for the ANSI separator, so 13 bytes first
+		assertEquals(13, read, "First read should return data up to and including RS");
 		String received = new String(buf, 0, read, StandardCharsets.UTF_8);
-		String expected = "Hellö World\u001EA";
+		String expected = "Hellö World\u001E";
 		assertEquals(expected, received);
-		
+
+		// Next read should yield the remaining trailing data char
+		read = tis.read(buf);
+		assertEquals(1, read);
+		assertEquals('A', buf[0]);
+
 		assertEquals(-1, tis.read(buf), "Expected end of stream");
 		
 		tis.close();
