@@ -431,7 +431,7 @@ public class TelnetProtocol {
 	//-------------------------------------------------------------------
 	private void reject(TelnetOutputStream out, TelnetCommand command) throws IOException {
 		if (out==null) {
-			logger.log(Level.ERROR, "Cannot reject {0} because output stream is null", command);
+			logger.log(Level.DEBUG, "Cannot reject {0} because output stream is null", command);
 			return;
 		}
 		TelnetOption<?> extension = getExtensionForOption(command.getData());
