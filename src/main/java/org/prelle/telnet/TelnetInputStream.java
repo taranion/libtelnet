@@ -122,7 +122,7 @@ public class TelnetInputStream extends FilterInputStream {
 
 	//-----------------------------------------------------------------
 	public int read(byte[] buff, int offset, int length) throws IOException {
-		logger.log(Level.WARNING, "ENTER: read(byte[], {0}, {1})", offset, length);
+		logger.log(Level.INFO, "ENTER: read(byte[], {0}, {1})", offset, length);
 		int i=0;
 		bufferHasData = false;
 		try {
@@ -148,7 +148,7 @@ public class TelnetInputStream extends FilterInputStream {
 		} catch (SocketTimeoutException e) {
 			return (i>=0)?i:-1;
 		} finally {
-			logger.log(Level.WARNING, "LEAVE: read(byte[], {0}, {1}) read {2}", offset, length, i);
+			logger.log(Level.INFO, "LEAVE: read(byte[], {0}, {1}) read {2}", offset, length, i);
 		}
 	}
 
@@ -225,11 +225,11 @@ public class TelnetInputStream extends FilterInputStream {
 				// Go ahead found
 				if (sendGoAheadAsANSISeparator) {
 					commandMode = false;;
-					logger.log(Level.DEBUG, "GA found - convert To ANSI RS (0x1E)");
+					logger.log(Level.INFO, "GA found - convert To ANSI RS (0x1E)");
 					protocol.processCommand(this, new TelnetCommand(code));
 					return 0x1E; // Record separator
 				} else if (bufferHasData) {
-					logger.log(Level.WARNING, "GA found - but buffer has data - return data");
+					logger.log(Level.INFO, "GA found - but buffer has data - return data");
 					
 					commandMode = false;;
 					return -1;
