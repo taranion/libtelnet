@@ -14,11 +14,12 @@ import java.util.Map;
 import java.util.Objects;
 
 import org.prelle.telnet.TelnetConstants.ControlCode;
+import org.prelle.telnet.TelnetInputStream.TelnetInputStreamListener;
 
 /**
  * 
  */
-public class TelnetProtocol {
+public class TelnetProtocol implements TelnetInputStreamListener {
 
 	private final static Logger logger = System.getLogger("telnet.lvl3");
 
@@ -124,8 +125,13 @@ public class TelnetProtocol {
 			continueReading = true;
 			while (continueReading) {
 				try {
-					logger.log(Level.INFO, "calling inputStream.read() with {0}", continueReading);
+//					logger.log(Level.INFO, "calling inputStream.read() with {0}", continueReading);
 					int data = inputStream.read();
+					if (data==-1) {
+						logger.log(Level.INFO, "End of stream reached");
+						continueReading = false;
+						break;
+					}
 					processLater.add(data);
 					if (processLater.size()>4096) {
 						logger.log(Level.WARNING, "Receiving more than 4K data already in Telnet negotiation.... closing connection.");
@@ -139,6 +145,7 @@ public class TelnetProtocol {
 					// Ignore, this is expected
 				} catch (IOException e) {
 					logger.log(Level.ERROR, "Error reading from socket", e);
+					continueReading = false;
 				}
 			}
 			logger.log(Level.ERROR, "Stopping read from socket thread with {0} pre-read bytes", processLater.size());
@@ -287,6 +294,7 @@ public class TelnetProtocol {
 		case REJECTED:
 			// E.g. when disabling an option
 			if (command.getCode()==ControlCode.WONT || command.getCode()==ControlCode.DONT) {
+				if (state.lastSent==ControlCode.DONT) return;
 				// The remote site wants to stop doing this option
 				confirm(from.getReverseStream(), command);
 				listener.forEach(callback -> callback.optionStateChanged(extension, false));
@@ -324,8 +332,11 @@ public class TelnetProtocol {
 		}
 	}
 
-	//-----------------------------------------------------------------
-	void processCommand(TelnetInputStream from, TelnetCommand command) throws IOException {
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.TelnetInputStream.TelnetInputStreamListener#processCommand(org.prelle.telnet.TelnetInputStream, org.prelle.telnet.TelnetCommand)
+	 */
+	public void processCommand(TelnetInputStream from, TelnetCommand command) throws IOException {
 		logger.log(Level.DEBUG, "processCommand {0}", command);
 		switch (command.getCode()) {
 		case DO  : case DONT:

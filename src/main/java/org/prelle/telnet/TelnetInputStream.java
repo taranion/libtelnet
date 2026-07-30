@@ -6,7 +6,6 @@ package org.prelle.telnet;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.net.SocketTimeoutException;
@@ -23,20 +22,15 @@ public class TelnetInputStream extends FilterInputStream {
 
 	Logger logger = System.getLogger("telnet.lvl1.in");
 	
+	static interface TelnetInputStreamListener {
+		public void processSubnegotiation(TelnetInputStream telnetInputStream, int subNegotiationFor, int[] values);
+		public void processCommand(TelnetInputStream telnetInputStream, TelnetCommand telnetCommand) throws IOException;
+	}
+	
 	private static enum TelnetState {
 		OPTION_DETECTION,
 		SUBNEGOTIATION,
 		DATA
-	}
-	
-	private static class PreReadData {
-		public byte[] data;
-		public boolean userData;
-		public int offset;
-		public PreReadData(byte[] data, boolean userData) {
-			this.data = data;
-			this.userData = userData;
-		}
 	}
 
 	private boolean commandMode;
@@ -51,12 +45,8 @@ public class TelnetInputStream extends FilterInputStream {
 	private boolean characterMode;
 	
 	private TelnetOutputStream reverseStream;
-	private TelnetProtocol protocol;
-	private TelnetState state = TelnetState.OPTION_DETECTION;
+	private TelnetInputStreamListener protocol;
 	
-	/** Read available data into this buffer */
-	private byte[] buffer = new byte[1024];
-	private int bufferOffset = 0;
 	private boolean bufferHasData = false;
 	
 	private List<Integer> preReadData = new ArrayList<>();
@@ -64,16 +54,12 @@ public class TelnetInputStream extends FilterInputStream {
 	//-----------------------------------------------------------------
 	/**
 	 */
-	public TelnetInputStream(InputStream in, TelnetProtocol config) {
+	public TelnetInputStream(InputStream in, TelnetInputStreamListener config) {
 		super(in);
 		this.protocol = config;
 		if (in instanceof TelnetInputStream) {
 			throw new RuntimeException("Cannot wrap a TelnetInputStream");
 		}
-		config.setInputStream(this);
-		
-		// Start sending request for all supported options
-		config.initializeExtensions();
 	}
 
 	//-----------------------------------------------------------------
@@ -113,6 +99,9 @@ public class TelnetInputStream extends FilterInputStream {
 	//-----------------------------------------------------------------
 	private int tracingRead() throws IOException {
 //		logger.log(Level.INFO, "ENTER: tracingRead()");
+		if (!preReadData.isEmpty()) {
+			return preReadData.remove(0);
+		}
 		int data = in.read();
 		String name = (data>=240)?ControlCode.getCodeFor(data).name():"";
 		logger.log(Level.TRACE, "RCV {0} {1} ", data, name);
@@ -126,13 +115,15 @@ public class TelnetInputStream extends FilterInputStream {
 		int i=0;
 		bufferHasData = false;
 		try {
-			for (; i<length && in.available()>0; i++) {
+			for (; i<length && (in.available()>0 || !preReadData.isEmpty()); i++) {
 				if (offset+i>=buff.length) {
 					return (i>=0)?i:-1;
 				}
 				int c = read();
-				if (c==-1)
+				if (c==-1) {
+					bufferHasData = (i>0);
 					break;
+				}
 				buff[offset+i] = (byte)c;
 				bufferHasData = true;
 				// If the read byte is the ANSI record separator generated from a GA
@@ -159,11 +150,6 @@ public class TelnetInputStream extends FilterInputStream {
 	@Override
 	public int read() throws IOException {
 //		logger.log(Level.WARNING, "read() from {0} with preRead={1}", this, preReadData);
-		if (!preReadData.isEmpty()) {
-			int data = preReadData.remove(0);
-			logger.log(Level.TRACE, "read pre-read data {0}", data);
-			return data;
-		}
 		
 		
 		if (commandMode) {
@@ -190,8 +176,7 @@ public class TelnetInputStream extends FilterInputStream {
 					logger.log(Level.WARNING, "Connection reset");
 					return -1;
 				}
-				String name = protocol.getExtensionName(cmdVal);
-				logger.log(Level.INFO, "recv: {0} {1}", code, name);
+				logger.log(Level.INFO, "recv: {0} {1}", code, cmdVal);
 				protocol.processCommand(this, new TelnetCommand(code, cmdVal));
 				break;
 			case SB:
@@ -226,14 +211,19 @@ public class TelnetInputStream extends FilterInputStream {
 				if (sendGoAheadAsANSISeparator) {
 					commandMode = false;;
 					logger.log(Level.INFO, "GA found - convert To ANSI RS (0x1E)");
-					protocol.processCommand(this, new TelnetCommand(code));
 					return 0x1E; // Record separator
 				} else if (bufferHasData) {
 					logger.log(Level.INFO, "GA found - but buffer has data - return data");
-					
+					// It is important that we return the buffer first and only then (with the next read) return the command 
+					preReadData.add(0, code.code());
+					preReadData.add(0, ControlCode.IAC.code());
 					commandMode = false;;
-					return -1;
+					return -1; // Stop buffer reading
+				} else {
+					protocol.processCommand(this, new TelnetCommand(code));
 				}
+				commandMode = false;
+				break;
 			default:
 				commandMode = false;;
 				logger.log(Level.DEBUG, "Leaving command mode");
@@ -248,8 +238,8 @@ public class TelnetInputStream extends FilterInputStream {
 		// Loop until next data is received
 		commandMode = false;;
 		int data = -1;
-		data = in.read();
-//		logger.log(Level.ERROR, "read data {0}={1}", data, (char)data);
+		data = tracingRead();
+		logger.log(Level.ERROR, "read data {0}={1} from {2}", data, (char)data, in);
 		
 		switch (data) {
 		case -1:
@@ -712,7 +702,7 @@ public class TelnetInputStream extends FilterInputStream {
 	 * @return the protocol
 	 */
 	public TelnetProtocol getProtocol() {
-		return protocol;
+		return (TelnetProtocol) protocol;
 	}
 
 	//-------------------------------------------------------------------

@@ -85,12 +85,15 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 		stack.setInputStream(in);
 		
 		in.setReverseStream(out);
-		try {
-			this.setSoTimeout(500);
-		} catch (SocketException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		
+		// Start sending request for all supported options
+		stack.initializeExtensions();
+//		try {
+//			this.setSoTimeout(500);
+//		} catch (SocketException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 	}
 
 	//-----------------------------------------------------------------

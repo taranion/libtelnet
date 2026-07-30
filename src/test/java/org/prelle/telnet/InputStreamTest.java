@@ -1,17 +1,20 @@
 package org.prelle.telnet;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.prelle.telnet.TelnetInputStream.TelnetInputStreamListener;
 
 /**
  * 
@@ -49,7 +52,13 @@ class InputStreamTest {
 		byte[] data = baos.toByteArray();
 		System.out.println("Data length: " + data.length);
 		ByteArrayInputStream bais = new ByteArrayInputStream(data);
-		TelnetProtocol proto = new TelnetProtocol(CommunicationRole.CLIENT);
+		List<TelnetCommand> commandsReceived = new ArrayList<>();
+		TelnetInputStreamListener proto = new TelnetInputStreamListener() {
+			public void processSubnegotiation(TelnetInputStream telnetInputStream, int subNegotiationFor,
+					int[] values) {}
+			public void processCommand(TelnetInputStream telnetInputStream, TelnetCommand telnetCommand)
+					throws IOException { commandsReceived.add(telnetCommand); }
+			};
 		TelnetInputStream tis = new TelnetInputStream(bais, proto);
 		
 		byte[] buf = new byte[1024];
@@ -57,8 +66,10 @@ class InputStreamTest {
 		assertEquals(12, read, "Expected to read 12 bytes, but read "+ read);
 		String received = new String(buf, 0, read, StandardCharsets.UTF_8);
 		assertEquals(text, received);
+		assertEquals(1,commandsReceived.size(), "Expected IAC DO  "+commandsReceived);
 
 		read = tis.read(buf);		
+		assertEquals(2,commandsReceived.size(), "Expected IAC DO and IAC GA, but got "+commandsReceived);
 		assertEquals(1, read);
 		
 		assertEquals(-1, tis.read(buf), "Expected end of stream");
@@ -82,7 +93,13 @@ class InputStreamTest {
 		byte[] data = baos.toByteArray();
 		System.out.println("Data length: " + data.length);
 		ByteArrayInputStream bais = new ByteArrayInputStream(data);
-		TelnetProtocol proto = new TelnetProtocol(CommunicationRole.CLIENT);
+		List<TelnetCommand> commandsReceived = new ArrayList<>();
+	TelnetInputStreamListener proto = new TelnetInputStreamListener() {
+			public void processSubnegotiation(TelnetInputStream telnetInputStream, int subNegotiationFor,
+					int[] values) {}
+			public void processCommand(TelnetInputStream telnetInputStream, TelnetCommand telnetCommand)
+					throws IOException  {commandsReceived.add(telnetCommand); }
+			};
 		TelnetInputStream tis = new TelnetInputStream(bais, proto);
 		tis.setSendGoAheadAsANSISepator(true);
 		
@@ -93,6 +110,7 @@ class InputStreamTest {
 		String received = new String(buf, 0, read, StandardCharsets.UTF_8);
 		String expected = "Hellö World\u001E";
 		assertEquals(expected, received);
+		assertEquals(1,commandsReceived.size(), "Expected only 1 command (IAC DO)");
 
 		// Next read should yield the remaining trailing data char
 		read = tis.read(buf);
@@ -125,7 +143,12 @@ class InputStreamTest {
 
 		byte[] data = baos.toByteArray();
 		ByteArrayInputStream bais = new ByteArrayInputStream(data);
-		TelnetProtocol proto = new TelnetProtocol(CommunicationRole.CLIENT);
+		TelnetInputStreamListener proto = new TelnetInputStreamListener() {
+			public void processSubnegotiation(TelnetInputStream telnetInputStream, int subNegotiationFor,
+					int[] values) {}
+			public void processCommand(TelnetInputStream telnetInputStream, TelnetCommand telnetCommand)
+					throws IOException {}
+			};
 		TelnetInputStream tis = new TelnetInputStream(bais, proto);
 
 		byte[] buf = new byte[32];
@@ -166,7 +189,12 @@ class InputStreamTest {
 
 		byte[] data = baos.toByteArray();
 		ByteArrayInputStream bais = new ByteArrayInputStream(data);
-		TelnetProtocol proto = new TelnetProtocol(CommunicationRole.CLIENT);
+		TelnetInputStreamListener proto = new TelnetInputStreamListener() {
+			public void processSubnegotiation(TelnetInputStream telnetInputStream, int subNegotiationFor,
+					int[] values) {}
+			public void processCommand(TelnetInputStream telnetInputStream, TelnetCommand telnetCommand)
+					throws IOException {}
+			};
 		TelnetInputStream tis = new TelnetInputStream(bais, proto);
 
 		byte[] buf = new byte[1024];
