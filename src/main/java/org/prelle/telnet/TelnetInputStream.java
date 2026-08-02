@@ -239,7 +239,7 @@ public class TelnetInputStream extends FilterInputStream {
 		commandMode = false;;
 		int data = -1;
 		data = tracingRead();
-		logger.log(Level.ERROR, "read data {0}={1} from {2}", data, (char)data, in);
+//		logger.log(Level.DEBUG, "read data {0}={1} ", data, (char)data, in);
 		
 		switch (data) {
 		case -1:

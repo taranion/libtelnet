@@ -128,13 +128,13 @@ public class TelnetProtocol implements TelnetInputStreamListener {
 //					logger.log(Level.INFO, "calling inputStream.read() with {0}", continueReading);
 					int data = inputStream.read();
 					if (data==-1) {
-						logger.log(Level.INFO, "End of stream reached");
+						logger.log(Level.ERROR, "End of stream reached");
 						continueReading = false;
 						break;
 					}
 					processLater.add(data);
 					if (processLater.size()>4096) {
-						logger.log(Level.WARNING, "Receiving more than 4K data already in Telnet negotiation.... closing connection.");
+						logger.log(Level.ERROR, "Receiving more than 4K data already in Telnet negotiation.... closing connection.");
 						processLater.clear();
 						continueReading = false;
 						outputStream.close();
@@ -291,8 +291,25 @@ public class TelnetProtocol implements TelnetInputStreamListener {
 			}
 			break;
 		case CONFIRMED:
+			if (command.getCode()==ControlCode.WONT || state.lastSent==ControlCode.DO) {
+				// The remote site wants to stop doing this option
+				confirm(from.getReverseStream(), command);
+				listener.forEach(callback -> callback.optionStateChanged(extension, false));
+			}
+			break;
 		case REJECTED:
 			// E.g. when disabling an option
+			if (command.getCode()==ControlCode.WILL && state.lastSent==ControlCode.DONT) {
+				// The remote site wants to start doing this option again
+				confirm(from.getReverseStream(), command);
+				listener.forEach(callback -> callback.optionStateChanged(extension, true));
+				return;
+			}
+			// If server sends WONT ECHO and we are already in REJECTED / DONT state:
+		    if (command.getCode() == ControlCode.WONT ) {
+		        // Suppress sending IAC DONT ECHO to prevent infinite Telnet option loop
+		        return;
+		    }
 			if (command.getCode()==ControlCode.WONT || command.getCode()==ControlCode.DONT) {
 				if (state.lastSent==ControlCode.DONT) return;
 				// The remote site wants to stop doing this option
