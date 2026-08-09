@@ -10,6 +10,8 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.function.Function;
 
+import org.prelle.telnet.option.TelnetOption;
+
 /**
  * @author prelle
  *
@@ -59,7 +61,7 @@ public class TelnetServerSocket extends ServerSocket {
 
 		// Call an eventually existing supplier for extensions
 		if (configFactory != null) {
-			for (TelnetOption<?> extension : configFactory.apply(ret)) {
+			for (TelnetOption extension : configFactory.apply(ret)) {
 				ret.getStack().add(extension);
 			}
 		}
@@ -73,6 +75,8 @@ public class TelnetServerSocket extends ServerSocket {
 		logger.log(Level.DEBUG,"Incoming connection from {0},Port {1}", ret.getInetAddress().getHostAddress(), ret.getPort());
 		ret.out().logger = System.getLogger("telnet.lvl1.out."+ret.getInetAddress().getHostAddress());
 		ret.in().logger = System.getLogger("telnet.lvl1.in."+ret.getInetAddress().getHostAddress());
+		ret.negotiateOptionsAsync();
+		ret.in.startReadingFromSocket();
 		
 		logger.log(Level.DEBUG,"LEAVE accept()");
 		return ret;

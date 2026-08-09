@@ -9,45 +9,47 @@ import java.lang.System.Logger.Level;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.prelle.telnet.CommunicationRole;
-import org.prelle.telnet.TelnetOption;
-import org.prelle.telnet.TelnetOptionListener;
-import org.prelle.telnet.TelnetProtocol;
 import org.prelle.telnet.TelnetSocket;
+import org.prelle.telnet.event.TelnetSubnegotiationEvent;
+import org.prelle.telnet.option.TelnetOptionEvent.SubnegotiationFinishedEvent;
 
 /**
  * RFC 1073
  * @author prelle
  *
  */
-public class TelnetWindowSize implements TelnetOption<TelnetWindowSize.TelnetNAWSListener> {
+public class TelnetWindowSize implements TelnetOption {
 
 	public final static int CODE = 31;
 
 	protected final static Logger logger = System.getLogger("telnet.option.naws");
 
-	public static interface TelnetNAWSListener extends TelnetOptionListener {
-		public void telnetWindowSizeChanged(int width, int height);
+	public static class TerminalWindowSizeEvent extends TelnetOptionEvent {
+		private int width;
+		private int height;
+		public TerminalWindowSizeEvent(TelnetOption option, int width, int height) {
+			super(option);
+			this.width = width;
+			this.height = height;
+		}
+		public int getColumns() { return width; }
+		public int getRows() { return height; }
+		public String toString() {
+			return "Window Size: "+width+"x"+height;
+		}
 	}
-	
-	private List<TelnetNAWSListener> listeners = new ArrayList<>();
 	
 	private int rows = -1;
 	private int cols = -1;
-	private boolean enabled = false;
+	private boolean isFirstEvent = true;
 
 	//-------------------------------------------------------------------
 	public TelnetWindowSize() {
 	}
 
 	//-------------------------------------------------------------------
-	public TelnetWindowSize(TelnetNAWSListener callback) {
-		addListener(callback);
-	}
-
-	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetOption#getOptionCode()
+	 * @see org.prelle.telnet.option.TelnetOption#getOptionCode()
 	 */
 	@Override
 	public int getOptionCode() {
@@ -56,7 +58,7 @@ public class TelnetWindowSize implements TelnetOption<TelnetWindowSize.TelnetNAW
 	
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetOption#getName()
+	 * @see org.prelle.telnet.option.TelnetOption#getName()
 	 */
 	@Override
 	public String getName() { return "NAWS"; }
@@ -65,31 +67,40 @@ public class TelnetWindowSize implements TelnetOption<TelnetWindowSize.TelnetNAW
 	/**
 	 * Called from TelnetProtocol to learn if this handler will initiate communication or wait for the other side to do so.
 	 */
-	public boolean startCommunicationAs(CommunicationRole role) {
+	@Override
+	public boolean startNegotiationAs(CommunicationRole role) {
 		return role==CommunicationRole.SERVER;
 	}
 	
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetOption#initiate(org.prelle.telnet.TelnetProtocol, org.prelle.telnet.CommunicationRole)
+	 * @see org.prelle.telnet.option.TelnetOption#initiate(org.prelle.telnet.option.TelnetProtocol, org.prelle.telnet.option.CommunicationRole)
 	 */
 	@Override
-	public ControlCode initiate(TelnetProtocol stack, CommunicationRole role) throws IOException {
-		if (role==CommunicationRole.CLIENT) {
-			stack.getOutputStream().sendWill(getOptionCode());
-			return ControlCode.WILL;
-		} else {
+	public void initiate(TelnetProtocol stack, CommunicationRole role) throws IOException {
+		if (role==CommunicationRole.SERVER) {
 			stack.getOutputStream().sendDo(getOptionCode());
-			return ControlCode.DO;
 		}
 	}
+	
+	//-----------------------------------------------------------------
+	/**
+	 * Called from TelnetProtocol to learn if this handler will initiate communication or wait for the other side to do so.
+	 */
+	public boolean startSubNegotiationAs(CommunicationRole role) {
+		return role==CommunicationRole.CLIENT;
+	}
+
 	//-----------------------------------------------------------------
 	/**
 	 * Called after the use of a option has been confirmed
 	 * @return TRUE if a subnegotiation is needed
 	 */
 	@Override
-	public boolean negotiateDetails(TelnetProtocol origin) {
+	public boolean negotiateDetails(TelnetProtocol origin, CommunicationRole role) {
+		if (role==CommunicationRole.SERVER) {
+			return false;
+		}
 		System.err.println("TelnetWindowSize.negotiateDetails: cols="+cols+", rows="+rows);
 		try {
 			if (cols>0 && rows>0)
@@ -115,13 +126,21 @@ public class TelnetWindowSize implements TelnetOption<TelnetWindowSize.TelnetNAW
 	 * @see org.prelle.telnet.TelnetOptionHandler#handleSubnegotiation(org.prelle.telnet.Role, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
 	@Override
-	public void handleSubnegotiation(int[] values, TelnetProtocol stack) {
+	public List<TelnetOptionEvent> handleSubnegotiation(TelnetSubnegotiationEvent event, TelnetProtocol stack) {
+		int[] values = event.getAsIntArray();
 		int x = values[0]*256 + values[1];
 		int y = values[2]*256 + values[3];
 		logger.log(Level.DEBUG,"Terminal size = "+ x+"x"+y);
 		cols = x;
 		rows = y;
-		listeners.forEach( l -> l.telnetWindowSizeChanged(x, y));
+		
+		List<TelnetOptionEvent> result = new ArrayList<>();
+		result.add(new TerminalWindowSizeEvent(this, x, y));
+		if (isFirstEvent) {
+			isFirstEvent = false;
+			result.add(new SubnegotiationFinishedEvent(this));
+		}
+		return result;
 	}
 
 	//-------------------------------------------------------------------
@@ -149,17 +168,4 @@ public class TelnetWindowSize implements TelnetOption<TelnetWindowSize.TelnetNAW
 		}
 	}
 
-	//-------------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.TelnetOption#addListener(org.prelle.telnet.TelnetOptionListener)
-	 */
-	@Override
-	public void addListener(TelnetNAWSListener listener) {
-		if (!listeners.contains(listener)) {
-			listeners.add(listener);
-		}
-	}
-
-	public int getRows() { return rows; }
-	public int getColumns() { return cols; }
 }

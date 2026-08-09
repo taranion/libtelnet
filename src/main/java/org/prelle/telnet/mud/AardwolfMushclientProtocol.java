@@ -2,18 +2,19 @@ package org.prelle.telnet.mud;
 
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.prelle.telnet.TelnetOption;
-import org.prelle.telnet.TelnetOptionListener;
-import org.prelle.telnet.TelnetProtocol;
+import org.prelle.telnet.event.TelnetSubnegotiationEvent;
+import org.prelle.telnet.option.CommunicationRole;
+import org.prelle.telnet.option.TelnetOption;
+import org.prelle.telnet.option.TelnetOptionEvent;
+import org.prelle.telnet.option.TelnetProtocol;
 
 /**
  *
  */
-public class AardwolfMushclientProtocol implements TelnetOption<AardwolfMushclientProtocol.AardwolfMushclientListener> {
+public class AardwolfMushclientProtocol implements TelnetOption {
 
 	protected final static Logger logger = System.getLogger("telnet.aard");
 
@@ -38,19 +39,27 @@ public class AardwolfMushclientProtocol implements TelnetOption<AardwolfMushclie
 			return null;
 		}
 	}
-
-	public static interface AardwolfMushclientListener extends TelnetOptionListener {
-		public void telnetMudModeChanged(MUDMode mode);
-		public void telnetTickReceived();
+	
+	public static class AardwolfMushclientModeEvent extends TelnetOptionEvent {
+		private MUDMode mode;
+		public AardwolfMushclientModeEvent(TelnetOption option, MUDMode mode) {
+			super(option);
+			this.mode = mode;
+		}
+		public MUDMode getMudMode() { return mode; }
 	}
-
-	private List<AardwolfMushclientListener> listeners = new ArrayList<>();
+	
+	public static class AardwolfMushclientTickEvent extends TelnetOptionEvent {
+		public AardwolfMushclientTickEvent(TelnetOption option) {
+			super(option);
+		}
+	}
 
 	private final static int CODE = 102;
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetOption#getOptionCode()
+	 * @see org.prelle.telnet.option.TelnetOption#getOptionCode()
 	 */
 	@Override
 	public int getOptionCode() {
@@ -59,50 +68,31 @@ public class AardwolfMushclientProtocol implements TelnetOption<AardwolfMushclie
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetOption#getName()
+	 * @see org.prelle.telnet.option.TelnetOption#getName()
 	 */
 	@Override
 	public String getName() { return "AMP"; }
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetOption#negotiateDetails(org.prelle.telnet.TelnetProtocol)
+	 * @see org.prelle.telnet.option.TelnetOption#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
 	@Override
-	public boolean negotiateDetails(TelnetProtocol stack) {
-		return false;
-	}
-
-	//-------------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.TelnetOption#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
-	 */
-	@Override
-	public void handleSubnegotiation(int[] values, TelnetProtocol nvt) {
+	public List<TelnetOptionEvent> handleSubnegotiation(TelnetSubnegotiationEvent event, TelnetProtocol stack) {
+		byte[] values = event.getData();
 		switch (values[0]) {
 		case 100:
 			MUDMode mode = MUDMode.valueOf(values[1]);
-			logger.log(Level.DEBUG,"RCV: mode="+mode);
-			if (mode!=null) {
-				listeners.forEach(l -> l.telnetMudModeChanged(mode));
-			}
+			logger.log(Level.WARNING,"RCV: mode="+mode);
+			return List.of(new AardwolfMushclientModeEvent(this, mode));
 		case 101:
 			// Received MUD tick
-			logger.log(Level.DEBUG,"RCV: TICK");
-			listeners.forEach(l -> l.telnetTickReceived());
-			break;
+			logger.log(Level.WARNING,"RCV: TICK");
+			return List.of(new AardwolfMushclientTickEvent(this));
 		default:
 			logger.log(Level.WARNING,"TODO: we received2 : {0}", Arrays.toString(values));
 		}
-	}
-
-	//-------------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.TelnetOption#addListener(org.prelle.telnet.TelnetOptionListener)
-	 */
-	@Override
-	public void addListener(AardwolfMushclientListener listener) {
-		if (!listeners.contains(listener)) listeners.add(listener);
+		return List.of();
 	}
 
 }

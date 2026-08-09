@@ -23,9 +23,8 @@ public class MUDTerminalTypeStandard extends TerminalType {
 	public String getName() { return "MTTS"; }
 
 	//-------------------------------------------------------------------
-	public MUDTerminalTypeStandard(TerminalTypeListener callback) {
+	public MUDTerminalTypeStandard() {
 		super();
-		this.addListener(callback);
 	}
 	
 	//-------------------------------------------------------------------

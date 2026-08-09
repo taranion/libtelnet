@@ -1,21 +1,32 @@
 /**
  *
  */
-package org.prelle.telnet;
+package org.prelle.telnet.option;
 
 import java.io.IOException;
+import java.util.List;
+
+import org.prelle.telnet.event.TelnetSubnegotiationEvent;
+import org.prelle.telnet.parser.TelnetConstants;
 
 /**
  * @author prelle
  *
  */
-public interface TelnetOption<E extends  TelnetOptionListener> extends TelnetConstants {
+public interface TelnetOption extends TelnetConstants {
 	
 	//-----------------------------------------------------------------
 	int getOptionCode();
 	
 	//-----------------------------------------------------------------
 	String getName();
+	
+	//-----------------------------------------------------------------
+	default boolean isSubnegotiationFinished() {
+		return true;
+	}
+	public default void setSubnegotiationFinished(boolean finished) {
+	}
 	
 	//-----------------------------------------------------------------
 	default String resolveSubCommandName(int position, byte b) {
@@ -25,8 +36,10 @@ public interface TelnetOption<E extends  TelnetOptionListener> extends TelnetCon
 	//-----------------------------------------------------------------
 	/**
 	 * Called from TelnetProtocol to learn if this handler will initiate communication or wait for the other side to do so.
+	 * @param role Which role do we have in this negotiation
+	 * @return TRUE if initiate() should be called.
 	 */
-	default boolean startCommunicationAs(CommunicationRole role) {
+	default boolean startNegotiationAs(CommunicationRole role) {
 		return role==CommunicationRole.SERVER;
 	}
 
@@ -37,9 +50,13 @@ public interface TelnetOption<E extends  TelnetOptionListener> extends TelnetCon
 	 * @param role 
 	 * @return Telnet command that has been sent for this option.
 	 */
-	default ControlCode initiate(TelnetProtocol stack, CommunicationRole role) throws IOException {
+	default void initiate(TelnetProtocol stack, CommunicationRole role) throws IOException {
 		stack.getOutputStream().sendDo(getOptionCode());
-		return ControlCode.DO;
+	}
+	
+	//-----------------------------------------------------------------
+	default boolean startSubNegotiationAs(CommunicationRole role) {
+		return false;
 	}
 
 	//-----------------------------------------------------------------
@@ -47,15 +64,16 @@ public interface TelnetOption<E extends  TelnetOptionListener> extends TelnetCon
 	 * Called after the use of a option has been confirmed
 	 * @return TRUE when answers to a sub-negotiation are expected
 	 */
-	boolean negotiateDetails(TelnetProtocol stack);
+	default boolean negotiateDetails(TelnetProtocol stack, CommunicationRole role) {
+		return false;
+	}
 
 	//-----------------------------------------------------------------
 	/**
 	 * Called when a subnegotiation for this option is received
 	 */
-	void handleSubnegotiation(int[] values, TelnetProtocol stack);
-	
-	//-----------------------------------------------------------------
-	public void addListener(E listener);
+	public default List<TelnetOptionEvent> handleSubnegotiation(TelnetSubnegotiationEvent event, TelnetProtocol stack) {
+		return List.of();
+	}
 
 }

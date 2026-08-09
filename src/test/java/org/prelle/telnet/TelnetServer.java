@@ -10,20 +10,22 @@ import java.io.PrintWriter;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 
+import org.prelle.telnet.event.TelnetCommand;
+import org.prelle.telnet.event.TelnetEvent;
 import org.prelle.telnet.option.LineMode;
 import org.prelle.telnet.option.LineMode.LineModeListener;
 import org.prelle.telnet.option.TelnetCharset;
-import org.prelle.telnet.option.TelnetCharset.CharsetListener;
 import org.prelle.telnet.option.TelnetEnvironmentOption;
-import org.prelle.telnet.option.TelnetEnvironmentOption.EnvironmentListener;
+import org.prelle.telnet.option.TelnetOption;
+import org.prelle.telnet.option.TelnetWindowSize;
 import org.prelle.telnet.option.TerminalType;
-import org.prelle.telnet.option.TerminalType.TerminalTypeListener;
+import org.prelle.telnet.parser.TelnetConstants;
 
 /**
  * @author prelle
  *
  */
-public class PassiveUsage implements Runnable, TelnetConstants {
+public class TelnetServer implements Runnable, TelnetConstants {
 
     private final static Logger logger = System.getLogger("app");
 
@@ -36,20 +38,20 @@ public class PassiveUsage implements Runnable, TelnetConstants {
 	 * @throws IOException
 	 */
 	public static void main(String[] args) throws IOException {
-		new PassiveUsage();
+		new TelnetServer();
 //		new ActiveUsage();
 	}
 
-	public PassiveUsage() throws IOException {
+	public TelnetServer() throws IOException {
 		serverSocket = new TelnetServerSocket(4000);
 		serverSocket.setExtensionFactory( (socket) -> {
+			logger.log(Level.INFO,"Creating extensions for socket "+socket);
 			return new TelnetOption[] { 
-					new TerminalType((TerminalTypeListener)null), 
-					new LineMode((LineModeListener)null) , 
-					new TelnetCharset((CharsetListener)null, "UTF-8","CP437","ISO-8859-1","ASCII"), 
-					new TelnetEnvironmentOption((EnvironmentListener) (variables) -> {
-						logger.log(Level.INFO,"Environment variables received: {0}", variables);
-					}) 
+					new TerminalType(), 
+					new LineMode() , 
+					new TelnetCharset("UTF-8","CP437","ISO-8859-1","ASCII"), 
+					new TelnetEnvironmentOption() ,
+					new TelnetWindowSize()
 				};
 		});
 
@@ -63,14 +65,14 @@ public class PassiveUsage implements Runnable, TelnetConstants {
 		while (true) {
 			try {
 				TelnetSocket socket = (TelnetSocket) serverSocket.accept();
-				socket.addListener(  new TelnetListener() {
+				socket.addListener(  new TelnetSocketListener() {
 					@Override
 					public void optionStateChanged(TelnetOption extension, boolean state) {
 						logger.log(Level.INFO,"Extension {0} changed to {1}", extension.getName(), state);
 					}
 
 					@Override
-					public void telnetCommandReceived(TelnetCommand command) {
+					public void onTelnetEvent(TelnetEvent command) {
 						logger.log(Level.INFO,"Telnet command received: {0}", command);
 					}
 
@@ -91,9 +93,9 @@ public class PassiveUsage implements Runnable, TelnetConstants {
 				int data = -1;
 				do {
 					data = in.read();
-					System.out.println("Read "+data+" as "+(char)data);
+					System.err.println("Read "+data+" as "+(char)data);
 //					if (socket.isFeatureActive(TelnetOption.ECHO)) {
-						out.write(data);
+//						out.write(data);
 //					}
 				} while (data!=-1);
 			} catch (IOException e1) {

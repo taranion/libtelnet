@@ -3,23 +3,23 @@ package org.prelle.telnet.option;
 /**
  * 
  */
-public class SupressGoAhead implements TelnetOption {
+public class EndOfRecord implements TelnetOption {
 
 	//-------------------------------------------------------------------
 	/**
 	 */
-	public SupressGoAhead() {
+	public EndOfRecord() {
 		// TODO Auto-generated constructor stub
 	}
 
 	@Override
 	public int getOptionCode() {
-		return 3;
+		return 25;
 	}
 
 	@Override
 	public String getName() {
-		return "SGA";
+		return "EOR";
 	}
 	
 	//-----------------------------------------------------------------

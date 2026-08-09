@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,8 +16,9 @@ public class ReceiveDatagramInputStream extends InputStream {
 	
 	private final static Logger logger = System.getLogger("telnet");
 	
-	private List<byte[]> incomingData = new ArrayList<>();
+	protected List<byte[]> incomingData = new ArrayList<>();
 	
+	protected boolean closed = false;
 	private byte[] currentlyConsuming;
 	private int currentIndex = 0;
 
@@ -45,15 +48,19 @@ public class ReceiveDatagramInputStream extends InputStream {
 	
 	@Override
 	public int read() throws IOException {
-		logger.log(Level.WARNING, "readSingle");
+//		logger.log(Level.WARNING, "readSingle");
 		if (currentlyConsuming != null && currentIndex < currentlyConsuming.length) {
 			return currentlyConsuming[currentIndex++] & 0xFF; // Return the next byte as an int
 		}
+
+		if (closed) return -1;
 		
 		synchronized (incomingData) {
 			while (incomingData.isEmpty()) {
 				try {
+					logger.log(Level.WARNING, "...wait");
 					incomingData.wait(); // Wait for new data to arrive
+					logger.log(Level.WARNING, "...waiting done");
 				} catch (InterruptedException e) {
 					Thread.currentThread().interrupt();
 					throw new IOException("Thread interrupted while waiting for data", e);
@@ -77,8 +84,14 @@ public class ReceiveDatagramInputStream extends InputStream {
 		
 		synchronized (incomingData) {
 			while (incomingData.isEmpty()) {
+				if (closed) return -1;
 				try {
+					logger.log(Level.WARNING, "...wait");
 					incomingData.wait(); // Wait for new data to arrive
+					logger.log(Level.WARNING, "...waiting done");
+					if (closed && incomingData.isEmpty()) {
+						return -1; // Return -1 if the stream is closed while waiting
+					}
 				} catch (InterruptedException e) {
 					Thread.currentThread().interrupt();
 					throw new IOException("Thread interrupted while waiting for data", e);
@@ -101,14 +114,9 @@ public class ReceiveDatagramInputStream extends InputStream {
 	
 	
 	public void receiveData(byte[] data) {
-        logger.log(Level.WARNING,"Received binary message of length: " + data.length);
+        logger.log(Level.WARNING,"Received data of length: " + data.length);
         synchronized (incomingData) {
-			if (currentlyConsuming == null) {
-				currentlyConsuming = data;
-				currentIndex = 0;
-			} else {
-				incomingData.add(data);
-			}
+			incomingData.add(data);
 			incomingData.notifyAll(); // Notify any waiting threads that new data is available
 		}
 	}	

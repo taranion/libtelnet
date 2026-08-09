@@ -1,4 +1,4 @@
-package org.prelle.telnet;
+package org.prelle.telnet.option;
 
 /**
  *

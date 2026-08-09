@@ -10,21 +10,18 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.prelle.telnet.CommunicationRole;
-import org.prelle.telnet.TelnetConstants;
-import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetOutputStream;
-import org.prelle.telnet.TelnetProtocol;
-import org.prelle.telnet.TelnetOption;
 import org.prelle.telnet.WellKnownTelnetOptions;
+import org.prelle.telnet.event.TelnetSubnegotiationEvent;
+import org.prelle.telnet.parser.TelnetConstants;
 
 /**
  * @author prelle
  *
  */
-public class LineMode implements TelnetOption<LineMode.LineModeListener> {
+public class LineMode implements TelnetOption {
 
-	protected final static Logger logger = System.getLogger("telnet.linemode");
+	protected final static Logger logger = System.getLogger("telnet.option.linemode");
 
 	public static class LineModeConfig {
 		LineModeListener listener;
@@ -42,7 +39,7 @@ public class LineMode implements TelnetOption<LineMode.LineModeListener> {
 		}
 	}
 
-	public static interface LineModeListener extends TelnetOptionListener {
+	public static interface LineModeListener {
 		//-------------------------------------------------------------------
 		/**
 		 * @param suggested
@@ -52,6 +49,27 @@ public class LineMode implements TelnetOption<LineMode.LineModeListener> {
 		public void onLinemodeFlagsAcknowledged(List<ModeBit> acknowledged);
 		public void sendFlushOn(List<Integer> flushCodes);
 	}
+	
+	public static class LineModeEvent extends TelnetOptionEvent {
+		private List<ModeBit> flags;
+		public LineModeEvent(TelnetOption option, List<ModeBit> flags) {
+			super(option);
+			this.flags = flags;
+		}
+		public List<ModeBit> getFlags() { 
+			List<ModeBit> n = new ArrayList<>(flags);
+			n.remove(ModeBit.MODE_ACK);
+			return n; 
+		}
+		public boolean isAcknowledged() { return flags.contains(ModeBit.MODE_ACK); }
+		public String toString() {
+			if (isAcknowledged()) 
+				return "LineModeEvent: "+getFlags()+" acknowledged";
+			else
+				return "LineModeEvent: "+getFlags()+" requested";
+		}
+	}
+	
 
 	public static enum ModeBit {
 		/**
@@ -202,7 +220,6 @@ public class LineMode implements TelnetOption<LineMode.LineModeListener> {
 //		public List<Integer> getCodes() { return this.codes; }
 //	}
 
-	private List<LineModeListener> listeners = new ArrayList<>();
 	private CommunicationRole role;
 	private List<ModeBit> modes = new ArrayList<>();
 
@@ -210,11 +227,6 @@ public class LineMode implements TelnetOption<LineMode.LineModeListener> {
    public LineMode() {
 //    	super(TelnetOption.LINEMODE.getCode(), "LINEMODE");
     }
-
-	//-----------------------------------------------------------------
- 	public LineMode(LineModeListener callback) {
-	  listeners.add(callback);
- 	}
  	
 	//-------------------------------------------------------------------
  	public String toString() {
@@ -223,7 +235,7 @@ public class LineMode implements TelnetOption<LineMode.LineModeListener> {
  	
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetOption#getOptionCode()
+	 * @see org.prelle.telnet.option.TelnetOption#getOptionCode()
 	 */
 	@Override
 	public int getOptionCode() {
@@ -238,8 +250,15 @@ public class LineMode implements TelnetOption<LineMode.LineModeListener> {
 	/**
 	 * Called from TelnetProtocol to learn if this handler will initiate communication or wait for the other side to do so.
 	 */
-	public boolean startCommunicationAs(CommunicationRole role) {
+	@Override
+	public boolean startNegotiationAs(CommunicationRole role) {
 		return role==CommunicationRole.SERVER;
+	}
+	
+	//-----------------------------------------------------------------
+	@Override
+	public boolean startSubNegotiationAs(CommunicationRole role) {
+		return false; //role==CommunicationRole.SERVER;
 	}
 
 	//-----------------------------------------------------------------
@@ -248,7 +267,9 @@ public class LineMode implements TelnetOption<LineMode.LineModeListener> {
 	 * @return TRUE if a subnegotiation is needed
 	 */
     @Override
-	public boolean negotiateDetails(TelnetProtocol stack) {
+	public boolean negotiateDetails(TelnetProtocol stack, CommunicationRole role) {
+    	logger.log(Level.WARNING, "negotiateDetails for LINEMODE as {0}", role);
+		this.role = role;
  		try {
 			if (role==CommunicationRole.SERVER) {
 				logger.log(Level.INFO, "Start character-a-time mode by clearing EDIT flag");
@@ -264,10 +285,11 @@ public class LineMode implements TelnetOption<LineMode.LineModeListener> {
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetOption#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
+	 * @see org.prelle.telnet.option.TelnetOption#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
     @Override
-	public void handleSubnegotiation(int[] values, TelnetProtocol stack) {
+    public List<TelnetOptionEvent> handleSubnegotiation(TelnetSubnegotiationEvent event, TelnetProtocol stack) {
+    	byte[] values = event.getData();
 		logger.log(Level.DEBUG, "LineMode sub {0} as {1}",Arrays.toString(values), role);
 		
 		Operation op = null;
@@ -278,7 +300,7 @@ public class LineMode implements TelnetOption<LineMode.LineModeListener> {
 			int[] remain = new int[values.length-2];
 			System.arraycopy(values, 2, remain, 0, remain.length);
 			forwardMask(stack, c0, remain);
-			return;
+			return List.of();
 		} else {
 			op = Operation.valueOf(values[0]);
 		}
@@ -289,17 +311,14 @@ public class LineMode implements TelnetOption<LineMode.LineModeListener> {
 			logger.log(Level.INFO, "IAC SB LINEMODE MODE "+modes);
 			if (role==CommunicationRole.SERVER && !modes.contains(ModeBit.MODE_ACK)) {
 				logger.log(Level.WARNING, "Ignore, because we are server - noone tells us what to do");
-				return;
+				return List.of();
 			}
-			listeners.forEach(lmList -> {
-				if (modes.contains(ModeBit.MODE_ACK)) {
-					lmList.onLinemodeFlagsAcknowledged(modes);					
-				} else {
-					List<ModeBit> confirmed = lmList.onLinemodeFlagsSuggested(modes);
-					confirmMode(stack.getOutputStream(), confirmed);
-				}
-			});
-			break;
+//			if (!modes.contains(ModeBit.MODE_ACK)) {
+//				List<ModeBit> confirmed = lmList.onLinemodeFlagsSuggested(modes);
+//				confirmMode(stack.getOutputStream(), confirmed);				
+//			}
+			
+			return List.of(new LineModeEvent(this, modes));
 		case SLC:
 			logger.log(Level.INFO, "IAC SB LINEMODE SLC {0}", Arrays.toString(values));
 			for (int i=1; i<values.length;) {
@@ -337,6 +356,7 @@ public class LineMode implements TelnetOption<LineMode.LineModeListener> {
 			logger.log(Level.WARNING, "Unhandled "+op);
 		}
 
+		return List.of();
 	}
 
 	//-------------------------------------------------------------------
@@ -368,7 +388,7 @@ public class LineMode implements TelnetOption<LineMode.LineModeListener> {
 			}
 		}
 
-		listeners.forEach(lmList -> lmList.sendFlushOn(codes));
+//		listeners.forEach(lmList -> lmList.sendFlushOn(codes));
 	}
 
 	//-------------------------------------------------------------------
@@ -384,9 +404,8 @@ public class LineMode implements TelnetOption<LineMode.LineModeListener> {
 				});
 	}
 
-	@Override
-	public void addListener(LineModeListener listener) {
-		if (!listeners.contains(listener)) listeners.add(listener);
+	//-------------------------------------------------------------------
+	public void requestCharacterMode(TelnetOutputStream out) throws IOException {
+		setFlags(out, List.of(ModeBit.TRAPSIG));		
 	}
-
 }

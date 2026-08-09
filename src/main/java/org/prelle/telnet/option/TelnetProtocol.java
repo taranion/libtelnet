@@ -1,0 +1,540 @@
+package org.prelle.telnet.option;
+
+import java.io.IOException;
+import java.lang.System.Logger;
+import java.lang.System.Logger.Level;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Consumer;
+
+import org.prelle.telnet.TelnetInputStream;
+import org.prelle.telnet.TelnetOutputStream;
+import org.prelle.telnet.WellKnownTelnetOptions;
+import org.prelle.telnet.event.DataEvent;
+import org.prelle.telnet.event.TelnetCommand;
+import org.prelle.telnet.event.TelnetEvent;
+import org.prelle.telnet.event.TelnetNegotiationEvent;
+import org.prelle.telnet.event.TelnetParserListener;
+import org.prelle.telnet.event.TelnetSubnegotiationEvent;
+import org.prelle.telnet.option.TelnetOptionEvent.SubnegotiationFinishedEvent;
+import org.prelle.telnet.parser.TelnetConstants;
+import org.prelle.telnet.parser.TelnetStateMachine;
+
+/**
+ * 
+ */
+public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
+
+	private final static Logger logger = System.getLogger("telnet.lvl3");
+
+	public static enum OptionState {
+		UNKNOWN,
+		UNKNOWN_QUERIED,
+		INACTIVE_NOT_SUPPORTED,
+		INACTIVE,
+		/** Asked remote site to activate this option, waiting for response */
+		INACTIVE_QUERIED,
+		ACTIVE,
+		/** Asked remote site to deactivate this option, waiting for response */
+		ACTIVE_QUERIED,
+		;
+		public boolean isWaitState() {
+			return this==UNKNOWN_QUERIED || this==UNKNOWN || this==INACTIVE_QUERIED;
+		}
+	}
+	
+	public static enum SubNegState {
+		IDLE,
+		RESPONSE_PENDING,
+		FINISHED
+		;
+		public boolean isWaitState() {
+			return this==RESPONSE_PENDING;
+		}
+	}
+	
+	private static record ProcessResult(Optional<ControlCode> answerWith, Optional<Boolean> stateChange) {
+		public ProcessResult(Optional<ControlCode> answerWith) {
+			this(answerWith, Optional.empty());
+		}
+		public ProcessResult(Optional<ControlCode> answerWith, Boolean newState) {
+			this(answerWith, Optional.of(newState));
+		}
+	}
+	
+	
+	private static class NegotiatonState {
+		private OptionState state = OptionState.UNKNOWN;
+		private SubNegState subnegState = SubNegState.IDLE;
+		private TelnetOption extension;
+		
+		//-------------------------------------------------------------------
+		/**
+		 * Constructor to use for unknown options
+		 */
+		public NegotiatonState() {
+		}
+		
+		//-------------------------------------------------------------------
+		/**
+		 * Constructor to use for known options
+		 * @param extension
+		 * @param listener
+		 */
+		public NegotiatonState(TelnetOption extension) {
+			this.extension = extension;
+		}
+		
+		//-------------------------------------------------------------------
+		/**
+		 * @see java.lang.Object#toString()
+		 */
+		public String toString() {
+			return state+"/"+subnegState;
+		}
+
+		public void setState(OptionState value) {
+			if (this.state!=value) {
+				logger.log(Level.INFO, "Changing state for {0} from {1} to {2}", (extension!=null)?extension.getName():"UNKNOWN", this.state, value);
+			}
+			state = value;
+		}
+		
+		//-------------------------------------------------------------------
+		private ProcessResult generateAnswer(ControlCode remoteSends) {
+			switch (state) {
+			case ACTIVE:
+				// Option is currently active
+				switch (remoteSends) {
+				case DO:
+				case WILL:
+					// We are already active, so we ignore the WILL/DO command to prevent loops
+					return new ProcessResult(Optional.empty());
+				case DONT:
+					// The remote side wants to stop doing this option, so we confirm with WONT
+					setState(OptionState.INACTIVE);
+					return new ProcessResult(Optional.of(ControlCode.WONT), false);
+				case WONT:
+					// The remote side wants to stop doing this option, so we confirm with DONT
+					setState(OptionState.INACTIVE);
+					return new ProcessResult(Optional.of(ControlCode.DONT), false);
+				default:
+					return new ProcessResult(Optional.empty());
+				}
+			case UNKNOWN_QUERIED:
+				// This is the first response we ever got for this option
+				boolean active = (remoteSends==ControlCode.DO || remoteSends==ControlCode.WILL);
+				if (active) {
+					setState(OptionState.ACTIVE);
+				} else {
+					setState(OptionState.INACTIVE_NOT_SUPPORTED);
+				}
+				return new ProcessResult(Optional.empty(), active);
+			case INACTIVE_QUERIED:
+				// We asked the remote side to activate this option - this is the response				
+				active = (remoteSends==ControlCode.DO || remoteSends==ControlCode.WILL);
+				if (active) {
+					setState(OptionState.ACTIVE);
+					return new ProcessResult(Optional.empty(), active);
+				} else {
+					// Remain inactive
+					setState(OptionState.INACTIVE);
+					return new ProcessResult(Optional.empty());
+				}
+			case UNKNOWN:
+				// This is the very first request for an option.
+				if (extension==null) {
+					// We don't support this option, so we respond with WONT/DONT			
+					setState(OptionState.INACTIVE_NOT_SUPPORTED);
+					return new ProcessResult(Optional.of( (remoteSends==ControlCode.DO)?ControlCode.WONT:ControlCode.DONT));
+				} else {
+					// We support this option, so we respond with WILL/DO
+					setState(OptionState.ACTIVE);
+					return new ProcessResult(Optional.of((remoteSends==ControlCode.DO)?ControlCode.WILL:ControlCode.DO), true);
+				}
+			case INACTIVE:
+				// This is a follow-up request for a supported option
+				switch (remoteSends) {
+				case  DO:
+					setState(OptionState.ACTIVE);
+					return new ProcessResult( Optional.of( ControlCode.WILL), true);
+				case WILL:
+					setState(OptionState.ACTIVE);
+					return new ProcessResult( Optional.of( ControlCode.DO), true);
+				case WONT:
+				case DONT:
+					// Trying to deactivate an option that is already inactive - ignore to prevent loops
+					return new ProcessResult(Optional.empty());					
+				}
+			case INACTIVE_NOT_SUPPORTED:
+				// We already told the remote side that we do not support this option.
+				// Don't send any more responses to prevent loops
+				return new ProcessResult(Optional.empty());
+			case ACTIVE_QUERIED:
+				// We asked the remote side to deactivate this option - this is the response				
+				active = (remoteSends==ControlCode.DO || remoteSends==ControlCode.WILL);
+				if (active) {
+					// Remain active
+					setState(OptionState.ACTIVE);
+					return new ProcessResult(Optional.empty());
+				} else {
+					// Remote party agreed to deactivate this option
+					setState(OptionState.INACTIVE);
+					return new ProcessResult(Optional.empty(), false);
+				}
+			default:
+				break;					
+			}
+			return new ProcessResult(Optional.empty());
+		}
+
+		//-------------------------------------------------------------------
+		public boolean isActive() {
+			return state==OptionState.ACTIVE;
+		}
+	}
+	
+	private CommunicationRole role;
+	private TelnetStateMachine parser;
+	private TelnetProtocolListener listener;
+	
+	private Map<TelnetOption, CommunicationRole> extensions = new HashMap<>();
+	private Map<Integer, TelnetOption> extensionsByCode = new HashMap<>();
+
+	private Map<Integer, NegotiatonState> negotiationState;
+	
+	private TelnetInputStream inputStream;
+	private TelnetOutputStream outputStream;
+    
+    private boolean initialHandshakeDone = false;
+    private Consumer<DataEvent> dataConsumer; 
+	
+	//-------------------------------------------------------------------
+	public TelnetProtocol(CommunicationRole role, TelnetProtocolListener listener) {
+		this.role = role;
+		this.listener = listener;
+		parser    = new TelnetStateMachine(this);
+		negotiationState = new HashMap<>();
+	}
+	
+	//-------------------------------------------------------------------
+	public void setDataListener(Consumer<DataEvent> consumer) {
+		this.dataConsumer = consumer;
+	}
+
+	public boolean isSendGoAheadAsANSISepator() {
+		return parser.isSendGoAheadAsANSISepator();
+	}
+
+	public void setSendGoAheadAsANSISepator(boolean sendGoAheadAsANSISepator) {
+		parser.setSendGoAheadAsANSISepator(sendGoAheadAsANSISepator);
+	}
+
+	//-------------------------------------------------------------------
+	public void process(byte[] data) {
+		if (data == null || data.length == 0) return;
+		// Pass data to parser which will return events via TelnetParserListener interface
+		parser.process(data);
+	}
+	
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.event.TelnetParserListener#onTelnetEvent(org.prelle.telnet.event.TelnetEvent)
+	 */
+	@Override
+	public void onTelnetEvent(TelnetEvent event) {
+		logger.log(Level.INFO, "onTelnetEvent({0})", event);
+		switch (event) {
+		case DataEvent _ -> {
+			if (dataConsumer!=null)
+				dataConsumer.accept((DataEvent)event);
+			else
+				listener.onTelnetEvent(event);
+		}
+		case TelnetCommand _ -> listener.onTelnetEvent(event);
+		case TelnetNegotiationEvent option -> handleDoDontWillWont(option);
+		case TelnetSubnegotiationEvent subneg -> {
+			TelnetOption option = extensionsByCode.get(subneg.getOption());
+			if (option!=null) {
+				for (TelnetOptionEvent ev : option.handleSubnegotiation(subneg, this)) {
+					if (ev instanceof SubnegotiationFinishedEvent _) {
+						// Mark the option as ready
+						negotiationState.get(subneg.getOption()).subnegState = SubNegState.FINISHED;
+						verifyAllOptionsReady();
+					} else
+						listener.onTelnetEvent(ev);
+				}
+			} else 
+				logger.log(Level.WARNING, "Received subnegotiation for unknown option {0}", subneg.getOption());
+		}
+		default -> logger.log(Level.WARNING, "Unknown TelnetEvent type: {0}", event);
+		}
+	}
+
+	@SuppressWarnings("incomplete-switch")
+	public void sendResponse(TelnetEvent response) {
+		if (outputStream==null) {
+			logger.log(Level.ERROR, "Output stream is null - cannot send response {0}", response);
+			return;
+		}
+		
+		try {
+			switch (response) {
+			case TelnetSubnegotiationEvent subneg -> {
+				logger.log(Level.INFO, "Respond to subnegotiation  {0}", response);
+				byte[] send = new byte[subneg.getData().length + 5];
+				send[0] = (byte)IAC;
+				send[1] = (byte)SB;
+				send[2] = (byte)subneg.getOption();
+				System.arraycopy(subneg.getData(), 0, send, 3, subneg.getData().length);
+				send[send.length-2] = (byte)IAC;
+				send[send.length-1] = (byte)SE;
+				outputStream.write(send);
+				outputStream.flush();
+			}
+			case TelnetNegotiationEvent negotiation -> {
+				logger.log(Level.INFO, "Respond to negotiation  {0}", response);
+				switch (negotiation.getType()) {
+				case WILL : outputStream.sendWill(negotiation.getOption()); break;
+				case WONT : outputStream.sendWont(negotiation.getOption()); break;
+				case DO   : outputStream.sendDo(negotiation.getOption()); break;
+				case DONT : outputStream.sendDont(negotiation.getOption()); break;
+				};
+				outputStream.flush();
+		}
+			default -> {
+				// For TelnetCommand and TelnetNegotiationEvent, we can use the outputStream's send method
+				logger.log(Level.WARNING, "Don't know how to send: "+response.getClass()+" = "+response);
+			}
+			}
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	//-------------------------------------------------------------------
+	public TelnetProtocol add(TelnetOption extension) {
+		if (!extensions.containsKey(extension)) {
+			extensions.put(extension, role);
+		}
+		extensionsByCode.put(extension.getOptionCode(), extension);
+		negotiationState.put(extension.getOptionCode(), new NegotiatonState(extension));
+		return this;
+	}
+	
+	//-------------------------------------------------------------------
+	public void initializeExtensions() {
+		logger.log(Level.INFO, "ENTER: initializeExtensions() with {0} extensions", extensions.size());
+		try {
+			if (!extensions.isEmpty())
+				Objects.requireNonNull(outputStream, "Output stream must be set before initializing extensions");
+			initialHandshakeDone = false;
+			for (TelnetOption ext : extensions.keySet()) {
+				try {
+					if (ext.startNegotiationAs(role)) {
+						ext.initiate(this, role);
+						negotiationState.get(ext.getOptionCode()).setState(OptionState.INACTIVE_QUERIED);
+					} else
+						negotiationState.get(ext.getOptionCode()).setState(OptionState.INACTIVE);
+				} catch (Exception e) {
+					logger.log(Level.ERROR, "Error initializing extension "+ext.getName(), e);
+				}
+			}
+			try {
+				if (outputStream!=null)
+					outputStream.flush();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		} finally {
+			logger.log(Level.INFO, "LEAVE: initializeExtensions");
+		}
+	}
+
+
+	//-----------------------------------------------------------------
+	private void verifyAllOptionsReady() {
+		if (initialHandshakeDone) return;
+		logger.log(Level.DEBUG, "verifyAllOptionsReady");
+		// Dump all states 
+		if (logger.isLoggable(Level.DEBUG)) {
+			negotiationState.values().stream()
+				.filter( ext -> ext.extension!=null)
+				.forEach( entry -> logger.log(Level.DEBUG, "--- {0} \t= {1}", entry.extension.getName(), entry));
+		}
+		// Dump wait states 
+		if (logger.isLoggable(Level.DEBUG)) {
+			negotiationState.values().stream()
+				.filter( ext -> ext.state.isWaitState())
+				.forEach( entry -> logger.log(Level.DEBUG, "***Waiting for {0} ({1})", entry.extension.getOptionCode(), entry.extension.getName()));
+		}
+		boolean allReady = negotiationState.values().stream()
+				.allMatch( state -> !state.state.isWaitState());
+		boolean allSubReady = negotiationState.values().stream()
+				.allMatch( state -> !state.subnegState.isWaitState());
+		logger.log(Level.DEBUG, "All subnegotiations finished? {0} + {1}", allReady, allSubReady);
+		if (allReady & allSubReady) {
+			logger.log(Level.WARNING, "All subnegotiations finished");
+			initialHandshakeDone = true;
+			listener.telnetReady();
+		}
+	}
+	
+//	//-----------------------------------------------------------------
+//	public void waitUntilSubnegotiationDone(int timeoutMS) {
+//		logger.log(Level.INFO, "ENTER: waitUntilSubnegotiationDone()");
+//		
+//		startReadFromSocketThread();
+//		
+//		Instant start = Instant.now();
+//		Instant waitUntil = start.plusMillis(timeoutMS);
+//		try {
+//			while (negotiationState.values().stream().anyMatch(s -> s.state.isWaitState()) && Instant.now().isBefore(waitUntil)) {
+//				try {
+//					Thread.sleep(100);
+//				} catch (InterruptedException e) {
+//					logger.log(Level.WARNING, "Interrupted while waiting for subnegotiation to finish", e);
+//					return;
+//				}
+//			}
+//		} finally {
+//			continueReading = false;
+//			inputStream.receiveData(processLater);
+//			processLater.clear();
+//			// close all unanswered subnegotiations
+//			for (NegotiatonState state : negotiationState.values()) {
+//				if (state.state==State.SUGGESTED) {
+//					logger.log(Level.WARNING, "Subnegotiation for {0} did not finish - closing", state.extension.getName());
+//					state.setState(State.REJECTED);
+//					listener.optionStateChanged(state.extension, false);			
+//				}
+//			}
+//			logger.log(Level.ERROR, "LEAVE: waitUntilSubnegotiationDone() for {0}ms - with {1} pre-read bytes", Duration.between(start, Instant.now()).toMillis(), processLater.size());
+//		}
+//	}
+
+	//-----------------------------------------------------------------
+	public TelnetOption getExtensionForOption(int optionCode) {
+		for (TelnetOption ext : extensions.keySet()) {
+			if (ext.getOptionCode()==optionCode)
+				return ext;
+		}
+		return null;
+	}
+
+	//-----------------------------------------------------------------
+	String getExtensionName(int optionCode) {
+		for (TelnetOption ext : extensions.keySet()) {
+			if (ext.getOptionCode()==optionCode)
+				return ext.getName();
+		}
+		return (WellKnownTelnetOptions.valueOf(optionCode)!=null)?WellKnownTelnetOptions.valueOf(optionCode).name():"UNKNOWN("+optionCode+")";
+	}
+
+	//-----------------------------------------------------------------
+	private void handleDoDontWillWont(TelnetNegotiationEvent command) {
+		int optionCode = command.getOption();
+		NegotiatonState state = negotiationState.get(optionCode);
+		if (state==null) {
+			// Unknown option - create a state for unsupported options 
+			state = new NegotiatonState();
+			negotiationState.put(optionCode, state);
+		}
+		logger.log(Level.DEBUG, "Received {0} while state is {1}", command, state);
+		TelnetOption extension = getExtensionForOption(optionCode);
+		
+		ProcessResult result = state.generateAnswer(command.getType());
+		// Do we need to send an answer
+		result.answerWith.ifPresent( answer -> {
+			logger.log(Level.INFO, "Responding to {0} with {1}", command, answer);
+			sendResponse(new TelnetNegotiationEvent(command, answer));
+		});
+		
+		// If it isn't active, assume subnegotiation is finished
+		if (state.state==OptionState.ACTIVE) {			
+			extension.setSubnegotiationFinished(true);
+		}
+		
+		// Did the state change somehow?
+		result.stateChange().ifPresent(newState -> {
+			// If this was a known option, we can update the state accordingly
+			logger.log(Level.INFO, "Changing state to {0} for option {1}", newState, (extension!=null)?extension.getName():"UNKNOWN("+optionCode+")");
+			if (extension!=null) {
+				if (newState) {
+					optionBecameActive(extension);
+				} else {
+					optionBecameInactive(extension);
+				}
+			}
+		});
+
+		// Check if all options are ready now
+		verifyAllOptionsReady();
+		
+	}
+
+	//-------------------------------------------------------------------
+	private void optionBecameActive(TelnetOption extension) {
+		logger.log(Level.INFO, "Option {0} became active", extension.getName());
+		NegotiatonState state = negotiationState.get(extension.getOptionCode());
+		listener.optionStateChanged(extension, true);
+		
+		boolean mustSubnegotiate = extension.startSubNegotiationAs(role);
+		if (mustSubnegotiate) {
+			logger.log(Level.INFO, "It is our turn to start a subnegotiation for {0}", extension.getName());
+			state.subnegState = SubNegState.RESPONSE_PENDING;
+			extension.negotiateDetails(this, role);
+		} else {
+			state.subnegState = SubNegState.FINISHED;
+		}
+	}
+
+	//-------------------------------------------------------------------
+	private void optionBecameInactive(TelnetOption extension) {
+		logger.log(Level.INFO, "Option {0} became inactive", extension.getName());
+		listener.optionStateChanged(extension, false);
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @return the inputStream
+	 */
+	public TelnetInputStream getInputStream() {
+		return inputStream;
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @param inputStream the inputStream to set
+	 */
+	public void setInputStream(TelnetInputStream inputStream) {
+		this.inputStream = inputStream;
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @return the outputStream
+	 */
+	public TelnetOutputStream getOutputStream() {
+		return outputStream;
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @param outputStream the outputStream to set
+	 */
+	public void setOutputStream(TelnetOutputStream outputStream) {
+		this.outputStream = outputStream;
+	}
+
+	//-------------------------------------------------------------------
+	public boolean isFeatureActive(Integer code) {
+		return negotiationState.containsKey(code) 
+				&& negotiationState.get(code).isActive();
+	}
+	
+}

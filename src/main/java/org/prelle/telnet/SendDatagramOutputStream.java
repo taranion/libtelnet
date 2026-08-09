@@ -28,13 +28,13 @@ public class SendDatagramOutputStream extends OutputStream {
 	 */
 	@Override
 	public void write(int b) throws IOException {
-		logger.log(Level.WARNING, "writeSingle");
+//		logger.log(Level.WARNING, "writeSingle");
 		sendFunction.accept(new byte[] {(byte)b});
 	}
 	
 	@Override
 	public void write(byte[] buf) throws IOException {
-		logger.log(Level.WARNING, "writeMulti");
+		logger.log(Level.WARNING, "writeMulti {0}", buf.length);
 		sendFunction.accept(buf);
 	}
 

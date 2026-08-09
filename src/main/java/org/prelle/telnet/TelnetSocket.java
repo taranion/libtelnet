@@ -8,50 +8,29 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.net.InetAddress;
 import java.net.Socket;
-import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.Function;
 
-import org.prelle.telnet.TelnetSocket.State;
+import org.prelle.telnet.event.DataEvent;
+import org.prelle.telnet.event.TelnetEvent;
+import org.prelle.telnet.option.CommunicationRole;
+import org.prelle.telnet.option.TelnetOption;
+import org.prelle.telnet.option.TelnetProtocol;
+import org.prelle.telnet.option.TelnetProtocolListener;
+import org.prelle.telnet.parser.TelnetConstants;
 
 /**
  * @author prelle
  *
  */
-public class TelnetSocket extends Socket implements TelnetConstants {
+public class TelnetSocket extends Socket implements TelnetConstants, TelnetProtocolListener {
 	
-	public static record NegotiationResult(TelnetOption handler, boolean accepted, Object data) {
-		public <E> E getResultData() {
-			return (E) data;
-		}
-		public String toString() {
-			return handler.getName()+" \t: "+(accepted?"ACTIVE":"REJECTED");
-		}
-	}
-
-	public static enum State {
-		CREATED,
-		OPTION_NEGOTIATION,
-		OPTION_SUBNEGOTIATION,
-		READY,
-		DISCONNECTED
-	}
 
 	private final static Logger logger = System.getLogger("telnet.lvl3");
 
@@ -65,6 +44,9 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	protected TelnetInputStream in;
 	protected TelnetOutputStream out;
 	private TelnetProtocol stack;
+	private InetAddress remoteAddress;
+	
+	private TelnetSocketListener listener;
 
 	//-----------------------------------------------------------------
 	public static ExecutorService getExecutorService() {
@@ -73,12 +55,13 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 
 	//-----------------------------------------------------------------
 	public TelnetSocket() {
-		stack = new TelnetProtocol(CommunicationRole.SERVER);
+		stack = new TelnetProtocol(CommunicationRole.SERVER, this);
 	}
 
 	//-----------------------------------------------------------------
-	public TelnetSocket(InputStream wrapIn, OutputStream wrapOut) {
-		stack = new TelnetProtocol(CommunicationRole.SERVER);
+	public TelnetSocket(InputStream wrapIn, OutputStream wrapOut, InetAddress src) {
+		this.remoteAddress = src;
+		stack = new TelnetProtocol(CommunicationRole.SERVER, this);
 		out = new TelnetOutputStream(wrapOut, stack);
 		stack.setOutputStream(out);
 		in = new TelnetInputStream( wrapIn, stack);
@@ -99,7 +82,7 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	//-----------------------------------------------------------------
 	public TelnetSocket(String host, int port) throws UnknownHostException, IOException {
 		super(host, port);
-		stack = new TelnetProtocol(CommunicationRole.CLIENT);
+		stack = new TelnetProtocol(CommunicationRole.CLIENT, this);
 //		negotiate.put(0, ControlCode.DO);
 //		active.add(0);
 		getOutputStream();
@@ -110,24 +93,23 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 //		optionCaps.capabilities.put(WellKnownTelnetOptions.ECHO    , new TelnetConfigOption());
 //		optionCaps.capabilities.put(WellKnownTelnetOptions.EOR     , new TelnetConfigOption());
 //		optionCaps.capabilities.put(WellKnownTelnetOptions.LINEMODE, new TelnetConfigOption());
+		
+		in().startReadingFromSocket();
 	}
+	
+	//-------------------------------------------------------------------
+	/**
+	 * @see java.net.Socket#getInetAddress()
+	 */
+	@Override
+    public InetAddress getInetAddress() {
+        return remoteAddress != null ? remoteAddress : super.getInetAddress();
+    }
 
 	//-----------------------------------------------------------------
-	public TelnetSocket addListener(TelnetListener listener) {
+	public TelnetSocket addListener(TelnetSocketListener listener) {
 		Objects.requireNonNull(listener, "listener must not be null");
-		stack.addListener(listener);
-		return this;
-	}
-
-	//-----------------------------------------------------------------
-	@SuppressWarnings("unchecked")
-	public TelnetSocket setOptionListener(WellKnownTelnetOptions option, TelnetOptionListener listener) {
-		if (stack.getExtensionForOption(option.getCode())==null) {
-			logger.log(Level.ERROR, "No extension registered for option "+option);
-			//throw new IllegalArgumentException("No extension registered for option "+option);
-			return this;
-		}
-		stack.getExtensionForOption(option.getCode()).addListener(listener);
+		this.listener = listener;
 		return this;
 	}
 
@@ -148,10 +130,10 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 		}
 	}
 
-	//-----------------------------------------------------------------
-	public void waitUntilSubnegotiationDone() {
-		stack.waitUntilSubnegotiationDone(2000);
-	}
+//	//-----------------------------------------------------------------
+//	public void waitUntilSubnegotiationDone() {
+//		stack.waitUntilSubnegotiationDone(3000);
+//	}
 	
 	//-----------------------------------------------------------------
 	/**
@@ -201,6 +183,47 @@ public class TelnetSocket extends Socket implements TelnetConstants {
 	//-------------------------------------------------------------------
 	public boolean isFeatureActive(Integer code) {
 		return stack.isFeatureActive(code);
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.option.TelnetProtocolListener#onTelnetEvent(org.prelle.telnet.event.TelnetEvent)
+	 */
+	@Override
+	public void onTelnetEvent(TelnetEvent event) {
+		// Instead of delivering data events to a listener, we directly feed them into the input stream, so that the application can read them from there.
+		if (event instanceof DataEvent dataEvent) {
+			try {
+				in().receiveData(dataEvent.getData());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		} else if (listener!=null) {
+			listener.onTelnetEvent(event);
+		}
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.option.TelnetProtocolListener#optionStateChanged(org.prelle.telnet.option.TelnetOption, boolean)
+	 */
+	@Override
+	public void optionStateChanged(TelnetOption extension, boolean active) {
+		if (listener!=null) {
+			listener.optionStateChanged(extension, active);
+		}
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.option.TelnetProtocolListener#telnetReady()
+	 */
+	@Override
+	public void telnetReady() {
+		if (listener!=null) {
+			listener.telnetReady();
+		}
 	}
 
 

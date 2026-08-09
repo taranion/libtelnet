@@ -11,7 +11,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Objects;
 
-import org.prelle.telnet.TelnetConstants.ControlCode;
+import org.prelle.telnet.option.TelnetOption;
+import org.prelle.telnet.option.TelnetProtocol;
+import org.prelle.telnet.parser.TelnetConstants.ControlCode;
 
 /**
  * @author prelle
@@ -31,6 +33,7 @@ public class TelnetOutputStream extends OutputStream {
 	 */
 	public TelnetOutputStream(OutputStream out, TelnetProtocol stack) {
 		Objects.requireNonNull(out, "OutputStream cannot be null");
+		System.err.println("TelnetOutputStream.<init>: "+out.getClass());
 		this.stack = stack;
 		stack.setOutputStream(this);
 		realOut = out;
@@ -66,6 +69,7 @@ public class TelnetOutputStream extends OutputStream {
 	 */
 	@Override
 	public void write(int data) throws IOException {
+		logger.log(Level.INFO,"write "+data);
 		realOut.write(data);
 	}
 
@@ -75,7 +79,7 @@ public class TelnetOutputStream extends OutputStream {
 	 */
 	@Override
 	public void write(byte[] data) throws IOException {
-		logger.log(Level.TRACE,"write "+(new String(data)));
+//		logger.log(Level.INFO,"write "+(new String(data)));
 		// Scan how many byte 255 are there
 		int count = 0;
 		boolean lastWasCR = false;
@@ -150,7 +154,6 @@ public class TelnetOutputStream extends OutputStream {
 		data[2] = (byte)optionCode;
 		logger.log(Level.WARNING,"send: IAC DO {0}={1}",optionCode, WellKnownTelnetOptions.valueOf(optionCode));
 		realOut.write(data);
-		realOut.flush();
 	}
 
 	//-----------------------------------------------------------------
@@ -161,7 +164,6 @@ public class TelnetOutputStream extends OutputStream {
 		data[2] = (byte)optionCode;
 		logger.log(Level.WARNING,"send: IAC WILL {0}={1}",optionCode, WellKnownTelnetOptions.valueOf(optionCode));
 		realOut.write(data);
-		realOut.flush();
 	}
 
 	//-----------------------------------------------------------------
@@ -172,7 +174,6 @@ public class TelnetOutputStream extends OutputStream {
 		data[2] = (byte)optionCode;
 		logger.log(Level.WARNING,"send: IAC DONT {0}={1}",optionCode, WellKnownTelnetOptions.valueOf(optionCode));
 		realOut.write(data);
-		realOut.flush();
 	}
 
 	//-----------------------------------------------------------------
@@ -183,7 +184,6 @@ public class TelnetOutputStream extends OutputStream {
 		data[2] = (byte)optionCode;
 		logger.log(Level.WARNING,"send: IAC WONT {0}={1}",optionCode, WellKnownTelnetOptions.valueOf(optionCode));
 		realOut.write(data);
-		realOut.flush();
 	}
 
 	//-----------------------------------------------------------------

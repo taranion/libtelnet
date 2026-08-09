@@ -1,7 +1,7 @@
 /**
  *
  */
-package org.prelle.telnet;
+package org.prelle.telnet.parser;
 
 /**
  * @author prelle

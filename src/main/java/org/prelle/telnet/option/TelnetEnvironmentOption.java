@@ -15,11 +15,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.prelle.telnet.CommunicationRole;
-import org.prelle.telnet.TelnetOptionListener;
 import org.prelle.telnet.TelnetOutputStream;
-import org.prelle.telnet.TelnetProtocol;
-import org.prelle.telnet.TelnetOption;
+import org.prelle.telnet.event.TelnetSubnegotiationEvent;
+import org.prelle.telnet.option.TelnetOptionEvent.SubnegotiationFinishedEvent;
 
 /**
  * RFC 857
@@ -27,15 +25,19 @@ import org.prelle.telnet.TelnetOption;
  * @author prelle
  *
  */
-public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOption.EnvironmentListener> {
+public class TelnetEnvironmentOption implements TelnetOption {
+	
+	public static class TelnetEnvironmentVariablesEvent extends TelnetOptionEvent {
+		private Map<String,String> variables;
+		public TelnetEnvironmentVariablesEvent(TelnetEnvironmentOption option, Map<String,String> variables) {
+			super(option);
+			this.variables = variables;
+		}
+		public Map<String,String> getVariables() { return variables; }
+		
+	}
 
 	protected final static Logger logger = System.getLogger("telnet.option.environ");
-
-	public static interface EnvironmentListener extends TelnetOptionListener {
-
-		public void telnetLearnedEnvironmentVariables(Map<String,String> variables);
-
-	}
 
 	public final static int CODE = 39;
 
@@ -50,7 +52,6 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 
 	private Map<String,String> userVariables = new HashMap<>();
 	private Map<String,String> systemVariables = new HashMap<>();
-	private List<EnvironmentListener> listener = new ArrayList<>();
 	
 	private int answersExpected = 0;
 	
@@ -84,16 +85,10 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 		if (systemData!=null)
 			systemVariables = systemData;
 	}
-	
-	//-------------------------------------------------------------------
-	public TelnetEnvironmentOption(EnvironmentListener listener) {
-		if (listener!=null)
-		this.listener.add(listener);
-	}
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetOption#getOptionCode()
+	 * @see org.prelle.telnet.option.TelnetOption#getOptionCode()
 	 */
 	@Override
 	public int getOptionCode() {
@@ -102,10 +97,15 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 
 	@Override
 	public String getName() { return "MNES";}
+	
+	//-----------------------------------------------------------------
+	public boolean isSubnegotiationFinished() {
+		return answersExpected==0;
+	}
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetOption#resolveSubCommandName(byte)
+	 * @see org.prelle.telnet.option.TelnetOption#resolveSubCommandName(byte)
 	 */
 	@Override
 	public String resolveSubCommandName(int position, byte value) {
@@ -129,10 +129,10 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetOption#startCommunicationAs(org.prelle.telnet.CommunicationRole)
+	 * @see org.prelle.telnet.option.TelnetOption#startNegotiationAs(org.prelle.telnet.option.CommunicationRole)
 	 */
 	@Override
-	public boolean startCommunicationAs(CommunicationRole role) {
+	public boolean startNegotiationAs(CommunicationRole role) {
 		return role==CommunicationRole.SERVER;
 	}
 
@@ -141,10 +141,12 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 	 * @see org.prelle.telnet.TelnetOptionHandler#performSubNegotiation(org.prelle.telnet.TelnetSocket, java.io.InputStream)
 	 */
 	@Override
-	public void handleSubnegotiation(int[] values, TelnetProtocol stack) {
-		logger.log(Level.DEBUG, "Subnegotiate for ENVIRON: "+Arrays.toString(values));
+	public List<TelnetOptionEvent> handleSubnegotiation(TelnetSubnegotiationEvent event, TelnetProtocol stack) {
+		byte[] values = event.getData();
+		logger.log(Level.DEBUG, "Subnegotiate for ENVIRON with {0} answers expected "+answersExpected);
 		int operation = values[0];
 
+		int expectedBefore = answersExpected;
 		if (answersExpected>0) answersExpected--;
 		switch (operation) {
 		case IS: handleIS(values, stack); break;
@@ -154,18 +156,25 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 			logger.log(Level.WARNING, "Operation {0} not supported yet", resolveSubCommandName(3, (byte)operation));
 		}
 		
-		if (answersExpected==0) {
-			stack.fireSubnegotiationFinished(this);
+		List<TelnetOptionEvent> result = new ArrayList<>();
+		result.add(new TelnetEnvironmentVariablesEvent(this, userVariables));
+		logger.log(Level.DEBUG, "Answers expected now {0} and before {1}", answersExpected, expectedBefore);
+		if (answersExpected==0 && expectedBefore>0) {
+			result.add(new SubnegotiationFinishedEvent(this));
 		}
+		return result;
 	}
 
 	//-------------------------------------------------------------------
-	private void handleIS(int[] values, TelnetProtocol origin) {
+	private void handleIS(byte[] values, TelnetProtocol origin) {
+		logger.log(Level.TRACE, "handleIS");
 		StringBuffer keyBuf = new StringBuffer();
 		StringBuffer valBuf = new StringBuffer();
 		Map<String,String> variables = new HashMap<String,String>();
 		int mode = -1;
 		int i=1;
+		
+		
 		while (i<values.length) {
 			int dat = values[i++];
 			if (dat==IAC) {
@@ -223,19 +232,10 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 
 		
 		logger.log(Level.DEBUG,"Telnet Environment done: {0}", variables);
-
-		if (listener!=null) {
-			for (EnvironmentListener l : listener) {
-				l.telnetLearnedEnvironmentVariables(variables);
-			}
-		} else {
-			logger.log(Level.TRACE, "No EnvironmentListener");
-		}
-		origin.fireSubnegotiationFinished(this);
 	}
 
 	//-------------------------------------------------------------------
-	private void handleINFO(int[] values, TelnetProtocol origin) {
+	private void handleINFO(byte[] values, TelnetProtocol origin) {
 		logger.log(Level.DEBUG, "handleINFO "+Arrays.toString(values));
 		StringBuffer keyBuf = new StringBuffer();
 		StringBuffer valBuf = new StringBuffer();
@@ -293,20 +293,11 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 			variables.put(keyBuf.toString(), valBuf.toString());
 		}
 		logger.log(Level.WARNING,"Telnet Environment done: {0}", variables);
-
-		if (listener!=null) {
-			for (EnvironmentListener l : listener) {
-				l.telnetLearnedEnvironmentVariables(variables);
-			}
-		} else {
-			logger.log(Level.TRACE, "No EnvironmentListener");
-		}
-		origin.fireSubnegotiationFinished(this);
 	}
 
 	//-------------------------------------------------------------------
-	private void handleSEND(int[] values, TelnetProtocol origin) {
-		logger.log(Level.DEBUG, "handleSEND "+Arrays.toString(values));
+	private void handleSEND(byte[] values, TelnetProtocol origin) {
+		logger.log(Level.INFO, "handleSEND "+Arrays.toString(values));
 		
 		List<String> requestedUser = null;
 		List<String> requestedSystem = null;
@@ -394,13 +385,22 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 			logger.log(Level.WARNING, "Failed sending telnet option",e);
 		}
 	}
+	
+	//-----------------------------------------------------------------
+	public boolean startSubNegotiationAs(CommunicationRole role) {
+		return role==CommunicationRole.SERVER;
+	}
 
 	//-------------------------------------------------------------------
 	/**
 	 * @see org.prelle.telnet.TelnetOptionHandler#initializeAs(org.prelle.telnet.Role)
 	 */
 	@Override
-	public boolean negotiateDetails(TelnetProtocol origin) {
+	public boolean negotiateDetails(TelnetProtocol origin, CommunicationRole role) {
+		if (role==CommunicationRole.CLIENT) {
+			logger.log(Level.DEBUG, "Client role, no negotiation needed");
+			return false;
+		}
 		logger.log(Level.DEBUG, "Ask remote party to send environment");
 		TelnetOutputStream out = origin.getOutputStream();
 		answersExpected = 3;
@@ -439,13 +439,6 @@ public class TelnetEnvironmentOption implements TelnetOption<TelnetEnvironmentOp
 			e.printStackTrace();
 		}
 		return true;
-	}
-
-	@Override
-	public void addListener(EnvironmentListener callback) {
-		if (!listener.contains(callback)) {
-			listener.add(callback);
-		}
 	}
 
 	//-------------------------------------------------------------------

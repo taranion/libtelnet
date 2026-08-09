@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
+import org.prelle.telnet.option.CommunicationRole;
+import org.prelle.telnet.option.TelnetProtocol;
 
 /**
  * Unit tests for {@link TelnetOutputStream} encoding behavior.
@@ -17,7 +19,7 @@ class OutputStreamTest {
     @Test
     void testEscapeSingleIAC() throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        TelnetProtocol proto = new TelnetProtocol(CommunicationRole.CLIENT);
+        TelnetProtocol proto = new TelnetProtocol(CommunicationRole.CLIENT,null);
         TelnetOutputStream tos = new TelnetOutputStream(baos, proto);
 
         byte[] input = new byte[] { (byte) 'A', (byte) 0xFF, (byte) 'B' };
@@ -33,7 +35,7 @@ class OutputStreamTest {
     @Test
     void testInjectCRBeforeLF() throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        TelnetProtocol proto = new TelnetProtocol(CommunicationRole.CLIENT);
+        TelnetProtocol proto = new TelnetProtocol(CommunicationRole.CLIENT,null);
         TelnetOutputStream tos = new TelnetOutputStream(baos, proto);
 
         // Default is injectCRBeforeLF = true
@@ -49,7 +51,7 @@ class OutputStreamTest {
     @Test
     void testInjectCRBeforeLFDisabled() throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        TelnetProtocol proto = new TelnetProtocol(CommunicationRole.CLIENT);
+        TelnetProtocol proto = new TelnetProtocol(CommunicationRole.CLIENT,null);
         TelnetOutputStream tos = new TelnetOutputStream(baos, proto);
         tos.setInjectCRBeforeLF(false);
 
@@ -65,7 +67,7 @@ class OutputStreamTest {
     @Test
     void testMultibyteUtf8AndIAC() throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        TelnetProtocol proto = new TelnetProtocol(CommunicationRole.CLIENT);
+        TelnetProtocol proto = new TelnetProtocol(CommunicationRole.CLIENT,null);
         TelnetOutputStream tos = new TelnetOutputStream(baos, proto);
 
         String p1 = "Hellö 世界";
@@ -102,7 +104,7 @@ class OutputStreamTest {
     @Test
     void testWriteCommandNotEncoded() throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        TelnetProtocol proto = new TelnetProtocol(CommunicationRole.CLIENT);
+        TelnetProtocol proto = new TelnetProtocol(CommunicationRole.CLIENT,null);
         TelnetOutputStream tos = new TelnetOutputStream(baos, proto);
 
         byte[] cmd = new byte[] { (byte) 0xFF, (byte) 0xFA, (byte) 0x01, (byte) 0xFF };

@@ -18,3 +18,5 @@ RawTelnetInputStream
 
 
 cMUD: SUPPORTS +a +b +bold +br +c +color +dd +dest +dl +dt +em +expire +font +frame +gauge +h +h1 +h2 +h3 +h4 +h5 +h6 +high +hr +i +image +img +italic +li +music +nobr +ol +p +pass +password +pre +relocate +report +reported +s +sbr +send +small +sound +stat +strike +strikeout +strong +style +support +tt +u +ul +underline +user +username +v +var +version +xch_mudtext +xch_page +xch_pane>
+
+

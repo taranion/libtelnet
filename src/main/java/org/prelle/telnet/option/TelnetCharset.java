@@ -13,25 +13,26 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.StringTokenizer;
 
-import org.prelle.telnet.CommunicationRole;
-import org.prelle.telnet.TelnetOption;
-import org.prelle.telnet.TelnetOptionListener;
-import org.prelle.telnet.TelnetProtocol;
+import org.prelle.telnet.event.TelnetSubnegotiationEvent;
+import org.prelle.telnet.option.TelnetOptionEvent.SubnegotiationFinishedEvent;
 
 /**
  * https://datatracker.ietf.org/doc/html/rfc2066
  * @author prelle
  *
  */
-public class TelnetCharset implements TelnetOption<TelnetCharset.CharsetListener> {
+public class TelnetCharset implements TelnetOption {
+	
+	public static class CharsetNegotiatedEvent extends TelnetOptionEvent {
+		private Charset charset;
+		public CharsetNegotiatedEvent(TelnetCharset option, Charset charset) {
+			super(option);
+			this.charset = charset;
+		}
+		public Charset getCharset() { return charset; }
+	}
 
 	protected final static Logger logger = System.getLogger("telnet.option.charset");
-
-	public static interface CharsetListener extends TelnetOptionListener {
-
-		public void telnetCharsetNegotiated(Charset charset);
-
-	}
 
 	public final static int CODE = 42;
 
@@ -44,22 +45,20 @@ public class TelnetCharset implements TelnetOption<TelnetCharset.CharsetListener
 	private final static int TTABLE_NAK = 8;
 	
 	
-	private CharsetListener callback;
 	private List<String> supportedCharsets = new ArrayList<>();
 	private Charset consoleCharset;
 	
-	private List<CharsetListener> listeners = new ArrayList<>();
+	private boolean isNegotiationFinished = false;
 
 	//-------------------------------------------------------------------
-	public TelnetCharset(CharsetListener callback, String ... charsets) {
-		this.callback = callback;
+	public TelnetCharset(String ... charsets) {
 		if (charsets!=null)
 			supportedCharsets = Arrays.asList(charsets);
 	}
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetOption#getOptionCode()
+	 * @see org.prelle.telnet.option.TelnetOption#getOptionCode()
 	 */
 	@Override
 	public int getOptionCode() {
@@ -74,17 +73,26 @@ public class TelnetCharset implements TelnetOption<TelnetCharset.CharsetListener
 	/**
 	 * Called from TelnetProtocol to learn if this handler will initiate communication or wait for the other side to do so.
 	 */
-	public boolean startCommunicationAs(CommunicationRole role) {
+	public boolean startNegotiationAs(CommunicationRole role) {
 		return role==CommunicationRole.SERVER;
 	}
-
+	
+	//-----------------------------------------------------------------
+	public boolean isSubnegotiationFinished() {
+		return isNegotiationFinished;
+	}
+	public void setSubnegotiationFinished(boolean finished) {
+		this.isNegotiationFinished = finished;
+	}
+	
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.TelnetOption#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
+	 * @see org.prelle.telnet.option.TelnetOption#handleSubnegotiation(int, int[], org.prelle.telnet.TelnetSocket, org.prelle.telnet.TelnetOutputStream)
 	 */
 	@Override
-	public void handleSubnegotiation(int[] values, TelnetProtocol stack) {
-		logger.log(Level.DEBUG, "RCV Subnegotiate for CHARSET: "+Arrays.toString(values));
+	public List<TelnetOptionEvent> handleSubnegotiation(TelnetSubnegotiationEvent event, TelnetProtocol stack) {
+		byte[] values = event.getData();
+		logger.log(Level.INFO, "RCV Subnegotiate for CHARSET: "+Arrays.toString(values));
 		int operation = values[0];
 		
 		if (operation==ACCEPTED) {
@@ -102,20 +110,10 @@ public class TelnetCharset implements TelnetOption<TelnetCharset.CharsetListener
 				consoleCharset = StandardCharsets.UTF_8;
 			else
 				consoleCharset = Charset.forName(csName);
-			
-			try {
-				for (CharsetListener listener : listeners) {
-					listener.telnetCharsetNegotiated(consoleCharset);
-				}
-			} catch (Exception e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			
-			for (CharsetListener listener : listeners) {
-				listener.telnetCharsetNegotiated(consoleCharset);
-			}
-			stack.fireSubnegotiationFinished(this);
+			isNegotiationFinished = true;
+			return List.of( 
+					new CharsetNegotiatedEvent(this,consoleCharset),
+					new SubnegotiationFinishedEvent(this));
 		} else if (operation==REQUEST) {
 			byte[] data = new byte[values.length-1];
 			for (int i=0; i<data.length; i++) {
@@ -164,8 +162,9 @@ public class TelnetCharset implements TelnetOption<TelnetCharset.CharsetListener
 			
 		} else if (operation==REJECTED) {
 			logger.log(Level.WARNING, "The remote party rejected our charset suggestions");
+			isNegotiationFinished = true;
 		}
-		
+		return List.of();
 	}
 
 	//-----------------------------------------------------------------
@@ -174,7 +173,7 @@ public class TelnetCharset implements TelnetOption<TelnetCharset.CharsetListener
 	 * @return TRUE when answers to a subnegotiation are expected
 	 */
 	@Override
-	public boolean negotiateDetails(TelnetProtocol stack) {
+	public boolean negotiateDetails(TelnetProtocol stack, CommunicationRole role) {
 		logger.log(Level.INFO, "ENTER: negotiateDetails()------------------------------------");
 		try {
 			var line = (" "+String.join(" ", supportedCharsets));
@@ -199,22 +198,6 @@ public class TelnetCharset implements TelnetOption<TelnetCharset.CharsetListener
 			return false;
 		} finally {
 			logger.log(Level.DEBUG, "LEAVE: negotiateDetails()");
-		}
-	}
-
-	//-------------------------------------------------------------------
-	public void setCharset(Charset charset) {
-		logger.log(Level.WARNING, "setCharset not implemented yet");
-	}
-
-	//-------------------------------------------------------------------
-	/**
-	 * @see org.prelle.telnet.TelnetOption#addListener(org.prelle.telnet.TelnetOptionListener)
-	 */
-	@Override
-	public void addListener(CharsetListener listener) {
-		if (!listeners.contains(listener)) {
-			listeners.add(listener);
 		}
 	}
 
