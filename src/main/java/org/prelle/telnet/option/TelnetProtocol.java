@@ -276,7 +276,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 	@SuppressWarnings("incomplete-switch")
 	public void sendResponse(TelnetEvent response) {
 		if (outputStream==null) {
-			logger.log(Level.ERROR, "Output stream is null - cannot send response {0}", response);
+			logger.log(Level.WARNING, "Output stream is null - cannot send response {0}", response);
 			return;
 		}
 		
@@ -378,7 +378,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 				.allMatch( state -> !state.subnegState.isWaitState());
 		logger.log(Level.DEBUG, "All subnegotiations finished? {0} + {1}", allReady, allSubReady);
 		if (allReady & allSubReady) {
-			logger.log(Level.WARNING, "All subnegotiations finished");
+			logger.log(Level.INFO, "All subnegotiations finished");
 			initialHandshakeDone = true;
 			listener.telnetReady();
 		}

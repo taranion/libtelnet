@@ -74,7 +74,7 @@ public class ReceiveDatagramInputStream extends InputStream {
 	}
 	
 	public int read(byte[] b, int off, int len) throws IOException {
-		logger.log(Level.WARNING, "readMulti");
+//		logger.log(Level.WARNING, "readMulti");
 		if (currentlyConsuming != null && currentIndex < currentlyConsuming.length) {
 			int bytesToRead = Math.min(len, currentlyConsuming.length - currentIndex);
 			System.arraycopy(currentlyConsuming, currentIndex, b, off, bytesToRead);
@@ -86,9 +86,9 @@ public class ReceiveDatagramInputStream extends InputStream {
 			while (incomingData.isEmpty()) {
 				if (closed) return -1;
 				try {
-					logger.log(Level.WARNING, "...wait");
+//					logger.log(Level.WARNING, "...wait");
 					incomingData.wait(); // Wait for new data to arrive
-					logger.log(Level.WARNING, "...waiting done");
+//					logger.log(Level.WARNING, "...waiting done");
 					if (closed && incomingData.isEmpty()) {
 						return -1; // Return -1 if the stream is closed while waiting
 					}
@@ -114,7 +114,6 @@ public class ReceiveDatagramInputStream extends InputStream {
 	
 	
 	public void receiveData(byte[] data) {
-        logger.log(Level.WARNING,"Received data of length: " + data.length);
         synchronized (incomingData) {
 			incomingData.add(data);
 			incomingData.notifyAll(); // Notify any waiting threads that new data is available

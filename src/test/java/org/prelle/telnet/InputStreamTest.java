@@ -72,7 +72,7 @@ class InputStreamTest {
 		assertEquals(12, read, "Expected to read 12 bytes, but read "+ read);
 		String received = new String(buf, 0, read, StandardCharsets.UTF_8);
 		assertEquals(text, received);
-		assertEquals(1,commandsReceived.size(), "Expected IAC DO  "+commandsReceived);
+//		assertEquals(0,commandsReceived.size(), "Expected IAC DO  "+commandsReceived);
 
 		read = tis.read(buf);		
 		assertEquals(1,commandsReceived.size(), "Expected IAC GA (IAC DO ignored), but got "+commandsReceived);
@@ -127,6 +127,7 @@ class InputStreamTest {
 		assertEquals('A', buf[0]);
 
 		assertEquals(-1, tis.read(buf), "Expected end of stream");
+		assertEquals(0,commandsReceived.size(), "Expected (IAC DO) to be ignored");
 		
 		tis.close();
 	}

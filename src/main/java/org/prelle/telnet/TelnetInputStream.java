@@ -35,7 +35,6 @@ public class TelnetInputStream extends ReceiveDatagramInputStream  {
 		}
 		
 		stack.setDataListener(dataEv -> {
-			logger.log(Level.WARNING, "Consume "+dataEv);
 			super.receiveData(dataEv.getData());
 		});
 		startReadingFromSocket();
