@@ -3,7 +3,9 @@ package org.prelle.telnet.protocol;
 import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -202,7 +204,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 	private CommunicationRole role;
 	private TelnetEventFactory factory;
 	private TelnetDecoder parser;
-	private TelnetReturnChannel outputStream;
+	private TelnetReturnChannel returnChannel;
 	private TelnetProtocolListener listener;
 	
 	private Map<TelnetOption, CommunicationRole> extensions = new HashMap<>();
@@ -220,14 +222,17 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 	
 	//-------------------------------------------------------------------
 	public TelnetProtocol(CommunicationRole role, TelnetProtocolListener listener) {
-		this(role, new DefaultTelnetEventFactory(), listener);
+		this(role, new DefaultTelnetEventFactory(), listener, null, new ArrayList<>(), null);
 	}
 	
 	//-------------------------------------------------------------------
-	public TelnetProtocol(CommunicationRole role, TelnetEventFactory factory, TelnetProtocolListener listener) {
+	public TelnetProtocol(CommunicationRole role, TelnetEventFactory factory, TelnetProtocolListener listener, Consumer<DataEvent> dataListener, List<TelnetOption> options, TelnetReturnChannel returnChannel) {
 		this.role = role;
 		this.factory  = factory;
 		this.listener = listener;
+		this.dataConsumer = dataListener;
+		options.forEach( opt -> add(opt));
+		this.returnChannel = returnChannel;
 		parser    = new TelnetDecoder(this);
 		negotiationState = new HashMap<>();
 	}
@@ -244,7 +249,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 	
 	//-------------------------------------------------------------------
 	public void setReturnChannel(TelnetReturnChannel sink) {
-		this.outputStream = sink;
+		this.returnChannel = sink;
 	}
 	
 	//-------------------------------------------------------------------
@@ -317,9 +322,9 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 
 	//-------------------------------------------------------------------
 	public void sendResponse(TelnetEvent response) {
-		if (outputStream!=null) {
+		if (returnChannel!=null) {
 			try {
-				outputStream.sendToRemote(response);
+				returnChannel.sendToRemote(response);
 			} catch (IOException e) {
 				logger.log(Level.ERROR, "Error sending response "+response, e);
 			}

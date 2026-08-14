@@ -91,8 +91,8 @@ public class TelnetSocket extends Socket implements TelnetConstants, TelnetProto
 				.build();
 //		negotiate.put(0, ControlCode.DO);
 //		active.add(0);
-		getOutputStream();
-		getInputStream();
+		out = new TelnetOutputStream(super.getOutputStream(), stack);
+		in  = new TelnetInputStream( super.getInputStream(), stack);
 //		out().logger = System.getLogger("telnet.lvl1.out."+host);
 //		in().logger = System.getLogger("telnet.lvl1.in."+host);
 ////		initialize();
@@ -147,10 +147,11 @@ public class TelnetSocket extends Socket implements TelnetConstants, TelnetProto
 	 */
 	@Override
 	public InputStream getInputStream() throws IOException {
-//		if (in==null) {
-//			in = new TelnetInputStream( super.getInputStream(), stack);
+		if (in==null) {
+			in = new TelnetInputStream( super.getInputStream(), stack);
 //			stack.setInputStream(in);
-//		}
+			in.startReadingFromSocket();
+		}
 		return in;
 	}
 
@@ -160,11 +161,11 @@ public class TelnetSocket extends Socket implements TelnetConstants, TelnetProto
 	 */
 	@Override
 	public OutputStream getOutputStream() throws IOException {
-//		if (out==null) {
-//			out = new TelnetOutputStream(super.getOutputStream(), stack);
+		if (out==null) {
+			out = new TelnetOutputStream(super.getOutputStream(), stack);
 //			in().setReverseStream(out);
 //			stack.setOutputStream(out);
-//		}
+		}
 		return out;
 	}
 

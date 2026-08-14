@@ -8,6 +8,8 @@ import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Arrays;
+import java.util.List;
 import java.util.function.Function;
 
 import org.prelle.telnet.option.TelnetOption;
@@ -20,7 +22,8 @@ public class TelnetServerSocket extends ServerSocket {
 
     private final static Logger logger = System.getLogger("telnet.lvl3");
     
-    private Function<TelnetSocket, TelnetOption[]> configFactory;
+    private Function<TelnetSocket, List<TelnetOption>> configFactory;
+    private Function<TelnetSocket, TelnetSocketListener> listenerFactory;
 
 	//-----------------------------------------------------------------
 	public TelnetServerSocket(int port) throws IOException {
@@ -33,22 +36,14 @@ public class TelnetServerSocket extends ServerSocket {
 	}
 
 	//-----------------------------------------------------------------
-	public void setExtensionFactory(Function<TelnetSocket, TelnetOption[]> configFactory) {
+	public void setExtensionFactory(Function<TelnetSocket, List<TelnetOption>> configFactory) {
 		this.configFactory = configFactory;
 	}
 
-//	//-----------------------------------------------------------------
-//	public TelnetServerSocket withNAWS() {
-//		activelyRequest(TelnetOption.NAWS);
-//		return this;
-//	}
-//
-//	//-----------------------------------------------------------------
-//	public TelnetServerSocket withMUDTerminalTypeStandard() {
-//		activelyRequest(TelnetOption.MTT);
-//		return this;
-//	}
-//
+	//-----------------------------------------------------------------
+	public void setListenernFactory(Function<TelnetSocket, TelnetSocketListener> listenerFactory) {
+		this.listenerFactory = listenerFactory;
+	}
 
 	//-----------------------------------------------------------------
 	/* (non-Javadoc)
@@ -64,6 +59,10 @@ public class TelnetServerSocket extends ServerSocket {
 			for (TelnetOption extension : configFactory.apply(ret)) {
 				ret.getStack().add(extension);
 			}
+		}
+		// Call an eventually existing supplier for listeners
+		if (listenerFactory != null) {
+			ret.addListener(listenerFactory.apply(ret));
 		}
 
 		implAccept(ret);

@@ -12,7 +12,8 @@ import java.util.List;
 /**
  * 
  */
-public class ReceiveDatagramInputStream extends InputStream {
+@Deprecated
+public abstract class ReceiveDatagramInputStream extends InputStream {
 	
 	private final static Logger logger = System.getLogger("telnet");
 	

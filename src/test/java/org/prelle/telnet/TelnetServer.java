@@ -9,11 +9,10 @@ import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
+import java.util.List;
 
 import org.prelle.telnet.event.TelnetEvent;
-import org.prelle.telnet.event.internal.TelnetCommandImpl;
 import org.prelle.telnet.option.LineMode;
-import org.prelle.telnet.option.LineMode.LineModeListener;
 import org.prelle.telnet.option.TelnetCharset;
 import org.prelle.telnet.option.TelnetEnvironmentOption;
 import org.prelle.telnet.option.TelnetOption;
@@ -39,33 +38,23 @@ public class TelnetServer implements Runnable, TelnetConstants {
 	 */
 	public static void main(String[] args) throws IOException {
 		new TelnetServer();
-//		new ActiveUsage();
 	}
 
+	//-----------------------------------------------------------------
 	public TelnetServer() throws IOException {
 		serverSocket = new TelnetServerSocket(4000);
 		serverSocket.setExtensionFactory( (socket) -> {
 			logger.log(Level.INFO,"Creating extensions for socket "+socket);
-			return new TelnetOption[] { 
+			return List.of( 
 					new TerminalType(), 
 					new LineMode() , 
 					new TelnetCharset("UTF-8","CP437","ISO-8859-1","ASCII"), 
 					new TelnetEnvironmentOption() ,
 					new TelnetWindowSize()
-				};
+				);
 		});
-
-		thread = new Thread(this,"ThreadCheck");
-		thread.start();
-		System.getLogger("app").log(Level.INFO, "Waiting on port 4000");
-	}
-
-	//-----------------------------------------------------------------
-	public void run() {
-		while (true) {
-			try {
-				TelnetSocket socket = (TelnetSocket) serverSocket.accept();
-				socket.addListener(  new TelnetSocketListener() {
+		
+		serverSocket.setListenernFactory( _ -> new TelnetSocketListener() {
 					@Override
 					public void optionStateChanged(TelnetOption extension, boolean state) {
 						logger.log(Level.INFO,"Extension {0} changed to {1}", extension.getName(), state);
@@ -80,6 +69,19 @@ public class TelnetServer implements Runnable, TelnetConstants {
 					public void telnetReady() {
 						logger.log(Level.INFO,"telnetReady");
 					}});
+
+		thread = new Thread(this,"ThreadCheck");
+		thread.start();
+		System.getLogger("app").log(Level.INFO, "Waiting on port 4000");
+	}
+
+	//-----------------------------------------------------------------
+	public void run() {
+		while (true) {
+			try {
+				TelnetSocket socket = (TelnetSocket) serverSocket.accept();
+				// You add add a listener here, but it might be a bit late, because the negotiation might have already started. Better add a listener via the factory method above.
+//				socket.addListener(  ...);
 				
 				InputStream in = socket.getInputStream();
 

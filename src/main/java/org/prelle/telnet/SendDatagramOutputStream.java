@@ -9,7 +9,8 @@ import java.util.function.Consumer;
 /**
  * 
  */
-public class SendDatagramOutputStream extends OutputStream {
+@Deprecated
+public abstract class SendDatagramOutputStream extends OutputStream {
 	
 	private final static Logger logger = System.getLogger("telnet");
 
