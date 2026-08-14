@@ -3,6 +3,18 @@ This Java library provides ways to
 * write a socket-based Telnet server  or client
 * write an event-based Telnet Server or client
 
+## Usage
+
+```xml
+<dependency>
+    <groupId>org.prelle</groupId>
+    <artifactId>telnet</artifactId>
+    <version>0.1.7</version>
+</dependency>
+```
+
+
+
 ## Events
 
 This library works with two kinds of events
