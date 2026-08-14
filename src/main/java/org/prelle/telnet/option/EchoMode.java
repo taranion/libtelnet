@@ -3,6 +3,8 @@ package org.prelle.telnet.option;
 import java.io.IOException;
 import java.lang.System.Logger;
 
+import org.prelle.telnet.protocol.TelnetProtocol;
+
 /**
  * 
  */
@@ -32,7 +34,7 @@ public class EchoMode implements TelnetOption {
 
 	@Override
 	public void initiate(TelnetProtocol stack, CommunicationRole role) throws IOException {
-		stack.getOutputStream().sendWill(getOptionCode());
+		stack.sendResponse(stack.factory().createTelnetNegotiationEvent(ControlCode.WILL, getOptionCode()));
 	}
 
 }

@@ -4,11 +4,9 @@ import java.io.ByteArrayOutputStream;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 
-import org.prelle.telnet.event.DataEvent;
-import org.prelle.telnet.event.TelnetCommand;
-import org.prelle.telnet.event.TelnetNegotiationEvent;
+import org.prelle.telnet.event.TelnetEventFactory;
 import org.prelle.telnet.event.TelnetParserListener;
-import org.prelle.telnet.event.TelnetSubnegotiationEvent;
+import org.prelle.telnet.event.internal.DefaultTelnetEventFactory;
 import org.prelle.telnet.parser.TelnetConstants.ControlCode;
 
 /**
@@ -17,9 +15,10 @@ import org.prelle.telnet.parser.TelnetConstants.ControlCode;
  * delegates all Telnet commands and subnegotiations to TelnetProtocol,
  * and forwards clean display bytes downstream.
  */
-public class TelnetStateMachine {
+public class TelnetDecoder {
 
 	private final static Logger logger = System.getLogger("telnet.lvl3");
+	private final static DefaultTelnetEventFactory DEFAULT_FACTORY = new DefaultTelnetEventFactory();
 
 	// Telnet protocol constants
 	public static final int IAC  = 255;
@@ -44,6 +43,7 @@ public class TelnetStateMachine {
 		SUBNEG_IAC_RECEIVED
 	}
 
+	private TelnetEventFactory factory;
 	private TelnetParserListener listener;
 
 	private State currentState = State.DATA;
@@ -53,7 +53,13 @@ public class TelnetStateMachine {
 	private boolean sendGoAheadAsANSISeparator = false;
 
 	//-------------------------------------------------------------------
-	public TelnetStateMachine(TelnetParserListener listener) {
+	public TelnetDecoder(TelnetParserListener listener) {
+		this(listener, DEFAULT_FACTORY);
+	}
+
+	//-------------------------------------------------------------------
+	public TelnetDecoder(TelnetParserListener listener, TelnetEventFactory factory) {
+		this.factory = factory;
 		this.listener = listener;
 	}
 
@@ -69,7 +75,7 @@ public class TelnetStateMachine {
 
 	private void releaseCleanBuffer() {
 		if (cleanBuffer.size() > 0 && listener != null) {
-			listener.onTelnetEvent(new DataEvent(cleanBuffer.toByteArray()));
+			listener.onTelnetEvent(factory.createDataEvent(cleanBuffer.toByteArray()));
 			cleanBuffer.reset();
 		}
 	}
@@ -137,35 +143,35 @@ public class TelnetStateMachine {
 			case EOR:
 				// Line/Prompt delimiter in some MUDs - pass command to TelnetProtocol
 				releaseCleanBuffer();
-				listener.onTelnetEvent(new TelnetCommand(ControlCode.getCodeFor(b)));
+				listener.onTelnetEvent(factory.createTelnetCommand(ControlCode.getCodeFor(b)));
 				currentState = State.DATA;
 				break;
 			default:
 				// Other Telnet control command (NOP, BREAK, etc.)
 				releaseCleanBuffer();
-				listener.onTelnetEvent(new TelnetCommand(ControlCode.getCodeFor(b)));
+				listener.onTelnetEvent(factory.createTelnetCommand(ControlCode.getCodeFor(b)));
 				currentState = State.DATA;
 				break;
 			}
 			break;
 
 		case WILL_RECEIVED:
-			listener.onTelnetEvent( new TelnetNegotiationEvent(ControlCode.WILL, b));
+			listener.onTelnetEvent( factory.createTelnetNegotiationEvent(ControlCode.WILL, b));
 			currentState = State.DATA;
 			break;
 
 		case WONT_RECEIVED:
-			listener.onTelnetEvent( new TelnetNegotiationEvent(ControlCode.WONT, b));
+			listener.onTelnetEvent( factory.createTelnetNegotiationEvent(ControlCode.WONT, b));
 			currentState = State.DATA;
 			break;
 
 		case DO_RECEIVED:
-			listener.onTelnetEvent( new TelnetNegotiationEvent(ControlCode.DO, b));
+			listener.onTelnetEvent( factory.createTelnetNegotiationEvent(ControlCode.DO, b));
 			currentState = State.DATA;
 			break;
 
 		case DONT_RECEIVED:
-			listener.onTelnetEvent( new TelnetNegotiationEvent(ControlCode.DONT, b));
+			listener.onTelnetEvent( factory.createTelnetNegotiationEvent(ControlCode.DONT, b));
 			currentState = State.DATA;
 			break;
 
@@ -185,7 +191,7 @@ public class TelnetStateMachine {
 		case SUBNEG_IAC_RECEIVED:
 			if (b == SE) {
 				// Subnegotiation complete!
-				listener.onTelnetEvent(new TelnetSubnegotiationEvent(currentOptionCode, subnegBuffer.toByteArray()));
+				listener.onTelnetEvent(factory.createTelnetSubnegotiationEvent(currentOptionCode, subnegBuffer.toByteArray()));
 				currentState = State.DATA;
 			} else if (b == IAC) {
 				// Escaped IAC (255 255) inside subnegotiation data

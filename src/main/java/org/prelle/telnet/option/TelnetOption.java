@@ -8,6 +8,8 @@ import java.util.List;
 
 import org.prelle.telnet.event.TelnetSubnegotiationEvent;
 import org.prelle.telnet.parser.TelnetConstants;
+import org.prelle.telnet.protocol.TelnetOptionEvent;
+import org.prelle.telnet.protocol.TelnetProtocol;
 
 /**
  * @author prelle
@@ -51,7 +53,7 @@ public interface TelnetOption extends TelnetConstants {
 	 * @return Telnet command that has been sent for this option.
 	 */
 	default void initiate(TelnetProtocol stack, CommunicationRole role) throws IOException {
-		stack.getOutputStream().sendDo(getOptionCode());
+		stack.sendResponse( stack.factory().createTelnetNegotiationEvent(ControlCode.DO, getOptionCode()) );
 	}
 	
 	//-----------------------------------------------------------------

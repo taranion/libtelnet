@@ -15,9 +15,9 @@ import org.junit.jupiter.api.Test;
 import org.prelle.telnet.event.TelnetEvent;
 import org.prelle.telnet.option.CommunicationRole;
 import org.prelle.telnet.option.TelnetOption;
-import org.prelle.telnet.option.TelnetProtocol;
-import org.prelle.telnet.option.TelnetProtocolListener;
 import org.prelle.telnet.parser.TelnetConstants;
+import org.prelle.telnet.protocol.TelnetProtocol;
+import org.prelle.telnet.protocol.TelnetProtocolListener;
 
 /**
  * 

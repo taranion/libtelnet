@@ -10,10 +10,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.prelle.telnet.TelnetOutputStream;
-import org.prelle.telnet.WellKnownTelnetOptions;
 import org.prelle.telnet.event.TelnetSubnegotiationEvent;
 import org.prelle.telnet.parser.TelnetConstants;
+import org.prelle.telnet.protocol.TelnetOptionEvent;
+import org.prelle.telnet.protocol.TelnetOptionEventImpl;
+import org.prelle.telnet.protocol.TelnetProtocol;
 
 /**
  * @author prelle
@@ -50,7 +51,7 @@ public class LineMode implements TelnetOption {
 		public void sendFlushOn(List<Integer> flushCodes);
 	}
 	
-	public static class LineModeEvent extends TelnetOptionEvent {
+	public static class LineModeEvent extends TelnetOptionEventImpl {
 		private List<ModeBit> flags;
 		public LineModeEvent(TelnetOption option, List<ModeBit> flags) {
 			super(option);
@@ -273,7 +274,7 @@ public class LineMode implements TelnetOption {
  		try {
 			if (role==CommunicationRole.SERVER) {
 				logger.log(Level.INFO, "Start character-a-time mode by clearing EDIT flag");
-				setFlags(stack.getOutputStream(), List.of(ModeBit.TRAPSIG));
+				setFlags(stack, List.of(ModeBit.TRAPSIG));
 				return true;
 			}
 		} catch (IOException e) {
@@ -359,21 +360,19 @@ public class LineMode implements TelnetOption {
 		return List.of();
 	}
 
-	//-------------------------------------------------------------------
-	private static void confirmMode(TelnetOutputStream out, List<ModeBit> confirmed) {
-		int mask = ModeBit.MODE_ACK.value;
-		for (ModeBit flag : confirmed) {
-			mask |= flag.value;
-		}
-		byte[] values = new byte[2];
-		values[0] = (byte) Operation.MODE.value;
-		values[1] = (byte) mask;
-		try {
-			out.sendSubNegotiation(WellKnownTelnetOptions.LINEMODE.getCode(), values);
-		} catch (IOException e) {
-			logger.log(Level.WARNING, "Error sending subnegotiation",e);
-		}
-	}
+//	//-------------------------------------------------------------------
+//	private static void confirmMode(TelnetProtocol stack, List<ModeBit> confirmed) {
+//		int mask = ModeBit.MODE_ACK.value;
+//		for (ModeBit flag : confirmed) {
+//			mask |= flag.value;
+//		}
+//		byte[] values = new byte[2];
+//		values[0] = (byte) Operation.MODE.value;
+//		values[1] = (byte) mask;
+//		
+//		TelnetSubnegotiationEvent event = new TelnetSubnegotiationEvent(getOptionCode(), values);
+//		stack.sendResponse( TelnetEncoder.encodeSubNegotiation(WellKnownTelnetOptions.LINEMODE.getCode(), values) );
+//	}
 
 	//-------------------------------------------------------------------
 	private void forwardMask(TelnetProtocol stack, ControlCode c0, int[] values) {
@@ -392,20 +391,20 @@ public class LineMode implements TelnetOption {
 	}
 
 	//-------------------------------------------------------------------
-	public static void setFlags(TelnetOutputStream out, List<ModeBit> flags) throws IOException {
+	public void setFlags(TelnetProtocol out, List<ModeBit> flags) throws IOException {
 		int flagMask = 0;
 		for (ModeBit flag : flags) {
 			flagMask |= flag.value;
 		}
 
-		out.sendSubNegotiation(WellKnownTelnetOptions.LINEMODE.getCode(), new byte[] {
+		out.sendResponse(out.factory().createTelnetSubnegotiationEvent(getOptionCode(), new byte[] {
 				(byte)Operation.MODE.value,
 				(byte)flagMask
-				});
+				}));
 	}
 
 	//-------------------------------------------------------------------
-	public void requestCharacterMode(TelnetOutputStream out) throws IOException {
+	public void requestCharacterMode(TelnetProtocol out) throws IOException {
 		setFlags(out, List.of(ModeBit.TRAPSIG));		
 	}
 }

@@ -8,7 +8,7 @@ import java.lang.System.Logger;
 
 import org.prelle.telnet.option.CommunicationRole;
 import org.prelle.telnet.option.TelnetOption;
-import org.prelle.telnet.option.TelnetProtocol;
+import org.prelle.telnet.protocol.TelnetProtocol;
 
 /**
  *
@@ -46,11 +46,11 @@ public class MUDSoundProtocolOption implements TelnetOption {
 	
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#initiate(org.prelle.telnet.option.TelnetProtocol, org.prelle.telnet.option.CommunicationRole)
+	 * @see org.prelle.telnet.option.TelnetOption#initiate(org.prelle.telnet.protocol.TelnetProtocol, org.prelle.telnet.option.CommunicationRole)
 	 */
 	@Override
 	public void initiate(TelnetProtocol stack, CommunicationRole role) throws IOException {
-		stack.getOutputStream().sendWill(getOptionCode());
+		stack.sendResponse( stack.factory().createTelnetNegotiationEvent(ControlCode.WILL, getOptionCode()) );
 	}
 
 }

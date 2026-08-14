@@ -10,8 +10,8 @@ import java.io.PrintWriter;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 
-import org.prelle.telnet.event.TelnetCommand;
 import org.prelle.telnet.event.TelnetEvent;
+import org.prelle.telnet.event.internal.TelnetCommandImpl;
 import org.prelle.telnet.option.LineMode;
 import org.prelle.telnet.option.LineMode.LineModeListener;
 import org.prelle.telnet.option.TelnetCharset;

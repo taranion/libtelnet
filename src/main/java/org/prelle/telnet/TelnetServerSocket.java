@@ -73,7 +73,7 @@ public class TelnetServerSocket extends ServerSocket {
 		 * Send all by default enabled variables
 		 */
 		logger.log(Level.DEBUG,"Incoming connection from {0},Port {1}", ret.getInetAddress().getHostAddress(), ret.getPort());
-		ret.out().logger = System.getLogger("telnet.lvl1.out."+ret.getInetAddress().getHostAddress());
+		((TelnetOutputStream)ret.out()).logger = System.getLogger("telnet.lvl1.out."+ret.getInetAddress().getHostAddress());
 		ret.in().logger = System.getLogger("telnet.lvl1.in."+ret.getInetAddress().getHostAddress());
 		ret.negotiateOptionsAsync();
 		ret.in.startReadingFromSocket();

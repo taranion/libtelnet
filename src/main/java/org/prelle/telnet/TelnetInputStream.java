@@ -8,7 +8,7 @@ import java.io.InputStream;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 
-import org.prelle.telnet.option.TelnetProtocol;
+import org.prelle.telnet.protocol.TelnetProtocol;
 
 /**
  * Reads byte buffers from the underlying stream
@@ -21,7 +21,6 @@ public class TelnetInputStream extends ReceiveDatagramInputStream  {
 
 	private InputStream in;
 	
-	private TelnetOutputStream reverseStream;
 	private TelnetProtocol protocol;
 	
 	//-----------------------------------------------------------------
@@ -156,22 +155,6 @@ public class TelnetInputStream extends ReceiveDatagramInputStream  {
 
 	public void setSendGoAheadAsANSISepator(boolean sendGoAheadAsANSISepator) {
 		protocol.setSendGoAheadAsANSISepator(sendGoAheadAsANSISepator);
-	}
-
-	//-------------------------------------------------------------------
-	/**
-	 * @return the reverseStream
-	 */
-	public TelnetOutputStream getReverseStream() {
-		return reverseStream;
-	}
-
-	//-------------------------------------------------------------------
-	/**
-	 * @param reverseStream the reverseStream to set
-	 */
-	public void setReverseStream(TelnetOutputStream reverseStream) {
-		this.reverseStream = reverseStream;
 	}
 
 	//-------------------------------------------------------------------

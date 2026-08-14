@@ -1,26 +1,28 @@
-package org.prelle.telnet.option;
+package org.prelle.telnet.protocol;
 
 import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 
-import org.prelle.telnet.TelnetInputStream;
-import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.WellKnownTelnetOptions;
 import org.prelle.telnet.event.DataEvent;
-import org.prelle.telnet.event.TelnetCommand;
 import org.prelle.telnet.event.TelnetEvent;
+import org.prelle.telnet.event.TelnetEventFactory;
 import org.prelle.telnet.event.TelnetNegotiationEvent;
 import org.prelle.telnet.event.TelnetParserListener;
-import org.prelle.telnet.event.TelnetSubnegotiationEvent;
-import org.prelle.telnet.option.TelnetOptionEvent.SubnegotiationFinishedEvent;
+import org.prelle.telnet.event.internal.DataEventImpl;
+import org.prelle.telnet.event.internal.DefaultTelnetEventFactory;
+import org.prelle.telnet.event.internal.TelnetCommandImpl;
+import org.prelle.telnet.event.internal.TelnetNegotiationEventImpl;
+import org.prelle.telnet.event.internal.TelnetSubnegotiationEventImpl;
+import org.prelle.telnet.option.CommunicationRole;
+import org.prelle.telnet.option.TelnetOption;
 import org.prelle.telnet.parser.TelnetConstants;
-import org.prelle.telnet.parser.TelnetStateMachine;
+import org.prelle.telnet.parser.TelnetDecoder;
 
 /**
  * 
@@ -29,7 +31,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 
 	private final static Logger logger = System.getLogger("telnet.lvl3");
 
-	public static enum OptionState {
+	private static enum OptionState {
 		UNKNOWN,
 		UNKNOWN_QUERIED,
 		INACTIVE_NOT_SUPPORTED,
@@ -45,7 +47,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 		}
 	}
 	
-	public static enum SubNegState {
+	private static enum SubNegState {
 		IDLE,
 		RESPONSE_PENDING,
 		FINISHED
@@ -103,6 +105,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 		}
 		
 		//-------------------------------------------------------------------
+		@SuppressWarnings("incomplete-switch")
 		private ProcessResult generateAnswer(ControlCode remoteSends) {
 			switch (state) {
 			case ACTIVE:
@@ -197,33 +200,58 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 	}
 	
 	private CommunicationRole role;
-	private TelnetStateMachine parser;
+	private TelnetEventFactory factory;
+	private TelnetDecoder parser;
+	private TelnetReturnChannel outputStream;
 	private TelnetProtocolListener listener;
 	
 	private Map<TelnetOption, CommunicationRole> extensions = new HashMap<>();
 	private Map<Integer, TelnetOption> extensionsByCode = new HashMap<>();
 
 	private Map<Integer, NegotiatonState> negotiationState;
-	
-	private TelnetInputStream inputStream;
-	private TelnetOutputStream outputStream;
     
     private boolean initialHandshakeDone = false;
     private Consumer<DataEvent> dataConsumer; 
 	
 	//-------------------------------------------------------------------
+    public static TelnetProtocolBuilder builder(CommunicationRole role) {
+		return new TelnetProtocolBuilder(role);
+	}
+	
+	//-------------------------------------------------------------------
 	public TelnetProtocol(CommunicationRole role, TelnetProtocolListener listener) {
+		this(role, new DefaultTelnetEventFactory(), listener);
+	}
+	
+	//-------------------------------------------------------------------
+	public TelnetProtocol(CommunicationRole role, TelnetEventFactory factory, TelnetProtocolListener listener) {
 		this.role = role;
+		this.factory  = factory;
 		this.listener = listener;
-		parser    = new TelnetStateMachine(this);
+		parser    = new TelnetDecoder(this);
 		negotiationState = new HashMap<>();
+	}
+	
+	//-------------------------------------------------------------------
+	public TelnetEventFactory factory() {
+		return factory;
+	}
+	
+	//-------------------------------------------------------------------
+	TelnetProtocolListener getListener() {
+		return listener;
+	}
+	
+	//-------------------------------------------------------------------
+	public void setReturnChannel(TelnetReturnChannel sink) {
+		this.outputStream = sink;
 	}
 	
 	//-------------------------------------------------------------------
 	public void setDataListener(Consumer<DataEvent> consumer) {
 		this.dataConsumer = consumer;
 	}
-
+	
 	public boolean isSendGoAheadAsANSISepator() {
 		return parser.isSendGoAheadAsANSISepator();
 	}
@@ -247,18 +275,19 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 	public void onTelnetEvent(TelnetEvent event) {
 		logger.log(Level.INFO, "onTelnetEvent({0})", event);
 		switch (event) {
-		case DataEvent _ -> {
+		case DataEventImpl _ -> {
 			if (dataConsumer!=null)
-				dataConsumer.accept((DataEvent)event);
+				dataConsumer.accept((DataEventImpl)event);
 			else
 				listener.onTelnetEvent(event);
 		}
-		case TelnetCommand _ -> listener.onTelnetEvent(event);
-		case TelnetNegotiationEvent option -> handleDoDontWillWont(option);
-		case TelnetSubnegotiationEvent subneg -> {
+		case TelnetCommandImpl _ -> listener.onTelnetEvent(event);
+		case TelnetNegotiationEventImpl option -> handleDoDontWillWont(option);
+		case TelnetSubnegotiationEventImpl subneg -> {
 			TelnetOption option = extensionsByCode.get(subneg.getOption());
 			if (option!=null) {
 				for (TelnetOptionEvent ev : option.handleSubnegotiation(subneg, this)) {
+					if  (ev.getOption()==null) ev.setOption(option);
 					if (ev instanceof SubnegotiationFinishedEvent _) {
 						// Mark the option as ready
 						negotiationState.get(subneg.getOption()).subnegState = SubNegState.FINISHED;
@@ -273,45 +302,29 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 		}
 	}
 
-	@SuppressWarnings("incomplete-switch")
+//	//-------------------------------------------------------------------
+//	public void sendResponse(byte[] toSend) {
+//		if (outputStream!=null) {
+//			try {
+//				outputStream.sendToRemote(toSend);
+//			} catch (IOException e) {
+//				logger.log(Level.ERROR, "Error sending response", e);
+//			}
+//		} else {
+//			logger.log(Level.WARNING, "No output stream set - cannot send response ");
+//		}
+//	}
+
+	//-------------------------------------------------------------------
 	public void sendResponse(TelnetEvent response) {
-		if (outputStream==null) {
-			logger.log(Level.WARNING, "Output stream is null - cannot send response {0}", response);
-			return;
-		}
-		
-		try {
-			switch (response) {
-			case TelnetSubnegotiationEvent subneg -> {
-				logger.log(Level.INFO, "Respond to subnegotiation  {0}", response);
-				byte[] send = new byte[subneg.getData().length + 5];
-				send[0] = (byte)IAC;
-				send[1] = (byte)SB;
-				send[2] = (byte)subneg.getOption();
-				System.arraycopy(subneg.getData(), 0, send, 3, subneg.getData().length);
-				send[send.length-2] = (byte)IAC;
-				send[send.length-1] = (byte)SE;
-				outputStream.write(send);
-				outputStream.flush();
+		if (outputStream!=null) {
+			try {
+				outputStream.sendToRemote(response);
+			} catch (IOException e) {
+				logger.log(Level.ERROR, "Error sending response "+response, e);
 			}
-			case TelnetNegotiationEvent negotiation -> {
-				logger.log(Level.INFO, "Respond to negotiation  {0}", response);
-				switch (negotiation.getType()) {
-				case WILL : outputStream.sendWill(negotiation.getOption()); break;
-				case WONT : outputStream.sendWont(negotiation.getOption()); break;
-				case DO   : outputStream.sendDo(negotiation.getOption()); break;
-				case DONT : outputStream.sendDont(negotiation.getOption()); break;
-				};
-				outputStream.flush();
-		}
-			default -> {
-				// For TelnetCommand and TelnetNegotiationEvent, we can use the outputStream's send method
-				logger.log(Level.WARNING, "Don't know how to send: "+response.getClass()+" = "+response);
-			}
-			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		} else {
+			logger.log(Level.WARNING, "No output stream set - cannot send response {0}", response);
 		}
 	}
 	
@@ -329,8 +342,6 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 	public void initializeExtensions() {
 		logger.log(Level.INFO, "ENTER: initializeExtensions() with {0} extensions", extensions.size());
 		try {
-			if (!extensions.isEmpty())
-				Objects.requireNonNull(outputStream, "Output stream must be set before initializing extensions");
 			initialHandshakeDone = false;
 			for (TelnetOption ext : extensions.keySet()) {
 				try {
@@ -342,13 +353,6 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 				} catch (Exception e) {
 					logger.log(Level.ERROR, "Error initializing extension "+ext.getName(), e);
 				}
-			}
-			try {
-				if (outputStream!=null)
-					outputStream.flush();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
 			}
 		} finally {
 			logger.log(Level.INFO, "LEAVE: initializeExtensions");
@@ -451,7 +455,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 		// Do we need to send an answer
 		result.answerWith.ifPresent( answer -> {
 			logger.log(Level.INFO, "Responding to {0} with {1}", command, answer);
-			sendResponse(new TelnetNegotiationEvent(command, answer));
+			sendResponse(factory.createTelnetNegotiationEvent(command, answer));
 		});
 		
 		// If it isn't active, assume subnegotiation is finished
@@ -499,37 +503,6 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 		listener.optionStateChanged(extension, false);
 	}
 
-	//-------------------------------------------------------------------
-	/**
-	 * @return the inputStream
-	 */
-	public TelnetInputStream getInputStream() {
-		return inputStream;
-	}
-
-	//-------------------------------------------------------------------
-	/**
-	 * @param inputStream the inputStream to set
-	 */
-	public void setInputStream(TelnetInputStream inputStream) {
-		this.inputStream = inputStream;
-	}
-
-	//-------------------------------------------------------------------
-	/**
-	 * @return the outputStream
-	 */
-	public TelnetOutputStream getOutputStream() {
-		return outputStream;
-	}
-
-	//-------------------------------------------------------------------
-	/**
-	 * @param outputStream the outputStream to set
-	 */
-	public void setOutputStream(TelnetOutputStream outputStream) {
-		this.outputStream = outputStream;
-	}
 
 	//-------------------------------------------------------------------
 	public boolean isFeatureActive(Integer code) {

@@ -6,10 +6,10 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.prelle.telnet.event.TelnetSubnegotiationEvent;
-import org.prelle.telnet.option.CommunicationRole;
 import org.prelle.telnet.option.TelnetOption;
-import org.prelle.telnet.option.TelnetOptionEvent;
-import org.prelle.telnet.option.TelnetProtocol;
+import org.prelle.telnet.protocol.TelnetOptionEvent;
+import org.prelle.telnet.protocol.TelnetOptionEventImpl;
+import org.prelle.telnet.protocol.TelnetProtocol;
 
 /**
  *
@@ -40,7 +40,7 @@ public class AardwolfMushclientProtocol implements TelnetOption {
 		}
 	}
 	
-	public static class AardwolfMushclientModeEvent extends TelnetOptionEvent {
+	public static class AardwolfMushclientModeEvent extends TelnetOptionEventImpl {
 		private MUDMode mode;
 		public AardwolfMushclientModeEvent(TelnetOption option, MUDMode mode) {
 			super(option);
@@ -49,7 +49,7 @@ public class AardwolfMushclientProtocol implements TelnetOption {
 		public MUDMode getMudMode() { return mode; }
 	}
 	
-	public static class AardwolfMushclientTickEvent extends TelnetOptionEvent {
+	public static class AardwolfMushclientTickEvent extends TelnetOptionEventImpl {
 		public AardwolfMushclientTickEvent(TelnetOption option) {
 			super(option);
 		}

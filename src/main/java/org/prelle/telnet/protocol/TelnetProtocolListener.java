@@ -1,6 +1,7 @@
-package org.prelle.telnet.option;
+package org.prelle.telnet.protocol;
 
 import org.prelle.telnet.event.TelnetEvent;
+import org.prelle.telnet.option.TelnetOption;
 
 /**
  * 

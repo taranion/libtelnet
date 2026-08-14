@@ -11,7 +11,10 @@ import java.util.List;
 
 import org.prelle.telnet.TelnetSocket;
 import org.prelle.telnet.event.TelnetSubnegotiationEvent;
-import org.prelle.telnet.option.TelnetOptionEvent.SubnegotiationFinishedEvent;
+import org.prelle.telnet.protocol.SubnegotiationFinishedEvent;
+import org.prelle.telnet.protocol.TelnetOptionEvent;
+import org.prelle.telnet.protocol.TelnetOptionEventImpl;
+import org.prelle.telnet.protocol.TelnetProtocol;
 
 /**
  * RFC 1073
@@ -24,7 +27,7 @@ public class TelnetWindowSize implements TelnetOption {
 
 	protected final static Logger logger = System.getLogger("telnet.option.naws");
 
-	public static class TerminalWindowSizeEvent extends TelnetOptionEvent {
+	public static class TerminalWindowSizeEvent extends TelnetOptionEventImpl {
 		private int width;
 		private int height;
 		public TerminalWindowSizeEvent(TelnetOption option, int width, int height) {
@@ -74,12 +77,12 @@ public class TelnetWindowSize implements TelnetOption {
 	
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#initiate(org.prelle.telnet.option.TelnetProtocol, org.prelle.telnet.option.CommunicationRole)
+	 * @see org.prelle.telnet.option.TelnetOption#initiate(org.prelle.telnet.protocol.TelnetProtocol, org.prelle.telnet.option.CommunicationRole)
 	 */
 	@Override
 	public void initiate(TelnetProtocol stack, CommunicationRole role) throws IOException {
 		if (role==CommunicationRole.SERVER) {
-			stack.getOutputStream().sendDo(getOptionCode());
+			stack.sendResponse(stack.factory().createTelnetNegotiationEvent(ControlCode.DO, getOptionCode()));
 		}
 	}
 	
@@ -164,7 +167,8 @@ public class TelnetWindowSize implements TelnetOption {
 			command[1] = (byte) (w%256);
 			command[2] = (byte) (h/256);
 			command[3] = (byte) (h%256);
-			origin.getOutputStream().sendSubNegotiation(CODE, command);
+			
+			origin.sendResponse(origin.factory().createTelnetSubnegotiationEvent(CODE, command));
 		}
 	}
 

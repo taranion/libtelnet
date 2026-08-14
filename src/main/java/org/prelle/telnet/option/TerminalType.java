@@ -12,7 +12,10 @@ import java.util.List;
 
 import org.prelle.telnet.event.TelnetSubnegotiationEvent;
 import org.prelle.telnet.mud.MUDTerminalTypeData;
-import org.prelle.telnet.option.TelnetOptionEvent.SubnegotiationFinishedEvent;
+import org.prelle.telnet.protocol.SubnegotiationFinishedEvent;
+import org.prelle.telnet.protocol.TelnetOptionEvent;
+import org.prelle.telnet.protocol.TelnetOptionEventImpl;
+import org.prelle.telnet.protocol.TelnetProtocol;
 
 /**
  * RFC 1091
@@ -50,7 +53,7 @@ public class TerminalType implements TelnetOption {
 		}
 	}
 
-	public static class TerminalTypesEvent extends TelnetOptionEvent {
+	public static class TerminalTypesEvent extends TelnetOptionEventImpl {
 		private TerminalTypeData data;
 		public TerminalTypesEvent(TelnetOption option, TerminalTypeData data) {
 			super(option);
@@ -109,7 +112,7 @@ public class TerminalType implements TelnetOption {
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#negotiateDetails(org.prelle.telnet.option.TelnetProtocol)
+	 * @see org.prelle.telnet.option.TelnetOption#negotiateDetails(org.prelle.telnet.protocol.TelnetProtocol)
 	 */
 	@Override
 	public boolean negotiateDetails(TelnetProtocol stack, CommunicationRole role) {
@@ -125,7 +128,7 @@ public class TerminalType implements TelnetOption {
 
 	//-------------------------------------------------------------------
 	/**
-	 * @see org.prelle.telnet.option.TelnetOption#handleSubnegotiation(int[], org.prelle.telnet.option.TelnetProtocol)
+	 * @see org.prelle.telnet.option.TelnetOption#handleSubnegotiation(int[], org.prelle.telnet.protocol.TelnetProtocol)
 	 */
 	@Override
 	public List<TelnetOptionEvent> handleSubnegotiation(TelnetSubnegotiationEvent event, TelnetProtocol stack) {
@@ -174,7 +177,7 @@ public class TerminalType implements TelnetOption {
 			byte[] data = new byte[6];
 			data[0] = IS;
 			System.arraycopy("xterm".getBytes(StandardCharsets.US_ASCII), 0, data, 1, 5);			
-			proto.sendResponse(new TelnetSubnegotiationEvent(this.getOptionCode(), data));
+			proto.sendResponse(proto.factory().createTelnetSubnegotiationEvent(this.getOptionCode(), data));
 			return;
 		}
 
@@ -191,12 +194,12 @@ public class TerminalType implements TelnetOption {
 		byte[] data = new byte[toSend.length()+1];
 		data[0] = IS;
 		System.arraycopy(toSend.getBytes(StandardCharsets.US_ASCII), 0, data, 1, toSend.length());
-		proto.sendResponse(new TelnetSubnegotiationEvent(this.getOptionCode(), data));
+		proto.sendResponse(proto.factory().createTelnetSubnegotiationEvent(this.getOptionCode(), data));
 	}
 
 	//-----------------------------------------------------------------
-	private void requestNext(TelnetProtocol prot) throws IOException {
-		prot.sendResponse(new TelnetSubnegotiationEvent(this.getOptionCode(), (byte)SEND));
+	private void requestNext(TelnetProtocol proto) throws IOException {
+		proto.sendResponse(proto.factory().createTelnetSubnegotiationEvent(this.getOptionCode(), new byte[] {(byte)SEND}));
 	}
 
 }

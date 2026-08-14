@@ -3,7 +3,6 @@
  */
 package org.prelle.telnet.mud;
 
-import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.nio.charset.StandardCharsets;
@@ -15,8 +14,9 @@ import java.util.function.Supplier;
 import org.prelle.telnet.event.TelnetSubnegotiationEvent;
 import org.prelle.telnet.option.CommunicationRole;
 import org.prelle.telnet.option.TelnetOption;
-import org.prelle.telnet.option.TelnetOptionEvent;
-import org.prelle.telnet.option.TelnetProtocol;
+import org.prelle.telnet.protocol.TelnetOptionEvent;
+import org.prelle.telnet.protocol.TelnetOptionEventImpl;
+import org.prelle.telnet.protocol.TelnetProtocol;
 
 /**
  * https://tintin.mudhalla.net/protocols/mssp/
@@ -27,7 +27,7 @@ public class MUDServerStatusProtocol implements TelnetOption {
 
 	protected final static Logger logger = System.getLogger("telnet.option.mssp");
 
-	public static class MSSPDataEvent extends TelnetOptionEvent {
+	public static class MSSPDataEvent extends TelnetOptionEventImpl {
 		private Map<String,String> data;
 		protected MSSPDataEvent(TelnetOption option, Map<String,String> data) {
 			super(option);
@@ -41,18 +41,15 @@ public class MUDServerStatusProtocol implements TelnetOption {
 	private final static int MSSP_VAR = 1;
 	private final static int MSSP_VAL = 2;
 
-	private CommunicationRole role;
 	private Supplier<Map<String,String>> dataSupplier;
 	
 	//-------------------------------------------------------------------
 	public MUDServerStatusProtocol() {
-		this.role = CommunicationRole.CLIENT;
 	}
 	
 	//-------------------------------------------------------------------
 	public MUDServerStatusProtocol(Supplier<Map<String,String>> dataSupplier) {
 		this.dataSupplier = dataSupplier;
-		this.role = CommunicationRole.SERVER;
 	}
 
 	//-------------------------------------------------------------------
@@ -95,12 +92,7 @@ public class MUDServerStatusProtocol implements TelnetOption {
 			buf.append((char)MSSP_VAL);
 			buf.append(entry.getValue());
 		}
-		System.out.println("Send "+buf);
-		try {
-			stack.getOutputStream().sendSubNegotiation(CODE, buf.toString());
-		} catch (IOException e) {
-			logger.log(Level.WARNING, "Failed sending telnet option",e);
-		}
+		stack.sendResponse( stack.factory().createTelnetSubnegotiationEvent(getOptionCode(), buf.toString().getBytes(StandardCharsets.UTF_8)) );
 		return false;
 	}
 

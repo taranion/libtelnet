@@ -15,9 +15,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.prelle.telnet.TelnetOutputStream;
 import org.prelle.telnet.event.TelnetSubnegotiationEvent;
-import org.prelle.telnet.option.TelnetOptionEvent.SubnegotiationFinishedEvent;
+import org.prelle.telnet.protocol.SubnegotiationFinishedEvent;
+import org.prelle.telnet.protocol.TelnetOptionEvent;
+import org.prelle.telnet.protocol.TelnetOptionEventImpl;
+import org.prelle.telnet.protocol.TelnetProtocol;
 
 /**
  * RFC 857
@@ -27,7 +29,7 @@ import org.prelle.telnet.option.TelnetOptionEvent.SubnegotiationFinishedEvent;
  */
 public class TelnetEnvironmentOption implements TelnetOption {
 	
-	public static class TelnetEnvironmentVariablesEvent extends TelnetOptionEvent {
+	public static class TelnetEnvironmentVariablesEvent extends TelnetOptionEventImpl {
 		private Map<String,String> variables;
 		public TelnetEnvironmentVariablesEvent(TelnetEnvironmentOption option, Map<String,String> variables) {
 			super(option);
@@ -346,9 +348,6 @@ public class TelnetEnvironmentOption implements TelnetOption {
 		logger.log(Level.INFO, "Requested user variables: {0}", requestedUser);
 		
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		baos.write(IAC);
-		baos.write(SB);
-		baos.write(CODE);
 		baos.write(IS);
 		if (requestedSystem!=null) {
 			Collection<String> keys = (requestedSystem.isEmpty())? systemVariables.keySet(): requestedSystem;
@@ -374,12 +373,9 @@ public class TelnetEnvironmentOption implements TelnetOption {
 				}
 			}
 		}
-		baos.write(IAC);
-		baos.write(SE);
 		
 		try {
-			origin.getOutputStream().writeCommand(baos.toByteArray());
-			origin.getOutputStream().flush();
+			origin.sendResponse(origin.factory().createTelnetSubnegotiationEvent(getOptionCode(), baos.toByteArray()));
 			baos.close();
 		} catch (IOException e) {
 			logger.log(Level.WARNING, "Failed sending telnet option",e);
@@ -402,42 +398,19 @@ public class TelnetEnvironmentOption implements TelnetOption {
 			return false;
 		}
 		logger.log(Level.DEBUG, "Ask remote party to send environment");
-		TelnetOutputStream out = origin.getOutputStream();
 		answersExpected = 3;
-		try {
-			byte[] send = new byte[8];
-			send[0] = (byte)IAC;
-			send[1] = (byte)SB;
-			send[2] = (byte)CODE;
-			send[3] = (byte)SEND;
-			send[4] = (byte)VAR;
-			send[5] = (byte)USERVAR;
-			send[6] = (byte)IAC;
-			send[7] = (byte)SE;
-			out.writeCommand(send);
-			send = new byte[7];
-			send[0] = (byte)IAC;
-			send[1] = (byte)SB;
-			send[2] = (byte)CODE;
-			send[3] = (byte)SEND;
-			send[4] = (byte)VAR;
-			send[5] = (byte)IAC;
-			send[6] = (byte)SE;
-			out.writeCommand(send);
-			send = new byte[7];
-			send[0] = (byte)IAC;
-			send[1] = (byte)SB;
-			send[2] = (byte)CODE;
-			send[3] = (byte)SEND;
-			send[4] = (byte)USERVAR;
-			send[5] = (byte)IAC;
-			send[6] = (byte)SE;
-			out.writeCommand(send);
-			out.flush();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+			byte[] send = new byte[3];
+			send[0] = (byte)SEND;
+			send[1] = (byte)VAR;
+			send[2] = (byte)USERVAR;
+			origin.sendResponse(origin.factory().createTelnetSubnegotiationEvent(getOptionCode(), send));
+			send = new byte[2];
+			send[0] = (byte)SEND;
+			send[1] = (byte)VAR;
+			origin.sendResponse(origin.factory().createTelnetSubnegotiationEvent(getOptionCode(), send));
+			send[0] = (byte)SEND;
+			send[1] = (byte)USERVAR;
+			origin.sendResponse(origin.factory().createTelnetSubnegotiationEvent(getOptionCode(), send));
 		return true;
 	}
 

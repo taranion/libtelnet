@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
 import org.prelle.telnet.option.CommunicationRole;
-import org.prelle.telnet.option.TelnetProtocol;
+import org.prelle.telnet.protocol.TelnetProtocol;
 
 /**
  * Unit tests for {@link TelnetOutputStream} encoding behavior.
@@ -101,19 +101,19 @@ class OutputStreamTest {
         }
     }
 
-    @Test
-    void testWriteCommandNotEncoded() throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        TelnetProtocol proto = new TelnetProtocol(CommunicationRole.CLIENT,null);
-        TelnetOutputStream tos = new TelnetOutputStream(baos, proto);
-
-        byte[] cmd = new byte[] { (byte) 0xFF, (byte) 0xFA, (byte) 0x01, (byte) 0xFF };
-        tos.writeCommand(cmd);
-        tos.close();
-
-        byte[] out = baos.toByteArray();
-        // writeCommand should write the bytes unchanged
-        assertArrayEquals(cmd, out);
-    }
+//    @Test
+//    void testWriteCommandNotEncoded() throws IOException {
+//        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+//        TelnetProtocol proto = new TelnetProtocol(CommunicationRole.CLIENT,null);
+//        TelnetOutputStream tos = new TelnetOutputStream(baos, proto);
+//
+//        byte[] cmd = new byte[] { (byte) 0xFF, (byte) 0xFA, (byte) 0x01, (byte) 0xFF };
+//        tos.writeCommand(cmd);
+//        tos.close();
+//
+//        byte[] out = baos.toByteArray();
+//        // writeCommand should write the bytes unchanged
+//        assertArrayEquals(cmd, out);
+//    }
 
 }

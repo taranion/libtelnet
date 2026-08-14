@@ -12,12 +12,13 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.prelle.telnet.event.DataEvent;
-import org.prelle.telnet.event.TelnetCommand;
 import org.prelle.telnet.event.TelnetEvent;
-import org.prelle.telnet.event.TelnetNegotiationEvent;
 import org.prelle.telnet.event.TelnetParserListener;
+import org.prelle.telnet.event.internal.DataEventImpl;
+import org.prelle.telnet.event.internal.TelnetCommandImpl;
+import org.prelle.telnet.event.internal.TelnetNegotiationEventImpl;
 import org.prelle.telnet.parser.TelnetConstants;
-import org.prelle.telnet.parser.TelnetStateMachine;
+import org.prelle.telnet.parser.TelnetDecoder;
 
 /**
  * 
@@ -60,15 +61,15 @@ class ParserTest {
 			@Override
 			public void onTelnetEvent(TelnetEvent event) { commandsReceived.add(event); }
 		};
-		TelnetStateMachine parser = new TelnetStateMachine(listener);
+		TelnetDecoder parser = new TelnetDecoder(listener);
 		// Test push processing
 		parser.process(data);
 		// Should have 4 events
 		assertEquals(4, commandsReceived.size(), "Expected 4 events, but got "+commandsReceived);
-		assertEquals( TelnetNegotiationEvent.class, commandsReceived.get(0).getClass());
-		assertEquals(              DataEvent.class, commandsReceived.get(1).getClass());
-		assertEquals(          TelnetCommand.class, commandsReceived.get(2).getClass());
-		assertEquals(              DataEvent.class, commandsReceived.get(3).getClass());
+		assertEquals( TelnetNegotiationEventImpl.class, commandsReceived.get(0).getClass());
+		assertEquals(              DataEventImpl.class, commandsReceived.get(1).getClass());
+		assertEquals(          TelnetCommandImpl.class, commandsReceived.get(2).getClass());
+		assertEquals(              DataEventImpl.class, commandsReceived.get(3).getClass());
 	}
 
 	//-------------------------------------------------------------------
@@ -92,7 +93,7 @@ class ParserTest {
 			@Override
 			public void onTelnetEvent(TelnetEvent event) { commandsReceived.add(event); }
 		};
-		TelnetStateMachine parser = new TelnetStateMachine(listener);
+		TelnetDecoder parser = new TelnetDecoder(listener);
 		parser.setSendGoAheadAsANSISepator(true);
 		// Test push processing
 		parser.process(data);
@@ -129,13 +130,13 @@ class ParserTest {
 			@Override
 			public void onTelnetEvent(TelnetEvent event) { commandsReceived.add(event); }
 		};
-		TelnetStateMachine parser = new TelnetStateMachine(listener);
+		TelnetDecoder parser = new TelnetDecoder(listener);
 		// Test push processing
 		parser.process(data);
 		// Should have 4 events
 		assertEquals(2, commandsReceived.size(), "Expected two events but got "+commandsReceived);
-		assertEquals( TelnetNegotiationEvent.class, commandsReceived.get(0).getClass());
-		assertEquals(              DataEvent.class, commandsReceived.get(1).getClass());
+		assertEquals( TelnetNegotiationEventImpl.class, commandsReceived.get(0).getClass());
+		assertEquals(              DataEventImpl.class, commandsReceived.get(1).getClass());
 		
 		DataEvent dataEvent = (DataEvent) commandsReceived.get(1);
 		assertEquals(3, dataEvent.getData().length);
@@ -169,13 +170,13 @@ class ParserTest {
 			@Override
 			public void onTelnetEvent(TelnetEvent event) { commandsReceived.add(event); }
 		};
-		TelnetStateMachine parser = new TelnetStateMachine(listener);
+		TelnetDecoder parser = new TelnetDecoder(listener);
 		// Test push processing
 		parser.process(data);
 		// Should have 4 events
 		assertEquals(2, commandsReceived.size(), "Expected two events but got "+commandsReceived);
-		assertEquals( TelnetNegotiationEvent.class, commandsReceived.get(0).getClass());
-		assertEquals(              DataEvent.class, commandsReceived.get(1).getClass());
+		assertEquals( TelnetNegotiationEventImpl.class, commandsReceived.get(0).getClass());
+		assertEquals(              DataEventImpl.class, commandsReceived.get(1).getClass());
 		
 		DataEvent dataEvent = (DataEvent) commandsReceived.get(1);
 		int expected = part1.getBytes(StandardCharsets.UTF_8).length + 1 + part2.getBytes(StandardCharsets.UTF_8).length;

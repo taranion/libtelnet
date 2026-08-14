@@ -3,7 +3,6 @@
  */
 package org.prelle.telnet.option;
 
-import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.nio.charset.Charset;
@@ -14,7 +13,10 @@ import java.util.List;
 import java.util.StringTokenizer;
 
 import org.prelle.telnet.event.TelnetSubnegotiationEvent;
-import org.prelle.telnet.option.TelnetOptionEvent.SubnegotiationFinishedEvent;
+import org.prelle.telnet.protocol.SubnegotiationFinishedEvent;
+import org.prelle.telnet.protocol.TelnetOptionEvent;
+import org.prelle.telnet.protocol.TelnetOptionEventImpl;
+import org.prelle.telnet.protocol.TelnetProtocol;
 
 /**
  * https://datatracker.ietf.org/doc/html/rfc2066
@@ -23,7 +25,7 @@ import org.prelle.telnet.option.TelnetOptionEvent.SubnegotiationFinishedEvent;
  */
 public class TelnetCharset implements TelnetOption {
 	
-	public static class CharsetNegotiatedEvent extends TelnetOptionEvent {
+	public static class CharsetNegotiatedEvent extends TelnetOptionEventImpl {
 		private Charset charset;
 		public CharsetNegotiatedEvent(TelnetCharset option, Charset charset) {
 			super(option);
@@ -152,12 +154,11 @@ public class TelnetCharset implements TelnetOption {
 //				toSend[0] = ACCEPTED;
 //				System.arraycopy(append, 0, toSend, 0, append.length);
 				logger.log(Level.WARNING, "Accept "+consoleCharset);
-				try {
-					stack.getOutputStream().sendSubNegotiation(CODE, ACCEPTED, append);
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+				
+				byte[] payload = new byte[1+append.length];
+				payload[0] = (byte)ACCEPTED;
+				System.arraycopy(append, 0, payload, 1, append.length);
+				stack.sendResponse(stack.factory().createTelnetSubnegotiationEvent(CODE, payload));
 			}
 			
 		} else if (operation==REJECTED) {
@@ -179,23 +180,13 @@ public class TelnetCharset implements TelnetOption {
 			var line = (" "+String.join(" ", supportedCharsets));
 			logger.log(Level.INFO, "Inform client that we support \"{0}\"", line);
 			byte[] charsetData = line.getBytes(StandardCharsets.US_ASCII);
-			byte[] send = new byte[charsetData.length+7];
-			send[0] = (byte)IAC;
-			send[1] = (byte)SB;
-			send[2] = (byte)CODE;
-			send[3] = (byte)REQUEST;
-			send[4] = (byte)32;
-			System.arraycopy(charsetData, 0, send, 5, charsetData.length);
-			send[5+charsetData.length] = (byte)IAC;
-			send[6+charsetData.length] = (byte)SE;
+			byte[] send = new byte[charsetData.length+2];
+			send[0] = (byte)REQUEST;
+			send[1] = (byte)32;
+			System.arraycopy(charsetData, 0, send, 2, charsetData.length);
 			logger.log(Level.DEBUG, "SND {0}", Arrays.toString(send));
-			stack.getOutputStream().writeCommand(send);
-			stack.getOutputStream().flush();
+			stack.sendResponse(stack.factory().createTelnetSubnegotiationEvent(CODE, send));
 			return true;
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-			return false;
 		} finally {
 			logger.log(Level.DEBUG, "LEAVE: negotiateDetails()");
 		}
