@@ -280,20 +280,20 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 	public void onTelnetEvent(TelnetEvent event) {
 		logger.log(Level.INFO, "onTelnetEvent({0})", event);
 		switch (event) {
-		case DataEventImpl _ -> {
+		case DataEventImpl data -> {
 			if (dataConsumer!=null)
 				dataConsumer.accept((DataEventImpl)event);
 			else
 				listener.onTelnetEvent(event);
 		}
-		case TelnetCommandImpl _ -> listener.onTelnetEvent(event);
+		case TelnetCommandImpl co -> listener.onTelnetEvent(event);
 		case TelnetNegotiationEventImpl option -> handleDoDontWillWont(option);
 		case TelnetSubnegotiationEventImpl subneg -> {
 			TelnetOption option = extensionsByCode.get(subneg.getOption());
 			if (option!=null) {
 				for (TelnetOptionEvent ev : option.handleSubnegotiation(subneg, this)) {
 					if  (ev.getOption()==null) ev.setOption(option);
-					if (ev instanceof SubnegotiationFinishedEvent _) {
+					if (ev instanceof SubnegotiationFinishedEvent) {
 						// Mark the option as ready
 						negotiationState.get(subneg.getOption()).subnegState = SubNegState.FINISHED;
 						verifyAllOptionsReady();
