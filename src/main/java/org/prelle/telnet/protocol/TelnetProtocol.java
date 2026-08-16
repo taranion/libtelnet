@@ -227,14 +227,14 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 	
 	//-------------------------------------------------------------------
 	public TelnetProtocol(CommunicationRole role, TelnetEventFactory factory, TelnetProtocolListener listener, Consumer<DataEvent> dataListener, List<TelnetOption> options, TelnetReturnChannel returnChannel) {
+		parser    = new TelnetDecoder(this);
+		negotiationState = new HashMap<>();
 		this.role = role;
 		this.factory  = factory;
 		this.listener = listener;
 		this.dataConsumer = dataListener;
 		options.forEach( opt -> add(opt));
 		this.returnChannel = returnChannel;
-		parser    = new TelnetDecoder(this);
-		negotiationState = new HashMap<>();
 	}
 	
 	//-------------------------------------------------------------------
@@ -245,6 +245,11 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 	//-------------------------------------------------------------------
 	TelnetProtocolListener getListener() {
 		return listener;
+	}
+	
+	//-------------------------------------------------------------------
+	public CommunicationRole getRole() {
+		return role;
 	}
 	
 	//-------------------------------------------------------------------
@@ -491,6 +496,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 		logger.log(Level.INFO, "Option {0} became active", extension.getName());
 		NegotiatonState state = negotiationState.get(extension.getOptionCode());
 		listener.optionStateChanged(extension, true);
+		listener.onTelnetEvent( factory.createOptionStateEvent(extension, true) );
 		
 		boolean mustSubnegotiate = extension.startSubNegotiationAs(role);
 		if (mustSubnegotiate) {
@@ -506,6 +512,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 	private void optionBecameInactive(TelnetOption extension) {
 		logger.log(Level.INFO, "Option {0} became inactive", extension.getName());
 		listener.optionStateChanged(extension, false);
+		listener.onTelnetEvent( factory.createOptionStateEvent(extension, false) );
 	}
 
 

@@ -55,6 +55,13 @@ public class TelnetProtocolBuilder {
 	}
 	
 	//-------------------------------------------------------------------
+	public TelnetProtocolBuilder withOptions(TelnetOption... value) {
+		for (TelnetOption option : value)
+			this.options.add(option);
+		return this;
+	}
+	
+	//-------------------------------------------------------------------
 	public TelnetProtocolBuilder withReturnChannel(TelnetReturnChannel returnChannel) {
 		this.returnChannel = returnChannel;
 		return this;

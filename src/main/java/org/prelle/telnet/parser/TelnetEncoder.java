@@ -2,11 +2,11 @@ package org.prelle.telnet.parser;
 
 import java.nio.charset.StandardCharsets;
 
+import org.prelle.telnet.event.DataEvent;
+import org.prelle.telnet.event.TelnetCommand;
 import org.prelle.telnet.event.TelnetEvent;
-import org.prelle.telnet.event.internal.DataEventImpl;
-import org.prelle.telnet.event.internal.TelnetCommandImpl;
-import org.prelle.telnet.event.internal.TelnetNegotiationEventImpl;
-import org.prelle.telnet.event.internal.TelnetSubnegotiationEventImpl;
+import org.prelle.telnet.event.TelnetNegotiationEvent;
+import org.prelle.telnet.event.TelnetSubnegotiationEvent;
 
 /**
  * 
@@ -90,8 +90,8 @@ public class TelnetEncoder implements TelnetConstants {
 	//-------------------------------------------------------------------
 	public static byte[] encodeEvent(TelnetEvent event) {
 		return switch (event) {
-		case DataEventImpl dataEvent -> dataEvent.getData();
-		case TelnetNegotiationEventImpl negEv -> {
+		case DataEvent dataEvent -> dataEvent.getData();
+		case TelnetNegotiationEvent negEv -> {
 			yield switch (negEv.getType()) {
 			case WILL -> encodeWill(negEv.getOption());
 			case WONT -> encodeWont(negEv.getOption());
@@ -100,8 +100,8 @@ public class TelnetEncoder implements TelnetConstants {
 			default -> throw new IllegalArgumentException("Unsupported negotiation type: " + negEv.getType());
 			};
 		}
-		case TelnetSubnegotiationEventImpl subEv -> encodeSubNegotiation(subEv.getOption(), subEv.getData());
-		case TelnetCommandImpl cmdEv -> new byte[] { (byte)IAC, (byte)cmdEv.getCode().code() };
+		case TelnetSubnegotiationEvent subEv -> encodeSubNegotiation(subEv.getOption(), subEv.getData());
+		case TelnetCommand cmdEv -> new byte[] { (byte)IAC, (byte)cmdEv.getCode().code() };
 		default -> throw new IllegalArgumentException("Unsupported event type: " + event.getClass().getName());
 		};
 	}
