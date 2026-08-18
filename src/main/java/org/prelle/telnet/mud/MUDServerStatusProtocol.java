@@ -6,6 +6,7 @@ package org.prelle.telnet.mud;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -73,8 +74,53 @@ public class MUDServerStatusProtocol implements TelnetOption {
 		String data = new String(event.getData(), StandardCharsets.UTF_8);
 		logger.log(Level.ERROR, "Subnegotiate for MSSP: "+ data);
 		
-		System.exit(1);
-		return List.of();
+		int[] values = event.getAsIntArray();
+		StringBuffer keyBuf = new StringBuffer();
+		StringBuffer valBuf = new StringBuffer();
+		Map<String,String> variables = new HashMap<>();
+		int mode = -1;
+		int i=1;
+		while (i<values.length) {
+			int dat = values[i++];
+			if (dat==IAC) {
+				// End of list
+				if (keyBuf.length()>0) {
+					logger.log(Level.INFO, "Variable {0}={1}", keyBuf, valBuf);
+					variables.put(keyBuf.toString(), valBuf.toString());
+				}
+				break;
+			}
+
+			switch (dat) {
+			case MSSP_VAR:
+				mode = dat;
+				if (keyBuf.length()>0) {
+					logger.log(Level.DEBUG, "System Variable {0}={1}", keyBuf, valBuf);
+					variables.put(keyBuf.toString(), valBuf.toString());
+				}
+				keyBuf = new StringBuffer();
+				break;
+			case MSSP_VAL:
+				mode = dat;
+				valBuf = new StringBuffer();
+				break;
+			default:
+				if (mode==MSSP_VAR) {
+					keyBuf.append( (char)dat );
+					break;
+				} else if (mode==MSSP_VAL) {
+					valBuf.append( (char)dat );
+				}
+			}
+
+			logger.log(Level.TRACE, "RCV {0} = {1}", dat, (char)dat);
+		}
+		if (keyBuf.length()>0) {
+			logger.log(Level.DEBUG, "System Variable {0}={1}", keyBuf, valBuf);
+			variables.put(keyBuf.toString(), valBuf.toString());
+		}
+		logger.log(Level.WARNING,"MSSP done: {0}", variables);
+		return List.of(new MSSPDataEvent(this, variables));
 	}
 
 	//-----------------------------------------------------------------
