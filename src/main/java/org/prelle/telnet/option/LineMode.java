@@ -407,4 +407,13 @@ public class LineMode implements TelnetOption {
 	public void requestCharacterMode(TelnetProtocol out) throws IOException {
 		setFlags(out, List.of(ModeBit.TRAPSIG));		
 	}
+	
+	//-------------------------------------------------------------------
+	public static byte[] encodeSetFlags(List<ModeBit> flags) {
+		int flagMask = 0;
+		for (ModeBit flag : flags) {
+			flagMask |= flag.value;
+		}
+		return new byte[] { (byte)Operation.MODE.value, (byte)flagMask };
+	}
 }

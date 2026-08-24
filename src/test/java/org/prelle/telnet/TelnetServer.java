@@ -54,7 +54,7 @@ public class TelnetServer implements Runnable, TelnetConstants {
 				);
 		});
 		
-		serverSocket.setListenernFactory( socket -> new TelnetSocketListener() {
+		serverSocket.setListenerFactory( socket -> new TelnetSocketListener() {
 					@Override
 					public void optionStateChanged(TelnetOption extension, boolean state) {
 						logger.log(Level.INFO,"Extension {0} changed to {1}", extension.getName(), state);

@@ -159,11 +159,14 @@ public class TelnetEnvironmentOption implements TelnetOption {
 		}
 		
 		List<TelnetOptionEvent> result = new ArrayList<>();
-		result.add(new TelnetEnvironmentVariablesEvent(this, userVariables));
+		if (!userVariables.isEmpty())
+			result.add(new TelnetEnvironmentVariablesEvent(this, userVariables));
+		if (!systemVariables.isEmpty())
+			result.add(new TelnetEnvironmentVariablesEvent(this, systemVariables));
 		logger.log(Level.DEBUG, "Answers expected now {0} and before {1}", answersExpected, expectedBefore);
-		if (answersExpected==0 && expectedBefore>0) {
+//		if (answersExpected==0 && expectedBefore>0) {
 			result.add(new SubnegotiationFinishedEvent(this));
-		}
+//		}
 		return result;
 	}
 

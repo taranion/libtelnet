@@ -4,9 +4,11 @@ import java.io.IOException;
 import java.lang.System.Logger;
 import java.lang.System.Logger.Level;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -33,7 +35,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 
 	private final static Logger logger = System.getLogger("telnet.lvl3");
 
-	private static enum OptionState {
+	public static enum OptionState {
 		UNKNOWN,
 		UNKNOWN_QUERIED,
 		INACTIVE_NOT_SUPPORTED,
@@ -69,7 +71,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 	}
 	
 	
-	private static class NegotiatonState {
+	public static class NegotiationState {
 		private OptionState state = OptionState.UNKNOWN;
 		private SubNegState subnegState = SubNegState.IDLE;
 		private TelnetOption extension;
@@ -78,7 +80,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 		/**
 		 * Constructor to use for unknown options
 		 */
-		public NegotiatonState() {
+		public NegotiationState() {
 		}
 		
 		//-------------------------------------------------------------------
@@ -87,7 +89,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 		 * @param extension
 		 * @param listener
 		 */
-		public NegotiatonState(TelnetOption extension) {
+		public NegotiationState(TelnetOption extension) {
 			this.extension = extension;
 		}
 		
@@ -210,7 +212,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 	private Map<TelnetOption, CommunicationRole> extensions = new HashMap<>();
 	private Map<Integer, TelnetOption> extensionsByCode = new HashMap<>();
 
-	private Map<Integer, NegotiatonState> negotiationState;
+	private Map<Integer, NegotiationState> negotiationState;
     
     private boolean initialHandshakeDone = false;
     private Consumer<DataEvent> dataConsumer; 
@@ -340,11 +342,12 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 	
 	//-------------------------------------------------------------------
 	public TelnetProtocol add(TelnetOption extension) {
+		Objects.requireNonNull(extension, "Cannot add null extension");
 		if (!extensions.containsKey(extension)) {
 			extensions.put(extension, role);
 		}
 		extensionsByCode.put(extension.getOptionCode(), extension);
-		negotiationState.put(extension.getOptionCode(), new NegotiatonState(extension));
+		negotiationState.put(extension.getOptionCode(), new NegotiationState(extension));
 		return this;
 	}
 	
@@ -391,7 +394,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 		boolean allSubReady = negotiationState.values().stream()
 				.allMatch( state -> !state.subnegState.isWaitState());
 		logger.log(Level.DEBUG, "All subnegotiations finished? {0} + {1}", allReady, allSubReady);
-		if (allReady & allSubReady) {
+		if (allReady & allSubReady && !initialHandshakeDone) {
 			logger.log(Level.INFO, "All subnegotiations finished");
 			initialHandshakeDone = true;
 			listener.telnetReady();
@@ -432,6 +435,11 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 //	}
 
 	//-----------------------------------------------------------------
+	public Collection<TelnetOption> getExtensions() {
+		return extensions.keySet();
+	}
+
+	//-----------------------------------------------------------------
 	public TelnetOption getExtensionForOption(int optionCode) {
 		for (TelnetOption ext : extensions.keySet()) {
 			if (ext.getOptionCode()==optionCode)
@@ -450,15 +458,20 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 	}
 
 	//-----------------------------------------------------------------
+	public NegotiationState getNegotiationState(int optionCode) {
+		return negotiationState.get(optionCode);
+	}
+
+	//-----------------------------------------------------------------
 	private void handleDoDontWillWont(TelnetNegotiationEvent command) {
 		int optionCode = command.getOption();
-		NegotiatonState state = negotiationState.get(optionCode);
+		NegotiationState state = negotiationState.get(optionCode);
 		if (state==null) {
 			// Unknown option - create a state for unsupported options 
-			state = new NegotiatonState();
+			state = new NegotiationState();
 			negotiationState.put(optionCode, state);
 		}
-		logger.log(Level.DEBUG, "Received {0} while state is {1}", command, state);
+		logger.log(Level.WARNING, "---------------------------Received {0} while state is {1}", command, state);
 		TelnetOption extension = getExtensionForOption(optionCode);
 		
 		ProcessResult result = state.generateAnswer(command.getType());
@@ -494,7 +507,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 	//-------------------------------------------------------------------
 	private void optionBecameActive(TelnetOption extension) {
 		logger.log(Level.INFO, "Option {0} became active", extension.getName());
-		NegotiatonState state = negotiationState.get(extension.getOptionCode());
+		NegotiationState state = negotiationState.get(extension.getOptionCode());
 		listener.optionStateChanged(extension, true);
 		listener.onTelnetEvent( factory.createOptionStateEvent(extension, true) );
 		
@@ -506,6 +519,15 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 		} else {
 			state.subnegState = SubNegState.FINISHED;
 		}
+		
+		negotiationState.forEach( (code,s) -> {
+			if (s.state.isWaitState()) {
+				logger.log(Level.INFO, "Option {0} is still waiting for a response", getExtensionName(code));
+			}
+			if (s.subnegState.isWaitState()) {
+				logger.log(Level.INFO, "Option {0} is still waiting for subnegotiation to finish", getExtensionName(code));
+			}
+		});
 	}
 
 	//-------------------------------------------------------------------
@@ -520,6 +542,11 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 	public boolean isFeatureActive(Integer code) {
 		return negotiationState.containsKey(code) 
 				&& negotiationState.get(code).isActive();
+	}
+
+	//-------------------------------------------------------------------
+	public void setEventFactory(TelnetEventFactory value) {
+		factory = value;
 	}
 	
 }

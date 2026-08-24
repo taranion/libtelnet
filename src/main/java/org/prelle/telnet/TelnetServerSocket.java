@@ -41,7 +41,7 @@ public class TelnetServerSocket extends ServerSocket {
 	}
 
 	//-----------------------------------------------------------------
-	public void setListenernFactory(Function<TelnetSocket, TelnetSocketListener> listenerFactory) {
+	public void setListenerFactory(Function<TelnetSocket, TelnetSocketListener> listenerFactory) {
 		this.listenerFactory = listenerFactory;
 	}
 
@@ -60,22 +60,22 @@ public class TelnetServerSocket extends ServerSocket {
 				ret.getStack().add(extension);
 			}
 		}
-		// Call an eventually existing supplier for listeners
-		if (listenerFactory != null) {
-			ret.addListener(listenerFactory.apply(ret));
-		}
 
 		implAccept(ret);
 //		ret.setTcpNoDelay(true);
 
+		// Call an eventually existing supplier for listeners
+		if (listenerFactory != null) {
+			ret.addListener(listenerFactory.apply(ret));
+		}
 		/*
 		 * Send all by default enabled variables
 		 */
 		logger.log(Level.DEBUG,"Incoming connection from {0},Port {1}", ret.getInetAddress().getHostAddress(), ret.getPort());
 		((TelnetOutputStream)ret.out()).logger = System.getLogger("telnet.lvl1.out."+ret.getInetAddress().getHostAddress());
 		ret.in().logger = System.getLogger("telnet.lvl1.in."+ret.getInetAddress().getHostAddress());
-		ret.negotiateOptionsAsync();
-		ret.in.startReadingFromSocket();
+//		ret.negotiateOptionsAsync();
+//		ret.in.startReadingFromSocket();
 		
 		logger.log(Level.DEBUG,"LEAVE accept()");
 		return ret;

@@ -18,6 +18,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.prelle.telnet.event.TelnetEvent;
+import org.prelle.telnet.event.TelnetEventFactory;
 import org.prelle.telnet.event.internal.DataEventImpl;
 import org.prelle.telnet.option.CommunicationRole;
 import org.prelle.telnet.option.TelnetOption;
@@ -51,6 +52,14 @@ public class TelnetSocket extends Socket implements TelnetConstants, TelnetProto
 	//-----------------------------------------------------------------
 	public static ExecutorService getExecutorService() {
 		return executor;
+	}
+
+	//-----------------------------------------------------------------
+	public TelnetSocket(TelnetEventFactory eventFactory) {
+		stack = TelnetProtocol.builder(CommunicationRole.SERVER)
+				.withListener(this)
+				.withEventFactory(eventFactory)
+				.build();
 	}
 
 	//-----------------------------------------------------------------
@@ -233,6 +242,14 @@ public class TelnetSocket extends Socket implements TelnetConstants, TelnetProto
 		}
 	}
 
+	//-------------------------------------------------------------------
+	/**
+	 * @return the listener
+	 */
+	public TelnetSocketListener getListener() {
+		return listener;
+	}
+
 
 //	//-------------------------------------------------------------------
 //	public boolean isFeatureActive(int code) {
@@ -244,4 +261,8 @@ public class TelnetSocket extends Socket implements TelnetConstants, TelnetProto
 //		return (getConfigOption(option)!=null && getConfigOption(option).isConfigurable());
 //	}
 
+	public void start() {
+		negotiateOptionsAsync();
+		in.startReadingFromSocket();
+	}
 }

@@ -171,4 +171,12 @@ public class TelnetOutputStream extends OutputStream implements TelnetReturnChan
 		realOut.flush();
 	}
 
+	//-------------------------------------------------------------------
+	/**
+	 * @return the stack
+	 */
+	public TelnetProtocol getStack() {
+		return stack;
+	}
+
 }

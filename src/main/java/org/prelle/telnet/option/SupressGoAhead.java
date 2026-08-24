@@ -25,7 +25,7 @@ public class SupressGoAhead implements TelnetOption {
 	//-----------------------------------------------------------------
 	@Override
 	public boolean startNegotiationAs(CommunicationRole role) {
-		return false;
+		return role==CommunicationRole.SERVER;
 	}
 
 }

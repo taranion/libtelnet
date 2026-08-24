@@ -2,6 +2,7 @@ package org.prelle.telnet.protocol;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import org.prelle.telnet.event.DataEvent;
@@ -50,6 +51,7 @@ public class TelnetProtocolBuilder {
 	
 	//-------------------------------------------------------------------
 	public TelnetProtocolBuilder withOption(TelnetOption option) {
+		Objects.requireNonNull(option);
 		this.options.add(option);
 		return this;
 	}
