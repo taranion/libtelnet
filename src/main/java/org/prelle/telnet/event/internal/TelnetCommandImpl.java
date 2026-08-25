@@ -19,6 +19,9 @@ public class TelnetCommandImpl implements TelnetEvent, TelnetCommand {
 
 	//-------------------------------------------------------------------
 	public String toString() {
+		if (code == null) {
+			return "TelnetCommand:NULL";
+		}
 		return code.name();
 	}
 

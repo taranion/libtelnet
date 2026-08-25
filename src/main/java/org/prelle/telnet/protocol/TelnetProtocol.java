@@ -51,7 +51,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 		}
 	}
 	
-	private static enum SubNegState {
+	public static enum SubNegState {
 		IDLE,
 		RESPONSE_PENDING,
 		FINISHED
@@ -101,11 +101,17 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 			return state+"/"+subnegState;
 		}
 
+		//-------------------------------------------------------------------
 		public void setState(OptionState value) {
 			if (this.state!=value) {
 				logger.log(Level.INFO, "Changing state for {0} from {1} to {2}", (extension!=null)?extension.getName():"UNKNOWN", this.state, value);
 			}
 			state = value;
+		}
+
+		//-------------------------------------------------------------------
+		public void setSubNegState(SubNegState value) {
+			subnegState = value;
 		}
 		
 		//-------------------------------------------------------------------
@@ -296,6 +302,10 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 		case TelnetCommandImpl co -> listener.onTelnetEvent(event);
 		case TelnetNegotiationEventImpl option -> handleDoDontWillWont(option);
 		case TelnetSubnegotiationEventImpl subneg -> {
+			// If not done yet, mark the option as active
+			if (negotiationState.get(subneg.getOption()).state==OptionState.INACTIVE_QUERIED)
+				negotiationState.get(subneg.getOption()).setState(OptionState.ACTIVE);
+			
 			TelnetOption option = extensionsByCode.get(subneg.getOption());
 			if (option!=null) {
 				for (TelnetOptionEvent ev : option.handleSubnegotiation(subneg, this)) {
