@@ -3,6 +3,7 @@ package org.prelle.telnet.event;
 import org.prelle.telnet.option.TelnetOption;
 import org.prelle.telnet.parser.TelnetConstants.ControlCode;
 import org.prelle.telnet.protocol.OptionStateEvent;
+import org.prelle.telnet.protocol.OptionSupportEvent;
 
 /**
  * 
@@ -19,5 +20,6 @@ public interface TelnetEventFactory {
 	public TelnetSubnegotiationEvent createTelnetSubnegotiationEvent(int option, byte[] data);
 	
 	public OptionStateEvent createOptionStateEvent(TelnetOption option, boolean enabled);
+	public OptionSupportEvent createOptionSupportEvent(TelnetOption option, boolean supported);
 	
 }

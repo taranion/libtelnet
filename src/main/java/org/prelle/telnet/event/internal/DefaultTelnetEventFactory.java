@@ -8,6 +8,7 @@ import org.prelle.telnet.event.TelnetSubnegotiationEvent;
 import org.prelle.telnet.option.TelnetOption;
 import org.prelle.telnet.parser.TelnetConstants.ControlCode;
 import org.prelle.telnet.protocol.OptionStateEvent;
+import org.prelle.telnet.protocol.OptionSupportEvent;
 
 /**
  * 
@@ -62,6 +63,15 @@ public class DefaultTelnetEventFactory implements TelnetEventFactory {
 	@Override
 	public OptionStateEvent createOptionStateEvent(TelnetOption option, boolean enabled) {
 		return new OptionStateEventImpl(option, enabled);
+	}
+
+	//-------------------------------------------------------------------
+	/**
+	 * @see org.prelle.telnet.event.TelnetEventFactory#createOptionSupportEvent(org.prelle.telnet.option.TelnetOption, boolean)
+	 */
+	@Override
+	public OptionSupportEvent createOptionSupportEvent(TelnetOption option, boolean supported) {
+		return new OptionSupportEventImpl(option, supported);
 	}
 
 }

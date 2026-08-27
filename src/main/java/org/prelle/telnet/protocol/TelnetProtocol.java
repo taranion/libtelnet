@@ -72,6 +72,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 	
 	
 	public static class NegotiationState {
+		private boolean supported;
 		private OptionState state = OptionState.UNKNOWN;
 		private SubNegState subnegState = SubNegState.IDLE;
 		private TelnetOption extension;
@@ -140,6 +141,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 				// This is the first response we ever got for this option
 				boolean active = (remoteSends==ControlCode.DO || remoteSends==ControlCode.WILL);
 				if (active) {
+					supported = true;
 					setState(OptionState.ACTIVE);
 				} else {
 					setState(OptionState.INACTIVE_NOT_SUPPORTED);
@@ -153,7 +155,7 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 					return new ProcessResult(Optional.empty(), active);
 				} else {
 					// Remain inactive
-					setState(OptionState.INACTIVE);
+					setState(OptionState.INACTIVE_NOT_SUPPORTED);
 					return new ProcessResult(Optional.empty());
 				}
 			case UNKNOWN:
@@ -484,7 +486,20 @@ public class TelnetProtocol implements TelnetParserListener, TelnetConstants {
 		logger.log(Level.WARNING, "---------------------------Received {0} while state is {1}", command, state);
 		TelnetOption extension = getExtensionForOption(optionCode);
 		
+		boolean supportedBefore = state.supported;
+		boolean wasInitialResponse = state.state==OptionState.INACTIVE_QUERIED || state.state==OptionState.UNKNOWN_QUERIED;
 		ProcessResult result = state.generateAnswer(command.getType());
+		// If it is supported now and not before, send an event
+		if (state.state==OptionState.ACTIVE && !supportedBefore) {
+			if (extension!=null) {
+				listener.onTelnetEvent( factory.createOptionSupportEvent(extension, true) );
+			}
+		} else if (state.state==OptionState.INACTIVE_NOT_SUPPORTED && wasInitialResponse) {
+			if (extension!=null) {
+				listener.onTelnetEvent( factory.createOptionSupportEvent(extension, false) );
+			}
+		}
+		
 		// Do we need to send an answer
 		result.answerWith.ifPresent( answer -> {
 			logger.log(Level.INFO, "Responding to {0} with {1}", command, answer);
